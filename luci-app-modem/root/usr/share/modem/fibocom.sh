@@ -3,7 +3,7 @@
 
 #脚本目录
 SCRIPT_DIR="/usr/share/modem"
-
+source /usr/share/libubox/jshn.sh
 #预设
 fibocom_presets()
 {
@@ -559,6 +559,239 @@ fibocom_network_info()
     rx_rate=$(echo $response | awk -F',' '{print $1}')
 }
 
+#锁频信息
+fibocom_get_lockband()
+{
+    local at_port="$1"
+    debug "Fibocom get lockband info"
+    get_lockband_config_command="AT+GTACT?"
+    get_available_band_command="AT+GTACT=?"
+    get_lockband_config_res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $get_lockband_config_command)
+    get_available_band_res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $get_available_band_command)
+    json_init
+    json_add_object "available_band"
+    index=0
+    for i in $(echo "$get_available_band_res"| sed 's/\r//g' | awk -F"[()]" '{for(j=8; j<NF;j+=2) if ($j) print $j; else print 0;}' ); do
+        case $index in
+            0) 
+            #"gsm"
+            ;;
+            1) 
+            #"umts_band" 
+            for j in $(echo "$i" | awk -F"," '{for(k=1; k<=NF; k++) print $k}'); do
+                json_add_string  "$j" "UMTS_$j"
+            done
+            ;;
+            2) 
+            #"LTE" "$i" 
+            for j in $(echo "$i" | awk -F"," '{for(k=1; k<=NF; k++) print $k}'); do
+                trim_first_letter=$(echo "$j" | sed 's/^.//')
+                json_add_string  "$j" "LTE_$trim_first_letter"
+            done
+            ;;
+            3)  
+            #"cdma_band"
+            ;;
+            4) 
+            #"evno"
+            ;;
+            5)
+            #"nr5g"
+            for j in $(echo "$i" | awk -F"," '{for(k=1; k<=NF; k++) print $k}'); do
+                trim_first_letter=$(echo "$j" | sed 's/^.//')
+                json_add_string  "$j" "NR_$trim_first_letter"
+            done
+            ;;
+        esac
+        index=$((index+1))
+    done
+    json_close_object
+    json_add_array "lock_band"
+    for i in $(echo "$get_lockband_config_res" | sed 's/\r//g' | awk -F"," '{for(k=4; k<=NF; k++) print $k}' ); do
+        json_add_string "" "$i"
+    done
+    json_close_array
+    json_result=`json_dump`
+    echo "$json_result"
+}
+
+#设置锁频
+fibocom_set_lockband()
+{
+    debug "Fibocom set lockband info"
+    local at_port="$1"
+    get_lockband_config_command="AT+GTACT?"
+    get_lockband_config_res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $get_lockband_config_command)
+    network_prefer_config=$(echo $get_lockband_config_res |cut -d : -f 2| awk -F"," '{ print $1","$2","$3}' |tr -d ' ')
+    local lock_band="$network_prefer_config,$2"
+    local set_lockband_command="AT+GTACT=$lock_band"
+    sh ${SCRIPT_DIR}/modem_at.sh $at_port $set_lockband_command
+}
+
+fibocom_get_neighborcell()
+{
+    local at_port="$1"
+    debug "Fibocom get neighborcell info"
+    get_neighborcell_command="AT+GTCCINFO?"
+    get_lockcell_command="AT+GTCELLLOCK?"
+    cell_type="undefined"
+    json_init
+    json_add_array "NR"
+    json_close_array
+    json_add_array "LTE"
+    json_close_array
+    sh ${SCRIPT_DIR}/modem_at.sh $at_port $get_neighborcell_command > /tmp/neighborcell
+     while IFS= read -r line; do
+        #跳过空行
+        line=$(echo $line | sed 's/\r//g')
+        if [ -z "$line" ]; then
+            continue
+        fi
+        case $line in
+            *"NR neighbor cell"*)
+                cell_type="NR"
+                continue
+                ;;
+            *"LTE neighbor cell"*)
+                cell_type="LTE"
+                continue
+                ;;
+            *"service cell"*|*"GTCELLINFO"*|*"OK"*)
+                cell_type="undefined"
+                continue
+                ;;
+        esac
+        case $cell_type in
+            "NR")
+                tac=$(echo "$line" | awk -F',' '{print $5}')
+                cellid=$(echo "$line" | awk -F',' '{print $6}')
+                arfcn=$(echo "$line" | awk -F',' '{print $7}')
+                pci=$(echo "$line" | awk -F',' '{print $8}')
+                ss_sinr=$(echo "$line" | awk -F',' '{print $9}')
+                rxlev=$(echo "$line" | awk -F',' '{print $10}')
+                ss_rsrp=$(echo "$line" | awk -F',' '{print $11}')
+                ss_rsrq=$(echo "$line" | awk -F',' '{print $12}')
+                arfcn=$(echo 'ibase=16;' "$arfcn"  | bc)
+                pci=$(echo 'ibase=16;' "$pci"  | bc)
+                json_select "NR"
+                json_add_object ""
+                json_add_string "tac" "$tac"
+                json_add_string "cellid" "$cellid"
+                json_add_string "arfcn" "$arfcn"
+                json_add_string "pci" "$pci"
+                json_add_string "ss_sinr" "$ss_sinr"
+                json_add_string "rxlev" "$rxlev"
+                json_add_string "ss_rsrp" "$ss_rsrp"
+                json_add_string "ss_rsrq" "$ss_rsrq"
+                json_close_object
+                json_select ".."
+                ;;
+            "LTE")
+                tac=$(echo "$line" | awk -F',' '{print $5}')
+                cellid=$(echo "$line" | awk -F',' '{print $6}')
+                arfcn=$(echo "$line" | awk -F',' '{print $7}')
+                pci=$(echo "$line" | awk -F',' '{print $8}')
+                bandwidth=$(echo "$line" | awk -F',' '{print $9}')
+                rxlev=$(echo "$line" | awk -F',' '{print $10}')
+                rsrp=$(echo "$line" | awk -F',' '{print $11}')
+                rsrq=$(echo "$line" | awk -F',' '{print $12}')
+                arfcn=$(echo 'ibase=16;' "$arfcn"   | bc)
+                pci=$(echo 'ibase=16;' "$pci"  | bc)
+                json_select "LTE"
+                json_add_object ""
+                json_add_string "tac" "$tac"
+                json_add_string "cellid" "$cellid"
+                json_add_string "arfcn" "$arfcn"
+                json_add_string "pci" "$pci"
+                json_add_string "bandwidth" "$bandwidth"
+                json_add_string "rxlev" "$rxlev"
+                json_add_string "rsrp" "$rsrp"
+                json_add_string "rsrq" "$rsrq"
+                json_close_object
+                json_select ".."
+                ;;
+        esac
+    done < "/tmp/neighborcell"
+
+    result=`sh ${SCRIPT_DIR}/modem_at.sh $at_port $get_lockcell_command | grep "+GTCELLLOCK:" | sed 's/+GTCELLLOCK: //g' | sed 's/\r//g'`
+    #$1:lockcell_status $2:cell_type $3:lock_type $4:arfcn $5:pci $6:scs $7:nr_band
+    json_add_object "lockcell_status"
+    if [ -n "$result" ]; then
+        lockcell_status=$(echo "$result" | awk -F',' '{print $1}')
+        if [ "$lockcell_status" = "1" ]; then
+            lockcell_status="lock"
+        else
+            lockcell_status="unlock"
+        fi
+        cell_type=$(echo "$result" | awk -F',' '{print $2}')
+        if [ "$cell_type" = "1" ]; then
+            cell_type="NR"
+        elif [ "$cell_type" = "0" ]; then
+            cell_type="LTE"
+        fi
+        lock_type=$(echo "$result" | awk -F',' '{print $3}')
+        if [ "$lock_type" = "1" ]; then
+            lock_type="arfcn"
+        elif [ "$lock_type" = "0" ]; then
+            lock_type="pci"
+        fi
+        arfcn=$(echo "$result" | awk -F',' '{print $4}')
+        pci=$(echo "$result" | awk -F',' '{print $5}')
+        scs=$(echo "$result" | awk -F',' '{print $6}')
+        nr_band=$(echo "$result" | awk -F',' '{print $7}')
+        json_add_string "lockcell_status" "$lockcell_status"
+        json_add_string "cell_type" "$cell_type"
+        json_add_string "lock_type" "$lock_type"
+        json_add_string "arfcn" "$arfcn"
+        json_add_string "pci" "$pci"
+        json_add_string "scs" "$scs"
+        json_add_string "nr_band" "$nr_band"
+    fi
+    json_close_object
+
+    json_dump
+}
+
+fibocom_unlockcell()
+{
+    local at_port="$1"
+    local unlockcell_command="AT+GTCELLLOCK=0"
+    sh ${SCRIPT_DIR}/modem_at.sh $at_port $unlockcell_command
+}
+
+fibocom_lockcurrent()
+{
+    local at_port="$1"
+    local unlockcell_command="AT+GTCELLLOCK=1"
+    sh ${SCRIPT_DIR}/modem_at.sh $at_port $unlockcell_command
+}
+
+fibocom_lockpci()
+{
+    local at_port="$1"
+    local cell_type="$2"
+    local arfcn="$3"
+    local pci="$4"
+    local scs="$5"
+    local nrband="$6"
+    if [  "$cell_type" == 1 ]; then
+        local set_lockcell_command="AT+GTCELLLOCK=1,$cell_type,0,$arfcn,$pci,$scs,50$nrband"
+    else
+        local set_lockcell_command="AT+GTCELLLOCK=1,$cell_type,0,$arfcn,$pci"
+    fi
+    echo $set_lockcell_command
+    sh ${SCRIPT_DIR}/modem_at.sh $at_port $set_lockcell_command
+}
+
+fibocom_lockarfcn()
+{
+    local at_port="$1"
+    local cell_type="$2"
+    local arfcn="$3"
+    local set_lockcell_command="AT+GTCELLLOCK=1,$cell_type,1,$arfcn"
+    echo $set_lockcell_command
+    sh ${SCRIPT_DIR}/modem_at.sh $at_port $set_lockcell_command
+}
 #获取频段
 # $1:网络类型
 # $2:频段数字

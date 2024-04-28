@@ -34,6 +34,10 @@ function index()
 	entry({"admin", "network", "modem", "set_mode"}, call("setMode"), nil).leaf = true
 	entry({"admin", "network", "modem", "get_network_prefer_info"}, call("getNetworkPreferInfo"), nil).leaf = true
 	entry({"admin", "network", "modem", "set_network_prefer"}, call("setNetworkPrefer"), nil).leaf = true
+	entry({"admin", "network", "modem", "get_lockband"}, call("getLockBand"), nil).leaf = true
+	entry({"admin", "network", "modem", "set_lockband"}, call("setLockBand"), nil).leaf = true
+	entry({"admin", "network", "modem", "get_neighbor_cellinfo"}, call("getNeighbor"), nil).leaf = true
+	entry({"admin", "network", "modem", "set_lock_cell"}, call("setLockCell"), nil).leaf = true
 	entry({"admin", "network", "modem", "get_self_test_info"}, call("getSelfTestInfo"), nil).leaf = true
 	entry({"admin", "network", "modem", "get_quick_commands"}, call("getQuickCommands"), nil).leaf = true
 	entry({"admin", "network", "modem", "send_at_command"}, call("sendATCommand"), nil).leaf = true
@@ -631,6 +635,93 @@ function setNetworkPrefer()
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(network_prefer)
 end
+
+function getNeighbor()
+	local at_port = http.formvalue("port")
+	local manufacturer = getManufacturer(at_port)
+	local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_get_neighborcell "..at_port
+	local result=shell(command)
+	local neighbor_cellinfo=json.parse(result)
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(neighbor_cellinfo)
+end
+
+function setLockCell()
+	local at_port = http.formvalue("port")
+	local manufacturer = getManufacturer(at_port)
+	local pci = http.formvalue("pci")
+	local arfcn = http.formvalue("arfcn") 
+	local scs = http.formvalue("scs") --0:15KHz 1:30KHz 2:60KHz
+	local nrband = http.formvalue("nrband")
+	local celltype = http.formvalue("celltype") --0:LTE 1:NR
+	local lock = http.formvalue("lock") --0:unlock 1:lock_pci 2:lock_arfcn 3:lock_self
+	response={}
+	if (lock == "0") then
+		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_unlockcell "..at_port
+		local result=shell(command)
+		response["response"]=result
+		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
+		response["lock"]=0
+	elseif (lock == "1") then
+		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_lockpci "..at_port.." "..celltype.." "..arfcn.." "..pci.." "..scs.." "..nrband
+		local result=shell(command)
+		response["response"]=result
+		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
+		response["lock"]="pci"
+	elseif (lock == "2") then
+		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_lockarfcn "..at_port.." "..celltype.." "..arfcn
+		local result=shell(command)
+		response["response"]=result
+		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
+		response["lock"]="arfcn"
+	elseif (lock == "3") then
+		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_lockcurrent "..at_port
+		local result=shell(command)
+		response["response"]=result
+		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
+		response["lock"]="self"
+	end
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(response)
+end
+
+function getLockBand()
+	local at_port = http.formvalue("port")
+	local manufacturer = getManufacturer(at_port)
+	local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_get_lockband "..at_port
+	local result=shell(command)
+	--获取锁频配置
+	local lock_band_config={}
+	if at_port and manufacturer and manufacturer~="unknown" then
+		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_get_lockband "..at_port
+		local result=shell(command)
+		lock_band_config=json.parse(result)
+	end
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(lock_band_config)
+end
+
+
+function setLockBand()
+	local at_port = http.formvalue("port")
+	local lock_band_config = http.formvalue("lock_band_config")
+
+	--获取制造商
+	local manufacturer = getManufacturer(at_port)
+	local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_set_lockband "..at_port.." "..lock_band_config
+	local result=shell(command)
+	--获取锁频配置
+	local lock_band_config={}
+	if at_port and manufacturer and manufacturer~="unknown" then
+		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_get_lockband "..at_port
+		local result=shell(command)
+		lock_band_config=json.parse(result)
+	end
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(lock_band_config)
+end
+
+
 
 --[[
 @Description 获取自检信息
