@@ -319,6 +319,12 @@ function getModemInfo()
 			end
 		end
 	end
+	--添加额外翻译
+	translation["Unknown"]=luci.i18n.translate("Unknown")
+	translation["Excellent"]=luci.i18n.translate("Excellent")
+	translation["Good"]=luci.i18n.translate("Good")
+	translation["Fair"]=luci.i18n.translate("Fair")
+	translation["Bad"]=luci.i18n.translate("Bad")
 
 	--整合数据
 	local data={}

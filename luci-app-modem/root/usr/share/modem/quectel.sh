@@ -491,6 +491,24 @@ quectel_network_info()
     #     per=$((csq * 100/31))"%"
     # fi
 
+    #最大比特率，信道质量指示
+    at_command='AT+QNWCFG="nr5g_ambr"'
+    response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command | grep "+QNWCFG:")
+    for context in $response; do
+        local apn=$(echo "$context" | awk -F'"' '{print $4}' | tr 'a-z' 'A-Z')
+        if [ -n "$apn" ] && [ "$apn" != "IMS" ]; then
+            #CQL UL（上行信道质量指示）
+            cqi_ul=$(echo "$context" | awk -F',' '{print $5}')
+            #CQI DL（下行信道质量指示）
+            cqi_dl=$(echo "$context" | awk -F',' '{print $3}')
+            #AMBR UL（上行签约速率，单位，Mbps）
+            ambr_ul=$(echo "$context" | awk -F',' '{print $6}' | sed 's/\r//g')
+            #AMBR DL（下行签约速率，单位，Mbps）
+            ambr_dl=$(echo "$context" | awk -F',' '{print $4}')
+            break
+        fi
+    done
+
     #速率统计
     at_command='AT+QNWCFG="up/down"'
     response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command | grep "+QNWCFG:" | sed 's/+QNWCFG: "up\/down",//g' | sed 's/\r//g')

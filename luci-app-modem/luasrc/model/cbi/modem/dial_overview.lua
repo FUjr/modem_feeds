@@ -31,7 +31,9 @@ function s.create(uci, t)
 end
 function s.remove(uci, t)
     uci.map.proceed = true
-    uci.map:del(t)
+    -- 设置删除
+    uci.map:set(t,"delete","1")
+    -- uci.map:del(t)
     luci.http.redirect(d.build_url("admin", "network", "modem","dial_overview"))
 end
 

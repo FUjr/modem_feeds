@@ -148,8 +148,8 @@ end
 				if (value!="-"&&value!="")
 				{
 					//添加单位
-					if (key=="RSSI") {
-						value=value+" dBm";
+					if (key=="AMBR UL"||key=="AMBR DL") {
+						value=value+" Mbps";
 					}
 					else if (key=="Tx Rate"||key=="Rx Rate")
 					{
@@ -172,6 +172,232 @@ end
 		//获取网络信息表格
 		var network_info_Element=document.getElementById("network_info");
 		network_info_Element.innerHTML=network_info_view;
+	}
+
+	// 获取一个范围的百分比
+	function get_percent(value, min, max)
+	{
+		var percent;
+		if (value <= min) {
+			percent=0;
+		} else if (value >= max) {
+			percent=100;
+		} else {
+			percent=((value - min) / (max - min)) * 100;
+		}
+		return percent.toFixed(2);
+	}
+
+	// 获取参考信号接收功率（RSRP）的信息视图
+	function get_rsrp_info_view(network_type,value)
+	{
+		value=parseFloat(value);
+		var rsrp_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
+
+		// 获取百分比
+		var percent=100;
+		if (network_type.includes("NR"))
+		{
+			percent=get_percent(value,-153,31);
+		}
+		else if (network_type.includes("LTE"))
+		{
+			percent=get_percent(value,-140,-44);
+		}
+		else if (network_type.includes("WCDMA"))
+		{
+			// percent=get_percent(value,-140,-44);
+		}
+
+		// 获取样式
+		var quality="Unknown";
+		var color="gray";
+		if (value>=-70)
+		{
+			quality="Excellent";
+			color="limegreen";
+		}
+		else if (value>=-80&&value<-70)
+		{
+			quality="Good";
+			color="lime";
+		}
+		else if (value>=-90&&value<-80)
+		{
+			quality="Fair";
+			color="gold";
+		}
+		else if (value<-90)
+		{
+			quality="Bad";
+			color="red";
+		}
+
+		rsrp_info_view.percent=percent;
+		rsrp_info_view.quality=quality;
+		rsrp_info_view.style='width:'+rsrp_info_view.percent+'%;background-color: '+color+';';
+
+		return rsrp_info_view;
+	}
+
+	// 获取参考信号接收质量（RSRQ）的信息视图
+	function get_rsrq_info_view(network_type,value)
+	{
+		value=parseFloat(value);
+		var rsrq_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
+
+		// 获取百分比
+		var percent=100;
+		if (network_type.includes("NR"))
+		{
+			percent=get_percent(value,-43,20);
+		}
+		else if (network_type.includes("LTE"))
+		{
+			percent=get_percent(value,-19.5,-3);
+		}
+		else if (network_type.includes("WCDMA"))
+		{
+			// percent=get_percent(value,-19.5,-3);
+		}
+
+		// 获取样式
+		var quality="Unknown";
+		var color="gray";
+		if (value>=-10)
+		{
+			quality="Excellent";
+			color="limegreen";
+		}
+		else if (value>=-15&&value<-10)
+		{
+			quality="Good";
+			color="lime";
+		}
+		else if (value>=-20&&value<-15)
+		{
+			quality="Fair";
+			color="gold";
+		}
+		else if (value<-20)
+		{
+			quality="Bad";
+			color="red";
+		}
+
+		rsrq_info_view.percent=percent;
+		rsrq_info_view.quality=quality;
+		rsrq_info_view.style='width:'+rsrq_info_view.percent+'%;background-color: '+color+';';
+
+		return rsrq_info_view;
+	}
+
+	// 获取信噪比（SINR）的信息视图
+	function get_sinr_info_view(network_type,value)
+	{
+		value=parseFloat(value);
+		var sinr_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
+
+		// 获取百分比
+		var percent=100;
+		if (network_type.includes("NR"))
+		{
+			percent=get_percent(value,-23,40);
+		}
+		else if (network_type.includes("LTE"))
+		{
+			percent=get_percent(value,-20,-30);
+		}
+		else if (network_type.includes("WCDMA"))
+		{
+			// percent=get_percent(value,-20,-30);
+		}
+
+		// 获取样式
+		var quality="Unknown";
+		var color="gray";
+		if (value>=25)
+		{
+			quality="Excellent";
+			color="limegreen";
+		}
+		else if (value>=15&&value<25)
+		{
+			quality="Good";
+			color="lime";
+		}
+		else if (value>=10&&value<15)
+		{
+			quality="Fair";
+			color="gold";
+		}
+		else if (value<10)
+		{
+			quality="Bad";
+			color="red";
+		}
+
+		sinr_info_view.percent=percent;
+		sinr_info_view.quality=quality;
+		sinr_info_view.style='width:'+sinr_info_view.percent+'%;background-color: '+color+';';
+
+		return sinr_info_view;
+	}
+
+	// 获取接收信号功率（RxLev）的信息视图	
+	function get_rxlev_info_view(network_type,value)
+	{
+		value=parseFloat(value);
+		var sinr_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
+
+		// 获取百分比
+		var percent=100;
+		if (network_type.includes("NR"))
+		{
+			percent=get_percent(value,-153,31);
+		}
+		else if (network_type.includes("LTE"))
+		{
+			percent=get_percent(value,-140,-44);
+		}
+		else if (network_type.includes("WCDMA"))
+		{
+			percent=get_percent(value,-120,-25);
+		}
+		else if (network_type.includes("GSM"))
+		{
+			percent=get_percent(value,-110,-48);
+		}
+
+		// 获取样式
+		var quality="Unknown";
+		var color="gray";
+		if (value>=-70)
+		{
+			quality="Excellent";
+			color="limegreen";
+		}
+		else if (value>=-80&&value<-70)
+		{
+			quality="Good";
+			color="lime";
+		}
+		else if (value>=-90&&value<-80)
+		{
+			quality="Fair";
+			color="gold";
+		}
+		else if (value<-100)
+		{
+			quality="Bad";
+			color="red";
+		}
+
+		sinr_info_view.percent=percent;
+		sinr_info_view.quality=quality;
+		sinr_info_view.style='width:'+sinr_info_view.percent+'%;background-color: '+color+';';
+
+		return sinr_info_view;
 	}
 
 	//获取小区信息视图
@@ -204,28 +430,56 @@ end
 					//添加单位
 					if (key=="Band") {
 						if (network_type.includes("NR")) {
-							value="N"+value
+							value="N"+value;
 						}
 						else if (network_type.includes("LTE")) {
-							value="B"+value
+							value="B"+value;
 						}
 						else if (network_type.includes("WCDMA")) {
-							value="B"+value
+							value="B"+value;
 						}
 					}
 					else if (key=="UL Bandwidth"||key=="DL Bandwidth") {
-						value=value+" MHz"
+						value=value+" MHz";
 					}
 					else if (key=="RSRP"||key=="TX Power"||key=="RxLev") {
-						value=value+" dBm"
+
+						if (key=="RSRP")
+						{
+							var rsrp_info_view=get_rsrp_info_view(network_type,value);
+							value='<div class="cbi-progressbar" title="'+value+' dBm | '+translation[rsrp_info_view.quality]+' ('+rsrp_info_view.percent+'%)"><div style="'+rsrp_info_view.style+'"></div></div>';
+						}
+						else if (key=="RxLev")
+						{
+							var rxlev_info_view=get_rxlev_info_view(network_type,value);
+							value='<div class="cbi-progressbar" title="'+value+' dBm | '+translation[rxlev_info_view.quality]+' ('+rxlev_info_view.percent+'%)"><div style="'+rxlev_info_view.style+'"></div></div>';
+						}
+						else
+						{
+							value=value+" dBm";
+						}
 					}
 					else if (key=="RSRQ"||key=="SINR"||key=="RSSNR"||key=="Ec/Io") {
-						value=value+" dB"
+						
+						if (key=="RSRQ")
+						{
+							var rsrq_info_view=get_rsrq_info_view(network_type,value);
+							value='<div class="cbi-progressbar" title="'+value+' dB | '+translation[rsrq_info_view.quality]+' ('+rsrq_info_view.percent+'%)"><div style="'+rsrq_info_view.style+'"></div></div>';
+						}
+						else if (key=="SINR")
+						{
+							var sinr_info_view=get_sinr_info_view(network_type,value);
+							value='<div class="cbi-progressbar" title="'+value+' dB | '+translation[sinr_info_view.quality]+' ('+sinr_info_view.percent+'%)"><div style="'+sinr_info_view.style+'"></div></div>';
+						}
+						else
+						{
+							value=value+" dB";
+						}
 					}
 					else if (key=="SCS") {
-						value=value+" KHz"
+						value=value+" KHz";
 					}
-					cell_info_view+='<tr class="tr"><td class="td left" title="'+full_name+'">'+translation[key]+'</td><td class="td left" id="'+key+'">'+value+'</td></tr>';
+					cell_info_view+='<tr class="tr"><td class="td left" title="'+full_name+'">'+translation[key]+' ('+key+')</td><td class="td left" id="'+key+'">'+value+'</td></tr>';
 					break;
 				}
  			}

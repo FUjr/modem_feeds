@@ -18,7 +18,7 @@ init_modem_info()
 	at_port='-'				#AT串口
 	mode='unknown'			#拨号模式
 	temperature="NaN $(printf "\xc2\xb0")C"	#温度
-    update_time='-'			#更新时间
+	update_time='-'			#更新时间
 
 	#SIM卡信息
 	sim_status="unknown"	#SIM卡状态
@@ -31,9 +31,13 @@ init_modem_info()
 
 	#网络信息
 	connect_status="disconnect"	#SIM卡状态
-	network_type="-" 			#蜂窝网络类型
-	tx_rate="-"  				#上传速率
-	rx_rate="-"  				#下载速率
+	network_type="-"			#蜂窝网络类型
+	cqi_ul="-"					#上行信道质量指示
+	cqi_dl="-"					#下行信道质量指示
+	ambr_ul="-"					#上行签约速率
+	ambr_dl="-"					#下行签约速率
+	tx_rate="-"					#上传速率
+	rx_rate="-"					#下载速率
 
 	#小区信息
 	network_mode="-" #网络模式
@@ -167,6 +171,10 @@ set_network_info()
 {
 	network_info="\"network_info\":[
 		{\"Network Type\":\"$network_type\", \"full_name\":\"Network Type\"},
+		{\"CQI UL\":\"$cqi_ul\", \"full_name\":\"Channel Quality Indicator for Uplink\"},
+		{\"CQI DL\":\"$cqi_dl\", \"full_name\":\"Channel Quality Indicator for Downlink\"},
+		{\"AMBR UL\":\"$ambr_ul\", \"full_name\":\"Access Maximum Bit Rate for Uplink\"},
+		{\"AMBR DL\":\"$ambr_dl\", \"full_name\":\"Access Maximum Bit Rate for Downlink\"},
 		{\"Tx Rate\":\"$tx_rate\", \"full_name\":\"Transmit Rate\"},
 		{\"Rx Rate\":\"$rx_rate\", \"full_name\":\"Receive Rate\"}
 	],"

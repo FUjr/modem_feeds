@@ -523,6 +523,18 @@ msgstr "中国电信"
 msgid "46011"
 msgstr "中国电信"
 
+msgid "Excellent"
+msgstr "非常好"
+
+msgid "Good"
+msgstr "好"
+
+msgid "Fair"
+msgstr "一般"
+
+msgid "Bad"
+msgstr "差"
+
 msgid "Plugin Config"
 msgstr "插件配置"
 

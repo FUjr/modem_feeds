@@ -352,6 +352,18 @@ msgstr "网络信息"
 msgid "Network Type"
 msgstr "网络类型"
 
+msgid "CQI UL"
+msgstr "上行信道质量指示"
+
+msgid "CQI DL"
+msgstr "下行信道质量指示"
+
+msgid "AMBR UL"
+msgstr "上行访问最大比特率"
+
+msgid "AMBR DL"
+msgstr "下行访问最大比特率"
+
 msgid "Tx Rate"
 msgstr "上传速率"
 
@@ -522,6 +534,18 @@ msgstr "中国电信"
 
 msgid "46011"
 msgstr "中国电信"
+
+msgid "Excellent"
+msgstr "非常好"
+
+msgid "Good"
+msgstr "好"
+
+msgid "Fair"
+msgstr "一般"
+
+msgid "Bad"
+msgstr "差"
 
 msgid "Plugin Config"
 msgstr "插件配置"

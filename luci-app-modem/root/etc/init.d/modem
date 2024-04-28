@@ -121,6 +121,13 @@ set_ipv4_interface()
 	local interface_name="$1"
 	local network_interface="$2"
 
+	#删除原网络配置
+	uci -q del network.${interface_name}.ipaddr
+	uci -q del network.${interface_name}.netmask
+	uci -q del network.${interface_name}.gateway
+	uci -q del network.${interface_name}.peerdns
+	uci -q del network.${interface_name}.dns
+
 	#添加或修改网络配置
 	uci set network.${interface_name}='interface'
 	uci set network.${interface_name}.proto='dhcp'
@@ -287,10 +294,6 @@ modemmanager()
 
 qmi()
 {
-	#设置网络接口
-	local network_interface=$(uci -q get modem.modem${modem_no}.network_interface)
-	set_interface "${modem_no}" "$network_interface"
-
 	#选择拨号工具
 	case $dial_tool in
 		"quectel-CM") quectel_cm ;;
@@ -302,11 +305,6 @@ qmi()
 
 gobinet()
 {
-	#获取网络接口
-	local network_interface=$(uci -q get modem.modem${modem_no}.network_interface)
-	#设置网络接口
-	set_interface "${modem_no}" "$network_interface"
-
 	#拨号
 	procd_open_instance
 	procd_set_param command sh ${SCRIPT_DIR}/modem_network_task.sh "${id}" "${modem_no}" "gobinet"
@@ -316,11 +314,6 @@ gobinet()
 
 ecm()
 {
-	#获取网络接口
-	local network_interface=$(uci -q get modem.modem${modem_no}.network_interface)
-	#设置网络接口
-	set_interface "${modem_no}" "$network_interface"
-
 	#拨号
 	procd_open_instance
 	procd_set_param command sh ${SCRIPT_DIR}/modem_network_task.sh "${id}" "${modem_no}" "ecm"
@@ -335,11 +328,6 @@ mbim()
 
 rndis()
 {
-	#获取网络接口
-	local network_interface=$(uci -q get modem.modem${modem_no}.network_interface)
-	#设置网络接口
-	set_interface "${modem_no}" "$network_interface"
-
 	#拨号
 	procd_open_instance
 	procd_set_param command sh ${SCRIPT_DIR}/modem_network_task.sh "${id}" "${modem_no}" "rndis"
@@ -547,41 +535,52 @@ stop_dial()
 	if [ -f "${MODEM_RUN_CONFIG}" ] && grep -q "${network}" "${MODEM_RUN_CONFIG}"; then
 		#该配置ID在运行，需要删除记录
 		sed -i "/${id}/d" "${MODEM_RUN_CONFIG}"
-	else
-		return 0
-	fi
 
-	#获取模块序号
-	get_modem_no "${network}"
+		#获取模块序号
+		get_modem_no "${network}"
 
-	#获取模组的拨号模式
-	[ -z "${modem_no}" ] && return 0
-	local mode=$(get_mode ${modem_no})
-	[ -z "$mode" ] || [ "$mode" = "unknown" ] && return
+		#获取模组的拨号模式
+		[ -z "${modem_no}" ] && return 0
+		local mode=$(get_mode ${modem_no})
+		[ -z "$mode" ] || [ "$mode" = "unknown" ] && return
 
-	#根据不同的拨号模式停止拨号
-	if [ "$mode" = "qmi" ]; then
-		stop_qmi
-	elif [ "$mode" = "gobinet" ]; then
-		stop_gobinet
-	elif [ "$mode" = "ecm" ]; then
-		stop_ecm
-	elif [ "$mode" = "mbim" ]; then
-		stop_mbim
-	elif [ "$mode" = "rndis" ]; then
-		stop_rndis
-	elif [ "$mode" = "ncm" ]; then
-		stop_ncm
+		#根据不同的拨号模式停止拨号
+		if [ "$mode" = "qmi" ]; then
+			stop_qmi
+		elif [ "$mode" = "gobinet" ]; then
+			stop_gobinet
+		elif [ "$mode" = "ecm" ]; then
+			stop_ecm
+		elif [ "$mode" = "mbim" ]; then
+			stop_mbim
+		elif [ "$mode" = "rndis" ]; then
+			stop_rndis
+		elif [ "$mode" = "ncm" ]; then
+			stop_ncm
+		fi
+
 	fi
 }
 
 dial()
 {
-	local enable #启用
-	local id #ID
+	local enable 	#启用
+	local id 		#ID
+	local delete 	#删除
 
 	config_get enable $1 enable
 	config_get id $1 id
+	config_get delete $1 delete
+
+	#删除拨号配置
+	[ "$delete" = "1" ] && {
+		stop_dial "$id"
+		uci -q del modem.${id}
+		uci commit modem
+		return 0
+	}
+
+	#停止拨号配置
 	[ "$enable" = "0" ] && {
 		stop_dial "$id"
 		return 0
@@ -621,20 +620,22 @@ dial()
 
 	#查看移动网络是否已经有配置在运行
 	mkdir -m 0755 -p "${MODEM_RUNDIR}"
-	if [ -f "${MODEM_RUN_CONFIG}" ]; then #文件存在
-		if grep -q "${network}" "${MODEM_RUN_CONFIG}"; then #是否记录该移动网络
-			local config_id=$(awk -v network="${network}" -F',' '!/^#/ && $0 ~ network { print $2 }' "${MODEM_RUN_CONFIG}")
-			#该移动网络已存在，且已有其他配置运行
-			if [ "$id" != "$config_id" ]; then
-				uci set modem.$1.enable=0
-				uci commit modem
-				return 0
-			fi
-		else
-			echo "${network},${id}" >> "${MODEM_RUN_CONFIG}"
-		fi
-	else
+	if [ ! -f "${MODEM_RUN_CONFIG}" ] || ! grep -q "${network}" "${MODEM_RUN_CONFIG}"; then
+		#文件不存在或者未记录该移动网络
 		echo "${network},${id}" >> "${MODEM_RUN_CONFIG}"
+
+		#获取网络接口
+		local network_interface=$(uci -q get modem.modem${modem_no}.network_interface)
+		#设置网络接口
+		set_interface "${modem_no}" "$network_interface"
+	else
+		local config_id=$(awk -v network="${network}" -F',' '!/^#/ && $0 ~ network { print $2 }' "${MODEM_RUN_CONFIG}")
+		#该移动网络已存在，且已有其他配置运行
+		if [ "$id" != "$config_id" ]; then
+			uci set modem.$1.enable=0
+			uci commit modem
+			return 0
+		fi
 	fi
 
 	#设置网络预设

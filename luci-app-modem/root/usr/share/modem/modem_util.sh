@@ -213,8 +213,15 @@ m_add_usb_id()
 
 	#如果已经添加则返回
 	grep -q "${manufacturer_id} ${product_id}" "${new_id_path}" && return
-	#添加ID
-	echo "${manufacturer_id} ${product_id}" >> "${new_id_path}"
+
+	while true; do
+		if [ -f "$new_id_path" ]; then
+			#添加ID
+			echo "${manufacturer_id} ${product_id}" >> "${new_id_path}"
+			break
+		fi
+		sleep 5s
+	done
 }
 
 #设置模组硬件配置

@@ -76,12 +76,6 @@ getMobileNetwork()
 
 --------advanced--------
 
--- 配置ID
-id = s:taboption("advanced", ListValue, "id", translate("Config ID"))
-id.rmempty = false
-id:value(arg[1])
--- uci:set('modem',arg[1],'id',arg[1])
-
 -- 拨号工具
 dial_tool = s:taboption("advanced", ListValue, "dial_tool", translate("Dial Tool"))
 dial_tool.description = translate("After switching the dialing tool, it may be necessary to restart the module or restart the router to recognize the module.")
@@ -135,5 +129,14 @@ password.password = true
 password:depends("auth", "both")
 password:depends("auth", "pap")
 password:depends("auth", "chap")
+
+-- 配置ID
+id = s:taboption("advanced", ListValue, "id", translate("Config ID"))
+id.rmempty = false
+id:value(arg[1])
+-- uci:set('modem',arg[1],'id',arg[1])
+
+-- 隐藏配置ID
+m:append(Template("modem/hide_dial_config_id"))
 
 return m

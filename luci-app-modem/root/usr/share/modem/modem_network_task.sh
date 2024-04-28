@@ -191,8 +191,8 @@ modem_network_task()
 
     #获取AT串口，制造商，平台，连接定义，接口名称
     local at_port=$(uci -q get modem.modem${modem_no}.at_port)
-	local manufacturer=$(uci -q get modem.modem${modem_no}.manufacturer)
-	local platform=$(uci -q get modem.modem${modem_no}.platform)
+    local manufacturer=$(uci -q get modem.modem${modem_no}.manufacturer)
+    local platform=$(uci -q get modem.modem${modem_no}.platform)
     local define_connect=$(uci -q get modem.modem${modem_no}.define_connect)
     local interface_name="wwan_5g_${modem_no}"
     local interface_name_ipv6="wwan6_5g_${modem_no}"
@@ -281,6 +281,7 @@ modem_network_task()
             #重新设置网络接口（广和通FM350-GL）
             if [ "$manufacturer" = "fibocom" ] && [ "$platform" = "mediatek" ]; then
                 reset_network_interface "${at_port}" "${define_connect}" "${modem_no}"
+                sleep 3s
             fi
 
             [ "$mode" != "modemmanager" ] && {

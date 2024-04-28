@@ -104,6 +104,70 @@
                 "data_interface":"usb",
                 "define_connect":"1",
                 "modes":["qmi","gobinet","ecm","mbim","rndis","ncm"]
+            },
+            "SRM815":{
+                "manufacturer_id":"2dee",
+                "manufacturer":"meig",
+                "platform":"qualcomm",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["qmi","gobinet","ecm","mbim","rndis"]
+            },
+            "SRM825":{
+                "manufacturer_id":"2dee",
+                "manufacturer":"meig",
+                "platform":"qualcomm",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["qmi","gobinet","ecm","mbim","rndis"]
+            },
+            "device":{
+                "quectel":{
+                    "unisoc":{
+                        "vendor_id":["2c7c"],
+                        "product_id":["6001","6002","6004","6005","6006","6007","0900","0901","0902","0903","0904"]
+                    },
+                    "qualcomm":{
+                        "vendor_id":["2c7c"],
+                        "product_id":["0121","0125","0191","0195","0296","0306","030b","0435","0452","0455","0512","0620","0800","0801"]
+                    },
+                    "mediatek":{
+                        "vendor_id":["2c7c"],
+                        "product_id":["0700","7001","7003"]
+                    }
+                },
+                "fibocom":{
+                    "unisoc":{
+                        "vendor_id":["2cb7","3c93","3763"],
+                        "product_id":["0a04","0a05","0a06","0a07","3c93","ffff"]
+                    },
+                    "qualcomm":{
+                        "vendor_id":["2cb7"],
+                        "product_id":["0104","0105","0106","0107","0108","0109","010A","010B","010F","0110","0111"]
+                    },
+                    "mediatek":{
+                        "vendor_id":["0e8d"],
+                        "product_id":["7126","7127"]
+                    }
+                },
+                "meig":{
+                    "unisoc":{
+                        "vendor_id":["2dee"],
+                        "product_id":["4d50","4d51","4d52","4d53"]
+                    },
+                    "qualcomm":{
+                        "vendor_id":["2dee","05c6"],
+                        "product_id":["4d22","4d23","4d38","4d45","f601"]
+                    },
+                    "hisilicon":{
+                        "vendor_id":["2dee","4d20"],
+                        "product_id":["7126","7127"]
+                    },
+                    "asrmicro":{
+                        "vendor_id":["2dee"],
+                        "product_id":["4d57","4d58","4d59"]
+                    }
+                }
             }
         },
         "pcie":{
