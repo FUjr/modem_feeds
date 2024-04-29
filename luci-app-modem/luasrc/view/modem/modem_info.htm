@@ -22,6 +22,65 @@ end
 		}
 	} */
 
+	.signal-view {
+		position: relative;
+		min-width: 11rem;
+		height: 1.5rem;
+		margin: 0 0;
+		border: thin solid #999;
+		background: #eee;
+		border-radius: 4px;
+		overflow: hidden;
+	}
+
+	.signal-percent {
+		width: 0;
+		height: 100%;
+		/* transition: width .25s ease-in; */
+		border-top-left-radius: 4px;
+		border-bottom-left-radius: 4px;
+		/* border-top-right-radius: 4px;
+    	border-bottom-right-radius: 4px; */
+	}
+
+	.signal-context{
+		font-family: monospace;
+		/* font-size: 1em; */
+		font-weight: bold;
+		font-size-adjust: .38;
+		line-height: 1.5rem;
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		overflow: hidden;
+		content: attr(title);
+		text-align: center;
+		white-space: pre;
+		text-overflow: ellipsis;
+		/* color:#000000; */
+	}
+
+	.signal-context small{
+		font-family: monospace;
+		/* font-size: 1em; */
+		font-weight: bold;
+		font-size-adjust: .38;
+		line-height: 1.5rem;
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		overflow: hidden;
+		content: attr(title);
+		text-align: center;
+		white-space: pre;
+		text-overflow: ellipsis;
+		/* color:#000000; */
+	}
+
 	table {
 		width: 100%;
   		border-spacing: 10px;
@@ -61,7 +120,6 @@ end
 
 		var rate_view;
 		if (mb>=1) {
-			console.log(mb);
 			rate_view=mb.toFixed(2)+" MB/s";
 		}
 		else if (kb>=1) {
@@ -188,216 +246,207 @@ end
 		return percent.toFixed(2);
 	}
 
-	// 获取参考信号接收功率（RSRP）的信息视图
-	function get_rsrp_info_view(network_type,value)
-	{
+	// 获取参考信号的信息视图
+	function get_signal_info_view(network_type,key,value) {
 		value=parseFloat(value);
-		var rsrp_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
+		var signal_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
 
+		// 获取参考信号接收功率（RSRP）的信息视图'
+		if (key=="RSRP") {
+			set_rsrp_info_view(network_type,value,signal_info_view);
+		}
+		else if (key=="RSRQ") {
+			set_rsrq_info_view(network_type,value,signal_info_view);
+		}
+		else if (key=="SINR") {
+			set_sinr_info_view(network_type,value,signal_info_view);
+		}
+		else if (key=="RxLev") {
+			set_rxlev_info_view(network_type,value,signal_info_view);
+		}
+		
+		//添加100%时候的样式
+		if (signal_info_view.percent==100) {
+			signal_info_view.style+="border-top-right-radius: 4px;border-bottom-right-radius: 4px;";
+		}
+
+		return signal_info_view;
+	}
+
+	// 获取参考信号接收功率（RSRP）的信息视图
+	function set_rsrp_info_view(network_type,value,signal_info_view)
+	{
 		// 获取百分比
-		var percent=100;
 		if (network_type.includes("NR"))
 		{
-			percent=get_percent(value,-153,31);
+			signal_info_view.percent=get_percent(value,-153,31);
 		}
 		else if (network_type.includes("LTE"))
 		{
-			percent=get_percent(value,-140,-44);
+			signal_info_view.percent=get_percent(value,-140,-44);
 		}
 		else if (network_type.includes("WCDMA"))
 		{
-			// percent=get_percent(value,-140,-44);
+			// signal_info_view.percent=get_percent(value,-140,-44);
 		}
 
 		// 获取样式
-		var quality="Unknown";
 		var color="gray";
 		if (value>=-70)
 		{
-			quality="Excellent";
+			signal_info_view.quality="Excellent";
 			color="limegreen";
 		}
 		else if (value>=-80&&value<-70)
 		{
-			quality="Good";
+			signal_info_view.quality="Good";
 			color="lime";
 		}
 		else if (value>=-90&&value<-80)
 		{
-			quality="Fair";
+			signal_info_view.quality="Fair";
 			color="gold";
 		}
 		else if (value<-90)
 		{
-			quality="Bad";
+			signal_info_view.quality="Bad";
 			color="red";
 		}
 
-		rsrp_info_view.percent=percent;
-		rsrp_info_view.quality=quality;
-		rsrp_info_view.style='width:'+rsrp_info_view.percent+'%;background-color: '+color+';';
-
-		return rsrp_info_view;
+		signal_info_view.style='width:'+signal_info_view.percent+'%;background-color: '+color+';';
 	}
 
 	// 获取参考信号接收质量（RSRQ）的信息视图
-	function get_rsrq_info_view(network_type,value)
+	function set_rsrq_info_view(network_type,value,signal_info_view)
 	{
-		value=parseFloat(value);
-		var rsrq_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
-
 		// 获取百分比
-		var percent=100;
 		if (network_type.includes("NR"))
 		{
-			percent=get_percent(value,-43,20);
+			signal_info_view.percent=get_percent(value,-43,20);
 		}
 		else if (network_type.includes("LTE"))
 		{
-			percent=get_percent(value,-19.5,-3);
+			signal_info_view.percent=get_percent(value,-19.5,-3);
 		}
 		else if (network_type.includes("WCDMA"))
 		{
-			// percent=get_percent(value,-19.5,-3);
+			// signal_info_view.percent=get_percent(value,-19.5,-3);
 		}
 
 		// 获取样式
-		var quality="Unknown";
 		var color="gray";
 		if (value>=-10)
 		{
-			quality="Excellent";
+			signal_info_view.quality="Excellent";
 			color="limegreen";
 		}
 		else if (value>=-15&&value<-10)
 		{
-			quality="Good";
+			signal_info_view.quality="Good";
 			color="lime";
 		}
 		else if (value>=-20&&value<-15)
 		{
-			quality="Fair";
+			signal_info_view.quality="Fair";
 			color="gold";
 		}
 		else if (value<-20)
 		{
-			quality="Bad";
+			signal_info_view.quality="Bad";
 			color="red";
 		}
 
-		rsrq_info_view.percent=percent;
-		rsrq_info_view.quality=quality;
-		rsrq_info_view.style='width:'+rsrq_info_view.percent+'%;background-color: '+color+';';
-
-		return rsrq_info_view;
+		signal_info_view.style='width:'+signal_info_view.percent+'%;background-color: '+color+';';
 	}
 
 	// 获取信噪比（SINR）的信息视图
-	function get_sinr_info_view(network_type,value)
+	function set_sinr_info_view(network_type,value,signal_info_view)
 	{
-		value=parseFloat(value);
-		var sinr_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
-
 		// 获取百分比
-		var percent=100;
 		if (network_type.includes("NR"))
 		{
-			percent=get_percent(value,-23,40);
+			signal_info_view.percent=get_percent(value,-23,40);
 		}
 		else if (network_type.includes("LTE"))
 		{
-			percent=get_percent(value,-20,-30);
+			signal_info_view.percent=get_percent(value,-20,-30);
 		}
 		else if (network_type.includes("WCDMA"))
 		{
-			// percent=get_percent(value,-20,-30);
+			// signal_info_view.percent=get_percent(value,-20,-30);
 		}
 
 		// 获取样式
-		var quality="Unknown";
 		var color="gray";
 		if (value>=25)
 		{
-			quality="Excellent";
+			signal_info_view.quality="Excellent";
 			color="limegreen";
 		}
 		else if (value>=15&&value<25)
 		{
-			quality="Good";
+			signal_info_view.quality="Good";
 			color="lime";
 		}
 		else if (value>=10&&value<15)
 		{
-			quality="Fair";
+			signal_info_view.quality="Fair";
 			color="gold";
 		}
 		else if (value<10)
 		{
-			quality="Bad";
+			signal_info_view.quality="Bad";
 			color="red";
 		}
 
-		sinr_info_view.percent=percent;
-		sinr_info_view.quality=quality;
-		sinr_info_view.style='width:'+sinr_info_view.percent+'%;background-color: '+color+';';
-
-		return sinr_info_view;
+		signal_info_view.style='width:'+signal_info_view.percent+'%;background-color: '+color+';';
 	}
 
 	// 获取接收信号功率（RxLev）的信息视图	
-	function get_rxlev_info_view(network_type,value)
+	function set_rxlev_info_view(network_type,value,signal_info_view)
 	{
-		value=parseFloat(value);
-		var sinr_info_view={percent:100,quality:"Unknown",style:"width:100.00%;background-color: gray;"};
-
 		// 获取百分比
-		var percent=100;
 		if (network_type.includes("NR"))
 		{
-			percent=get_percent(value,-153,31);
+			signal_info_view.percent=get_percent(value,-153,31);
 		}
 		else if (network_type.includes("LTE"))
 		{
-			percent=get_percent(value,-140,-44);
+			signal_info_view.percent=get_percent(value,-140,-44);
 		}
 		else if (network_type.includes("WCDMA"))
 		{
-			percent=get_percent(value,-120,-25);
+			signal_info_view.percent=get_percent(value,-120,-25);
 		}
 		else if (network_type.includes("GSM"))
 		{
-			percent=get_percent(value,-110,-48);
+			signal_info_view.percent=get_percent(value,-110,-48);
 		}
 
 		// 获取样式
-		var quality="Unknown";
 		var color="gray";
 		if (value>=-70)
 		{
-			quality="Excellent";
+			signal_info_view.quality="Excellent";
 			color="limegreen";
 		}
 		else if (value>=-80&&value<-70)
 		{
-			quality="Good";
+			signal_info_view.quality="Good";
 			color="lime";
 		}
 		else if (value>=-90&&value<-80)
 		{
-			quality="Fair";
+			signal_info_view.quality="Fair";
 			color="gold";
 		}
-		else if (value<-100)
+		else if (value<-90)
 		{
-			quality="Bad";
+			signal_info_view.quality="Bad";
 			color="red";
 		}
 
-		sinr_info_view.percent=percent;
-		sinr_info_view.quality=quality;
-		sinr_info_view.style='width:'+sinr_info_view.percent+'%;background-color: '+color+';';
-
-		return sinr_info_view;
+		signal_info_view.style='width:'+signal_info_view.percent+'%;background-color: '+color+';';
 	}
 
 	//获取小区信息视图
@@ -446,30 +495,35 @@ end
 
 						if (key=="RSRP")
 						{
-							var rsrp_info_view=get_rsrp_info_view(network_type,value);
-							value='<div class="cbi-progressbar" title="'+value+' dBm | '+translation[rsrp_info_view.quality]+' ('+rsrp_info_view.percent+'%)"><div style="'+rsrp_info_view.style+'"></div></div>';
+							var unit="dBm";
+							var signal_info_view=get_signal_info_view(network_type,"RSRP",value);
+							// value='<div class="cbi-progressbar" title="'+value+' dBm | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)"><div style="'+signal_info_view.style+'"></div></div>';
+							value='<div class="signal-view"><div class="signal-percent" style="'+signal_info_view.style+'"><div class="signal-context"><small title="'+value+' '+unit+' | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)"><div style="'+signal_info_view.style+'">'+value+' dB | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)</small></div></div></div>';
 						}
 						else if (key=="RxLev")
 						{
-							var rxlev_info_view=get_rxlev_info_view(network_type,value);
-							value='<div class="cbi-progressbar" title="'+value+' dBm | '+translation[rxlev_info_view.quality]+' ('+rxlev_info_view.percent+'%)"><div style="'+rxlev_info_view.style+'"></div></div>';
+							var unit="dBm";
+							var signal_info_view=get_signal_info_view(network_type,"RxLev",value);
+							value='<div class="signal-view"><div class="signal-percent" style="'+signal_info_view.style+'"><div class="signal-context"><small title="'+value+' '+unit+' | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)"><div style="'+signal_info_view.style+'">'+value+' dB | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)</small></div></div></div>';
 						}
 						else
 						{
 							value=value+" dBm";
 						}
 					}
-					else if (key=="RSRQ"||key=="SINR"||key=="RSSNR"||key=="Ec/Io") {
+					else if (key=="RSRQ"||key=="SINR"||key=="RSSNR"||key=="Srxlev"||key=="Ec/Io") {
 						
 						if (key=="RSRQ")
 						{
-							var rsrq_info_view=get_rsrq_info_view(network_type,value);
-							value='<div class="cbi-progressbar" title="'+value+' dB | '+translation[rsrq_info_view.quality]+' ('+rsrq_info_view.percent+'%)"><div style="'+rsrq_info_view.style+'"></div></div>';
+							var unit="dB";
+							var signal_info_view=get_signal_info_view(network_type,"RSRQ",value);
+							value='<div class="signal-view"><div class="signal-percent" style="'+signal_info_view.style+'"><div class="signal-context"><small title="'+value+' '+unit+' | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)"><div style="'+signal_info_view.style+'">'+value+' dB | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)</small></div></div></div>';
 						}
 						else if (key=="SINR")
 						{
-							var sinr_info_view=get_sinr_info_view(network_type,value);
-							value='<div class="cbi-progressbar" title="'+value+' dB | '+translation[sinr_info_view.quality]+' ('+sinr_info_view.percent+'%)"><div style="'+sinr_info_view.style+'"></div></div>';
+							var unit="dB";
+							var signal_info_view=get_signal_info_view(network_type,"SINR",value);
+							value='<div class="signal-view"><div class="signal-percent" style="'+signal_info_view.style+'"><div class="signal-context"><small title="'+value+' '+unit+' | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)"><div style="'+signal_info_view.style+'">'+value+' dB | '+translation[signal_info_view.quality]+' ('+signal_info_view.percent+'%)</small></div></div></div>';
 						}
 						else
 						{
@@ -477,9 +531,9 @@ end
 						}
 					}
 					else if (key=="SCS") {
-						value=value+" KHz";
+						value=value+" kHz";
 					}
-					cell_info_view+='<tr class="tr"><td class="td left" title="'+full_name+'">'+translation[key]+' ('+key+')</td><td class="td left" id="'+key+'">'+value+'</td></tr>';
+					cell_info_view+='<tr class="tr"><td class="td left" title="'+full_name+'">'+translation[key]+'</td><td class="td left" id="'+key+'">'+value+'</td></tr>';
 					break;
 				}
  			}

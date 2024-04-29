@@ -54,8 +54,9 @@ init_modem_info()
 	nr_rsrp=''
 	nr_rsrq=''
 	nr_sinr=''
-	nr_scs=''
 	nr_rxlev=''
+	nr_scs=''
+	nr_srxlev=''
 	#EN-DC模式（LTE）
 	endc_lte_mcc=''
 	endc_lte_mnc=''
@@ -71,9 +72,10 @@ init_modem_info()
 	endc_lte_rsrq=''
 	endc_lte_rssi=''
 	endc_lte_sinr=''
+	endc_lte_rxlev=''
 	endc_lte_cql=''
 	endc_lte_tx_power=''
-	endc_lte_rxlev=''
+	endc_lte_srxlev=''
 	#EN-DC模式（NR5G-NSA）
 	endc_nr_mcc=''
 	endc_nr_mnc=''
@@ -100,9 +102,10 @@ init_modem_info()
 	lte_rsrq=''
 	lte_rssi=''
 	lte_sinr=''
+	lte_rxlev=''
 	lte_cql=''
 	lte_tx_power=''
-	lte_rxlev=''
+	lte_srxlev=''
 	#WCDMA模式
 	wcdma_mcc=''
 	wcdma_mnc=''
@@ -198,8 +201,9 @@ set_cell_info()
 				{\"RSRP\":\"$nr_rsrp\", \"full_name\":\"Reference Signal Received Power\"},
 				{\"RSRQ\":\"$nr_rsrq\", \"full_name\":\"Reference Signal Received Quality\"},
 				{\"SINR\":\"$nr_sinr\", \"full_name\":\"Signal to Interference plus Noise Ratio Bandwidth\"},
+				{\"RxLev\":\"$nr_rxlev\", \"full_name\":\"Received Signal Level\"},
 				{\"SCS\":\"$nr_scs\", \"full_name\":\"SCS\"},
-				{\"RxLev\":\"$nr_rxlev\", \"full_name\":\"Received Signal Level\"}
+				{\"Srxlev\":\"$nr_srxlev\", \"full_name\":\"Serving Cell Receive Level\"}
 			]
 		}"
 	elif  [ "$network_mode" = "EN-DC Mode" ]; then
@@ -221,10 +225,11 @@ set_cell_info()
 						{\"RSRQ\":\"$endc_lte_rsrq\", \"full_name\":\"Reference Signal Received Quality\"},
 						{\"RSSI\":\"$endc_lte_rssi\", \"full_name\":\"Received Signal Strength Indicator\"},
 						{\"SINR\":\"$endc_lte_sinr\", \"full_name\":\"Signal to Interference plus Noise Ratio Bandwidth\"},
+						{\"RxLev\":\"$endc_lte_rxlev\", \"full_name\":\"Received Signal Level\"},
 						{\"RSSNR\":\"$endc_lte_rssnr\", \"full_name\":\"Radio Signal Strength Noise Ratio\"},
 						{\"CQI\":\"$endc_lte_cql\", \"full_name\":\"Channel Quality Indicator\"},
 						{\"TX Power\":\"$endc_lte_tx_power\", \"full_name\":\"TX Power\"},
-						{\"RxLev\":\"$endc_lte_rxlev\", \"full_name\":\"Received Signal Level\"}
+						{\"Srxlev\":\"$endc_lte_srxlev\", \"full_name\":\"Serving Cell Receive Level\"}
 					]
 				},
 
@@ -261,10 +266,11 @@ set_cell_info()
 				{\"RSRQ\":\"$lte_rsrq\", \"full_name\":\"Reference Signal Received Quality\"},
 				{\"RSSI\":\"$lte_rssi\", \"full_name\":\"Received Signal Strength Indicator\"},
 				{\"SINR\":\"$lte_sinr\", \"full_name\":\"Signal to Interference plus Noise Ratio Bandwidth\"},
+				{\"RxLev\":\"$lte_rxlev\", \"full_name\":\"RxLev\"},
 				{\"RSSNR\":\"$lte_rssnr\", \"full_name\":\"Radio Signal Strength Noise Ratio\"},
 				{\"CQI\":\"$lte_cql\", \"full_name\":\"Channel Quality Indicator\"},
 				{\"TX Power\":\"$lte_tx_power\", \"full_name\":\"TX Power\"},
-				{\"RxLev\":\"$lte_rxlev\", \"full_name\":\"RxLev\"}
+				{\"Srxlev\":\"$lte_srxlev\", \"full_name\":\"Serving Cell Receive Level\"}
 			]
 		}"
 	elif  [ "$network_mode" = "WCDMA Mode" ]; then

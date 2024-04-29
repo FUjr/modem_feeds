@@ -47,12 +47,6 @@ end
 function s.remove(uci, t)
     uci.map.proceed = true
     uci.map:del(t)
-
-    -- 获取模组数量
-    local modem_number=tonumber(uci.map:get("@global[0]","modem_number"))-1
-    -- 设置模组数量
-    uci.map:set("@global[0]","modem_number",modem_number)
-
     luci.http.redirect(d.build_url("admin", "network", "modem","plugin_config"))
 end
 

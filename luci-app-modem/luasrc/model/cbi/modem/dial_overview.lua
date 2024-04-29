@@ -1,5 +1,6 @@
 local d = require "luci.dispatcher"
 local uci = luci.model.uci.cursor()
+local sys  = require "luci.sys"
 
 m = Map("modem")
 m.title = translate("Dial Overview")
@@ -31,9 +32,7 @@ function s.create(uci, t)
 end
 function s.remove(uci, t)
     uci.map.proceed = true
-    -- 设置删除
-    uci.map:set(t,"delete","1")
-    -- uci.map:del(t)
+    uci.map:del(t)
     luci.http.redirect(d.build_url("admin", "network", "modem","dial_overview"))
 end
 

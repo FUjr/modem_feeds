@@ -36,7 +36,9 @@
 | 移远通信 | RM520N-CN                                          | 高通     | USB          | RMNET，ECM，MBIM，RNDIS，NCM |
 | 移远通信 | RM520N-GL                                          | 高通     | USB          | RMNET，ECM，MBIM，RNDIS，NCM |
 | 移远通信 | RM500Q-GL                                          | 高通     | PCIE         | RMNET，MBIM                  |
+| 移远通信 | RG500Q-EA                                          | 高通     | PCIE         | RMNET，MBIM                  |
 | 移远通信 | RM502Q-GL                                          | 高通     | PCIE         | RMNET，MBIM                  |
+| 移远通信 | RG520N-EU                                          | 高通     | PCIE         | RMNET，MBIM                  |
 | 广和通   | FM650-CN                                           | 紫光展锐 | USB          | ECM，MBIM，RNDIS，NCM        |
 | 广和通   | FM350-GL                                           | 联发科   | USB          | RNDIS                        |
 | 广和通   | FM150-AE-01，FM150-AE-11，FM150-AE-21，FM150-NA-01 | 高通     | USB          | RMNET，ECM，MBIM，RNDIS，NCM |

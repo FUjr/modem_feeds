@@ -35,6 +35,7 @@ function getMobileNetwork()
 		network:value("",translate("Mobile network not found"))
 	end
 
+	return
 	-- for i=0,modem_number-1 do
 	-- 	--获取模块名
 	-- 	local modem_name = uci:get('modem','modem'..i,'name')

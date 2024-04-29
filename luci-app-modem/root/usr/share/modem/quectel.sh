@@ -659,7 +659,7 @@ quectel_cell_info()
         endc_lte_sinr=$(echo "$lte" | awk -F',' '{print $15}')
         endc_lte_cql=$(echo "$lte" | awk -F',' '{print $16}')
         endc_lte_tx_power=$(echo "$lte" | awk -F',' '{print $17}')
-        endc_lte_rxlev=$(echo "$lte" | awk -F',' '{print $18}' | sed 's/\r//g')
+        endc_lte_srxlev=$(echo "$lte" | awk -F',' '{print $18}' | sed 's/\r//g')
         #NR5G-NSA
         endc_nr_mcc=$(echo "$nr5g_nsa" | awk -F',' '{print $2}')
         endc_nr_mnc=$(echo "$nr5g_nsa" | awk -F',' '{print $3}')
@@ -697,7 +697,7 @@ quectel_cell_info()
                 nr_sinr=$(echo "$response" | awk -F',' '{print $15}')
                 nr_scs_num=$(echo "$response" | awk -F',' '{print $16}')
                 nr_scs=$(quectel_get_scs $nr_scs_num)
-                nr_rxlev=$(echo "$response" | awk -F',' '{print $17}' | sed 's/\r//g')
+                nr_srxlev=$(echo "$response" | awk -F',' '{print $17}' | sed 's/\r//g')
             ;;
             "LTE"|"CAT-M"|"CAT-NB")
                 network_mode="LTE Mode"
@@ -720,7 +720,7 @@ quectel_cell_info()
                 lte_sinr=$(echo "$response" | awk -F',' '{print $17}')
                 lte_cql=$(echo "$response" | awk -F',' '{print $18}')
                 lte_tx_power=$(echo "$response" | awk -F',' '{print $19}')
-                lte_rxlev=$(echo "$response" | awk -F',' '{print $20}' | sed 's/\r//g')
+                lte_srxlev=$(echo "$response" | awk -F',' '{print $20}' | sed 's/\r//g')
             ;;
             "WCDMA")
                 network_mode="WCDMA Mode"

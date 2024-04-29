@@ -395,109 +395,112 @@ msgid "WCDMA Mode"
 msgstr "WCDMA 模式"
 
 msgid "MCC"
-msgstr "移动国家代码"
+msgstr "移动国家代码 (MCC)"
 
 msgid "MNC"
-msgstr "移动网络代码"
+msgstr "移动网络代码 (MNC)"
 
 msgid "Duplex Mode"
-msgstr "双工模式"
+msgstr "双工模式 (Duplex Mode)"
 
 msgid "LAC"
-msgstr "位置区码"
+msgstr "位置区码 (LAC)"
 
 msgid "Cell ID"
-msgstr "小区ID"
+msgstr "小区ID (Cell ID)"
 
 msgid "Physical Cell ID"
-msgstr "物理小区ID"
+msgstr "物理小区ID (Physical Cell ID)"
 
 msgid "TAC"
-msgstr "跟踪区编码"
+msgstr "跟踪区编码 (TAC)"
 
 msgid "ARFCN"
-msgstr "绝对射频信道号"
+msgstr "绝对射频信道号 (ARFCN)"
 
 msgid "EARFCN"
-msgstr "E-UTRA绝对射频信道号"
+msgstr "E-UTRA绝对射频信道号 (EARFCN)"
 
 msgid "UARFCN"
-msgstr "UTRA绝对射频信道号"
+msgstr "UTRA绝对射频信道号 (UARFCN)"
 
 msgid "Band"
-msgstr "频段"
+msgstr "频段 (Band)"
 
 msgid "Freq band indicator"
-msgstr "频带指示"
+msgstr "频带指示 (Freq band indicator)"
 
 msgid "UL Bandwidth"
-msgstr "上行带宽"
+msgstr "上行带宽 (UL Bandwidth)"
 
 msgid "DL Bandwidth"
-msgstr "下行带宽"
+msgstr "下行带宽 (DL Bandwidth)"
 
 msgid "RSRP"
-msgstr "参考信号接收功率"
+msgstr "参考信号接收功率 (RSRP)"
 
 msgid "RSRQ"
-msgstr "参考信号接收质量"
+msgstr "参考信号接收质量 (RSRQ)"
 
 msgid "RSSI"
-msgstr "接收信号强度指示"
+msgstr "接收信号强度指示 (RSSI)"
 
 msgid "SINR"
-msgstr "信号与干扰加噪声比"
-
-msgid "RSSNR"
-msgstr "信号干扰比"
-
-msgid "SCS"
-msgstr "NR子载波间隔"
-
-msgid "CQI"
-msgstr "信道质量指示"
-
-msgid "TX Power"
-msgstr "TX 功率"
-
-msgid "PSC"
-msgstr "主扰码"
-
-msgid "RAC"
-msgstr "路由区域码"
-
-msgid "RSCP"
-msgstr "接收信号码功率"
-
-msgid "每比特能量与干扰功率密度(干扰比)之比"
-msgstr "Eb/Io"
-
-msgid "每比特能量与噪声功率密度(噪声比)之比"
-msgstr "Eb/No"
-
-msgid "每码片能量与干扰功率密度(干扰比)之比"
-msgstr "Ec/Io"
-
-msgid "每码片能量与噪声功率密度(噪声比)之比"
-msgstr "Ec/No"
-
-msgid "Physical Channel"
-msgstr "物理信道"
-
-msgid "Spreading Factor"
-msgstr "扩频因子"
-
-msgid "Slot"
-msgstr "插槽格式"
-
-msgid "Speech Code"
-msgstr "语音编码"
-
-msgid "Compression Mode"
-msgstr "压缩模式"
+msgstr "信号与干扰加噪声比 (SINR)"
 
 msgid "RxLev"
-msgstr "接收信号功率"
+msgstr "接收信号功率 (RxLev)"
+
+msgid "RSSNR"
+msgstr "信号干扰比 (RSSNR)"
+
+msgid "SCS"
+msgstr "NR子载波间隔 (SCS)"
+
+msgid "CQI"
+msgstr "信道质量指示 (CQI)"
+
+msgid "TX Power"
+msgstr "TX 功率 (TX Power)"
+
+msgid "Srxlev"
+msgstr "服务小区接收信号功率 (Srxlev)"
+
+msgid "PSC"
+msgstr "主扰码 (PSC)"
+
+msgid "RAC"
+msgstr "路由区域码 (RAC)"
+
+msgid "RSCP"
+msgstr "接收信号码功率 (RSCP)"
+
+msgid "Eb/Io"
+msgstr "每比特能量与干扰功率密度(干扰比)之比"
+
+msgid "Eb/No"
+msgstr "每比特能量与噪声功率密度(噪声比)之比"
+
+msgid "Ec/Io"
+msgstr "每码片能量与干扰功率密度(干扰比)之比"
+
+msgid "Ec/No"
+msgstr "每码片能量与噪声功率密度(噪声比)之比"
+
+msgid "Physical Channel"
+msgstr "物理信道 (Physical Channel)"
+
+msgid "Spreading Factor"
+msgstr "扩频因子 (Spreading Factor)"
+
+msgid "Slot"
+msgstr "插槽格式 (Slot)"
+
+msgid "Speech Code"
+msgstr "语音编码 (Speech Code)"
+
+msgid "Compression Mode"
+msgstr "压缩模式 (Compression Mode)"
 
 msgid "CHN-CMCC"
 msgstr "中国移动"
@@ -536,16 +539,16 @@ msgid "46011"
 msgstr "中国电信"
 
 msgid "Excellent"
-msgstr "非常好"
+msgstr "优秀"
 
 msgid "Good"
-msgstr "好"
+msgstr "良好"
 
 msgid "Fair"
 msgstr "一般"
 
 msgid "Bad"
-msgstr "差"
+msgstr "较差"
 
 msgid "Plugin Config"
 msgstr "插件配置"
@@ -562,8 +565,8 @@ msgstr "扫描"
 msgid "Scaning modem..."
 msgstr "正在扫描中..."
 
-msgid "The automatic configuration modem is triggered only at startup, otherwise, manual scanning is necessary"
-msgstr "自动配置模组只有在启动的时候才会触发，其他情况需要手动点击扫描"
+msgid "The automatic configuration modem is triggered only at modem startup, otherwise, manual scanning is necessary"
+msgstr "自动配置模组只有在模组启动的时候才会触发，其他情况需要手动点击扫描"
 
 msgid "Manual Configuration"
 msgstr "手动配置"
@@ -572,7 +575,7 @@ msgid "Enable the manual configuration of modem information"
 msgstr "启用手动配置模组信息"
 
 msgid "(After enable, the automatic scanning and configuration function for modem information will be disabled)"
-msgstr "（启用后将禁用自动扫描配置模组信息功能）"
+msgstr "（启用后将禁用自动扫描并配置模组信息功能）"
 
 msgid "Plugin Info"
 msgstr "插件信息"

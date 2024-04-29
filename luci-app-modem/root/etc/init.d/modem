@@ -197,9 +197,28 @@ set_interface()
 	esac
 }
 
+#设置移远模组MAC地址
+set_quectel_mac()
+{
+	local mac_address="$(cat /sys/class/net/${network}/address)"
+	local null_mac="00:00:00:00:00:00"
+	[ -z "$mac_address" ] || [ "$mac_address" = "$null_mac" ] && {
+		#方法一（lua）
+		# local mac_address=$(lua -e 'math.randomseed(os.time()); for i=1,6 do io.write(string.format("%02X", math.random(0, 255))); if i < 6 then io.write(":") end; end')
+		#方法二（shell）
+		mac_address="$(generate_mac_address)"
+		ifconfig "${network}" hw ether "${mac_address}"
+	}
+}
+
 #移远拨号工具
 quectel_cm()
 {
+	#获取制造商
+	local manufacturer=$(uci -q get modem.modem${modem_no}.manufacturer)
+	#移远500系列模组特殊处理（解决在6.x内核下缺失MAC地址使用制造商驱动导致拨号异常问题）
+	[ "$manufacturer" = "quectel" ] && set_quectel_mac
+	
 	#拨号
 	procd_open_instance
 	procd_set_param command "quectel-CM"
@@ -566,19 +585,9 @@ dial()
 {
 	local enable 	#启用
 	local id 		#ID
-	local delete 	#删除
 
 	config_get enable $1 enable
 	config_get id $1 id
-	config_get delete $1 delete
-
-	#删除拨号配置
-	[ "$delete" = "1" ] && {
-		stop_dial "$id"
-		uci -q del modem.${id}
-		uci commit modem
-		return 0
-	}
 
 	#停止拨号配置
 	[ "$enable" = "0" ] && {
@@ -618,7 +627,7 @@ dial()
 		sleep 5s
     done
 
-	#查看移动网络是否已经有配置在运行
+	#查看该移动网络是否已经有拨号配置在运行
 	mkdir -m 0755 -p "${MODEM_RUNDIR}"
 	if [ ! -f "${MODEM_RUN_CONFIG}" ] || ! grep -q "${network}" "${MODEM_RUN_CONFIG}"; then
 		#文件不存在或者未记录该移动网络
@@ -630,7 +639,7 @@ dial()
 		set_interface "${modem_no}" "$network_interface"
 	else
 		local config_id=$(awk -v network="${network}" -F',' '!/^#/ && $0 ~ network { print $2 }' "${MODEM_RUN_CONFIG}")
-		#该移动网络已存在，且已有其他配置运行
+		#该移动网络已存在，且已有其他拨号配置在运行
 		if [ "$id" != "$config_id" ]; then
 			uci set modem.$1.enable=0
 			uci commit modem
@@ -726,6 +735,44 @@ manual_set_modem_config()
 	uci commit modem
 }
 
+#删除拨号配置
+del_dial_config()
+{
+	#运行配置是否存在
+	if [ -f "${MODEM_RUN_CONFIG}" ]; then
+
+		local configs=$(cat ${MODEM_RUN_CONFIG})
+		for config in $configs; do
+			#设置标志位
+			local flag="0"
+			local id=$(echo "$config" | awk -F',' '{print $2}')
+
+			local config_number=2
+			for i in $(seq 0 $((config_number-1))); do
+				local config_id=$(uci -q get modem.@dial-config[${i}].id)
+				[ "$config_id" = "$id" ] && {
+					flag="1"
+				}
+			done
+
+			#删除运行配置
+			[ "$flag" = "0" ] && {
+				sed -i "/${id}/d" "${MODEM_RUN_CONFIG}"
+			}
+		done
+	fi
+}
+
+#统计模组数量
+count_modem_number()
+{
+	local network	#移动网络
+
+	config_get network $1 network
+
+	modem_count=$((modem_count+1))
+}
+
 service_triggers()
 {
 	procd_add_reload_trigger "modem"
@@ -736,11 +783,20 @@ start_service() {
 	if [ "$enable_dial" = "0" ]; then
 		stop_service
 	else
-
 		#加载模组配置
 		config_load modem
 		#手动设置模组信息
 		config_foreach manual_set_modem_config "modem-device"
+
+		#统计模组数量
+		modem_count=0
+		config_foreach count_modem_number "modem-device"
+		#设置模组数量
+		uci set modem.@global[0].modem_number=${modem_count}
+		uci commit modem
+
+		#删除拨号配置
+		del_dial_config
 		#加载拨号配置
 		config_foreach dial "dial-config"
 	fi

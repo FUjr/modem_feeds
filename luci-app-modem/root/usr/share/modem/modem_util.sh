@@ -24,6 +24,23 @@ m_log()
 	logger -p "daemon.${level}" -t "Modem[$$]" "hotplug: $*"
 }
 
+#生成16进制数
+generate_hex() {
+	echo "$(openssl rand -hex 1)"
+}
+
+#生成随机MAC地址
+generate_mac_address() {
+	local mac=""
+	for i in $(seq 1 6); do
+	  	mac="${mac}$(generate_hex)"
+		if [[ $i != 6 ]]; then
+			mac="${mac}:"
+		fi
+	done
+	echo "$mac"
+}
+
 #上报USB事件
 # $1:事件行为（add，remove，bind）
 # $2:类型
@@ -336,6 +353,20 @@ m_set_usb_device()
 	fi
 }
 
+#处理特殊的模组名称
+# $1:模组名称
+handle_special_modem_name()
+{
+	local modem_name="$1"
+
+	#FM350-GL-00 5G Module
+	[[ "$modem_name" = *"fm350-gl"* ]] && {
+		modem_name="fm350-gl"
+	}
+
+	echo "$modem_name"
+}
+
 #重新尝试设置模组
 # $1:模组序号
 # $2:AT串口
@@ -358,21 +389,22 @@ retry_set_modem_config()
 		local at_command="AT+CGMM?"
 		local modem_name=$(at ${at_port} ${at_command} | grep "+CGMM: " | awk -F'"' '{print $2}' | tr 'A-Z' 'a-z')
 
+		#再一次获取模组名称
 		[ -z "$modem_name" ] && {
 			at_command="AT+CGMM"
 			modem_name=$(at ${at_port} ${at_command} | sed -n '2p' | sed 's/\r//g' | tr 'A-Z' 'a-z')
 		}
 
+		#处理特殊的模组名称
 		[ -n "$modem_name" ] && {
+			modem_name="$(handle_special_modem_name ${modem_name})"
+		}
 
-			#特殊处理FM350-GL-00 5G Module
-			[[ "$modem_name" = *"fm350-gl"* ]] && {
-				modem_name="fm350-gl"
-			}
-
-			#获取模组信息
-			local data_interface=$(uci -q get modem.modem${modem_no}.data_interface)
-			local modem_info=$(echo ${modem_support} | jq '.modem_support.'$data_interface'."'$modem_name'"')
+		#获取模组信息
+		local data_interface=$(uci -q get modem.modem${modem_no}.data_interface)
+		local modem_info=$(echo ${modem_support} | jq '.modem_support.'$data_interface'."'$modem_name'"')
+		
+		[ -n "$modem_name" ] && [ "$modem_info" != "null" ] && {
 
 			#获取制造商
 			local manufacturer=$(echo ${modem_info} | jq -r '.manufacturer')

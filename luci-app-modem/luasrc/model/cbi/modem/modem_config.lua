@@ -18,22 +18,42 @@ end
 
 --[[
 @Description 获取支持的模组信息
+@Params
+	data_interface 数据接口
 ]]
-function getSupportModems()
+function getSupportModems(data_interface)
 	local command="cat "..script_path.."modem_support.json"
 	local result=json.parse(shell(command))
-	return result["modem_support"]["usb"]
+	return result["modem_support"][data_interface]
 end
 
 --[[
 @Description 按照制造商给模组分类
-@Params
-	support_modem 支持的模组
 ]]
-function getManufacturers(support_modem)
+function getManufacturers()
 
 	local manufacturers={}
+	
+	-- 获取支持的模组
+	local support_modem=getSupportModems("usb")
+	-- USB
+	for modem in pairs(support_modem) do
 
+		local manufacturer=support_modem[modem]["manufacturer"]
+		if manufacturers[manufacturer] then
+			-- 直接插入
+			table.insert(manufacturers[manufacturer],modem)
+		else
+			-- 不存在先创建一个空表
+			local tmp={}
+			table.insert(tmp,modem)
+			manufacturers[manufacturer]=tmp
+		end
+	end
+
+	-- 获取支持的模组
+	local support_modem=getSupportModems("pcie")
+	-- PCIE
 	for modem in pairs(support_modem) do
 
 		local manufacturer=support_modem[modem]["manufacturer"]
@@ -103,10 +123,8 @@ name = s:option(ListValue, "name", translate("Modem Name"))
 name.placeholder = translate("Not Null")
 name.rmempty = false
 
--- 获取支持的模组
-local support_modem=getSupportModems()
 -- 按照制造商给模组分类
-local manufacturers=getManufacturers(support_modem)
+local manufacturers=getManufacturers()
 
 for key in pairs(manufacturers) do
 	local modems=manufacturers[key]
