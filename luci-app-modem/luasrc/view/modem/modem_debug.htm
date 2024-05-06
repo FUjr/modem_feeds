@@ -46,6 +46,7 @@
 
 		}
 
+
 		//设置标签菜单事件
 		function set_tab_event(parent_element) {
 			
@@ -55,6 +56,8 @@
 			for (var i = 0; i < childElements.length; i++) {
 				childElements[i].addEventListener('click', function (event) {
 					tab_event(this);
+					//remove_dont_edit_flag
+					document.getElementById("tab_menu").removeAttribute("dont_edit");
 					var debug_params = { first_cache: true };
 					get_modem_debug_info(debug_params);
 				});
@@ -399,8 +402,9 @@
 
 			//设置当前拨号模式
 			document.getElementById('current_mode').innerHTML = current_mode_view;
-
-			if (first_cache) {
+			dont_edit_flag = document.getElementById("tab_menu").getAttribute("dont_edit");
+			if (dont_edit_flag == null) {
+				document.getElementById("tab_menu").setAttribute("dont_edit", "true");
 				//设置支持的拨号模式
 				var mode_option_view = '';
 				for (mode of modes) {
@@ -416,8 +420,6 @@
 				//设置拨号模式选项
 				element = document.getElementById('mode_option_' + current_mode).checked = true;
 
-				//设置第一次获取数据标志
-				first_cache = false;
 			}
 		}
 
@@ -469,21 +471,18 @@
 
 			//获取偏好视图
 			var current_prefer_view = get_current_prefer_view(network_prefer);
-
-			//设置偏好选项和复选框
-			if (first_cache) {
-					//更新偏好配置
-					for (key in network_prefer) {
+			dont_edit_flag = document.getElementById("tab_menu").getAttribute("dont_edit");
+			if (dont_edit_flag == null) {
+				document.getElementById("tab_menu").setAttribute("dont_edit", "true");
+				for (key in network_prefer) {
 						//设置偏好配置
 						var prefer_config_element = document.getElementById('prefer_config_' + key.toLowerCase());
 						if (prefer_config_element != null) {
 							prefer_config_element.checked = network_prefer[key];
 						}
 					}
-				}
-
-				//设置第一次获取数据标志
-				first_cache = false;
+				
+			}
 			}
 
 		function set_lockband_info(lockband_info, first_cache) {
@@ -495,7 +494,8 @@
 
 			//设置偏好选项和复选框
 			if (first_cache) {
-				for (key in avalible_lockband) {
+				sortted_keys = Object.keys(avalible_lockband).sort();
+				for (key of sortted_keys) {
 					id = "lockband_config_" + key;
 					checkbox_get = document.getElementById(id);
 					if (checkbox_get == null) {
@@ -595,6 +595,7 @@
 		// 设置网络偏好
 		function set_network_prefer() {
 			//禁用功能
+			
 			disabled_function("network_prefer", true);
 
 			//获取选中的模组
@@ -603,10 +604,11 @@
 			//获取偏好配置
 			var network_prefer_config = {};
 			var checkboxes = document.getElementById('prefer_custom_config').querySelectorAll('input[type="checkbox"]');
-			for (checkbox of checkboxes) {
-				network_prefer_config[checkbox.value.toUpperCase()] = Number(checkbox.checked);
-			}
-		
+
+				for (checkbox of checkboxes) {
+					network_prefer_config[checkbox.value.toUpperCase()] = Number(checkbox.checked);
+				}
+
 			//设置偏好
 			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_network_prefer")%>', { "port": at_port, "prefer_config": network_prefer_config },
 				function (x, data) {
@@ -650,7 +652,6 @@
 						if (checkbox_get == null) {
 							checkbox_span = document.createElement('span');
 							checkbox_span.className = "cbi-checkbox";
-
 							checkbox = document.createElement('input');
 							checkbox.id = "lockband_config_" + key;
 							checkbox.name = "lockband_option";
@@ -711,7 +712,6 @@
 						if (Object.keys(network_prefer_info).length == 0) {
 							return false
 						}
-
 						//设置网络偏好信息
 						set_network_prefer_info(network_prefer_info, debug_params.first_cache);
 					}
@@ -744,57 +744,6 @@
 			}
 		}
 
-		function unlock_cell() {
-			var at_port = document.getElementById("modem_select").value;
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "lock": "0" },
-				function (x, data) {
-					console.log(data["response"]);
-					update_cell_config();
-				}
-			);
-
-		}
-
-		function lock_current_cell() {
-			var at_port = document.getElementById("modem_select").value;
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "lock": "3" },
-				function (x, data) {
-					console.log(data["response"]);
-					update_cell_config();
-				}
-			);
-
-		}
-
-		function lock_pci() {
-			var at_port = document.getElementById("modem_select").value;
-			var pci = document.getElementById("pci_input").value;
-			var arfcn = document.getElementById("arfcn_input").value;
-			var rat = document.getElementById("rat_select").value;
-			var scs = document.getElementById("scs_select").value;
-			var nrband = document.getElementById("nrband_input").value;
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "lock": "1", "pci": pci, "arfcn": arfcn, "celltype": rat , "scs": scs, "nrband": nrband},
-				function (x, data) {
-					console.log(data["response"]);
-					update_cell_config();
-				}
-			);
-
-		}
-
-		function lock_arfcn() {
-			var at_port = document.getElementById("modem_select").value;
-			var arfcn = document.getElementById("arfcn_input").value;
-			var rat = document.getElementById("rat_select").value;
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "lock": "2", "arfcn": arfcn, "celltype": rat },
-				function (x, data) {
-					console.log(data["response"]);
-					update_cell_config();
-				}
-			);
-
-		}
-
 		// 更新neighbor cell信息
 		function update_cell_config() {
 			function onclick_copy_fun_gen(cellinfo) {
@@ -819,51 +768,77 @@
 						neighbor_cell_info.removeChild(neighbor_cell_info.firstChild);
 					}
 					//add new child nodes
-					lte_cell = data["LTE"];
-					nr_cell = data["NR"];
+					lockcell_feature = data["Feature"];
+					//render feature button
+					lockcell_feature_div = document.getElementById('lockcell_feature');
+					for (key in lockcell_feature) {
+						v = lockcell_feature[key];
+						feature_button_id = "lockcell_feature_" + v;
+						if (document.getElementById(feature_button_id) != null) {
+							continue;
+						}
+						feature_button = document.createElement('input');
+						feature_button.type = "button";
+						feature_button.id = feature_button_id;
+						feature_button.value = key;
+						feature_button.className = "cbi-button-apply";
+						console.log("key:" + key + " feature:" + v)
+						feature_button.onclick = function () {
+							var at_port = document.getElementById("modem_select").value;
+							var pci = document.getElementById("pci_input").value;
+							var arfcn = document.getElementById("arfcn_input").value;
+							var rat = document.getElementById("rat_select").value;
+							var scs = document.getElementById("scs_select").value;
+							var nrband = document.getElementById("nrband_input").value;
+							XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "func": this.id.replace("lockcell_feature_",""), "pci": pci, "arfcn": arfcn, "celltype": rat, "scs": scs, "nrband": nrband},
+								function (x, data) {
+									console.log(data["response"]);
+									update_cell_config();
+								}
+							);
+						};
+						lockcell_feature_div.appendChild(feature_button);
+					}
+					
 					lockcell_status = data["lockcell_status"];
-					for (cell of lte_cell) {
-						cell['rat'] = "0";
-						cell_tr = document.createElement('tr');
-						cell_tr.className = "tr";
-						cell_td_left = document.createElement('td');
-						cell_td_left.className = "td";
-						cell_td_left.innerHTML = `RAT: LTE PCI:${cell['pci']} ARFCN:${cell['arfcn']} RSRP:${cell['rsrp']} RSRQ:${cell['rsrq']} `;
-						cell_td_right = document.createElement('td');
-						cell_td_right.className = "td";
-						copy_botton = document.createElement('input');
-						copy_botton.type = "button";
-						copy_botton.innerHTML = "Copy";
-						copy_botton.className = "cbi-button";
-						copy_botton.value = "Copy";
-
-						copy_botton.onclick = onclick_copy_fun_gen(cell);
-						cell_td_right.appendChild(copy_botton);
-						cell_tr.appendChild(cell_td_left);
-						cell_tr.appendChild(cell_td_right);
-						neighbor_cell_info.appendChild(cell_tr);
+					neighbor_cells = {
+						"LTE" : data["LTE"],
+						"NR" : data["NR"]
 					}
-					for (cell of nr_cell) {
-						cell['rat'] = "1";
-						cell_tr = document.createElement('tr');
-						cell_tr.className = "tr";
-						cell_td_left = document.createElement('td');
-						cell_td_left.className = "td";
-						cell_td_left.innerHTML = `RAT: LTE PCI:${cell['pci']} ARFCN:${cell['arfcn']} RSRP:${cell['rsrp']} RSRQ:${cell['rsrq']} `;
-						cell_td_right = document.createElement('td');
-						cell_td_right.className = "td";
-						copy_botton = document.createElement('input');
-						copy_botton.type = "button";
-						copy_botton.innerHTML = "Copy";
-						copy_botton.className = "cbi-button";
-						copy_botton.value = "Copy";
+					for (type in neighbor_cells) {
+						for (cell_info of neighbor_cells[type]) {
+							
+							rat = type == "LTE" ? 0 : 1;
+							cell_info["rat"] = rat;
+							innerHTML = `RAT:${type} `
+							console.log(innerHTML)
+							for (cell_info_key in cell_info){
+								if (cell_info[cell_info_key] == "") {
+									continue
+								}
+								innerHTML += `${cell_info_key}:${cell_info[cell_info_key]} `
+							}
+							cell_tr = document.createElement('tr');
+							cell_tr.className = "tr";
+							cell_td_left = document.createElement('td');
+							cell_td_left.className = "td";
+							cell_td_left.innerHTML = innerHTML;
+							cell_td_right = document.createElement('td');
+							cell_td_right.className = "td";
+							copy_botton = document.createElement('input');
+							copy_botton.type = "button";
+							copy_botton.innerHTML = "Copy";
+							copy_botton.className = "cbi-button";
+							copy_botton.value = "Copy";
 
-						copy_botton.onclick = onclick_fun_gen(cell);
-						cell_td_right.appendChild(copy_botton);
-						cell_tr.appendChild(cell_td_left);
-						cell_tr.appendChild(cell_td_right);
-						neighbor_cell_info.appendChild(cell_tr);
+							copy_botton.onclick = onclick_copy_fun_gen(cell_info);
+							cell_td_right.appendChild(copy_botton);
+							cell_tr.appendChild(cell_td_left);
+							cell_tr.appendChild(cell_td_right);
+							neighbor_cell_info.appendChild(cell_tr);
+						}
 					}
+					
 					lockcell_status_div = document.getElementById('current_cell_status');
 					childElements = lockcell_status_div.childNodes;
 					keys = Object.keys(lockcell_status);
@@ -1341,15 +1316,15 @@
 								<%:Submit%>
 							</td>
 							<td class="td left">
-								<div>
-									<input class="cbi-button cbi-button-apply" type="button" value="<%:Unlock Cell%>"
+								<div id="lockcell_feature">
+									<!-- <input class="cbi-button cbi-button-apply" type="button" value="<%:Unlock Cell%>"
 										onclick="unlock_cell()" alt="<%:Unlock Cell%>" title="<%:Unlock Cell%>">
 									<input class="cbi-button cbi-button-apply" type="button" value="<%:Lock Current%>"
 										onclick="lock_current_cell()" alt="<%:Lock Current%>" title="<%:Lock Current%>">
 									<input class="cbi-button cbi-button-reset" type="button" value="<%:Lock PCI%>"
 										onclick="lock_pci()" alt="<%:Lock PCI%>" title="<%:Lock PCI%>">
 									<input class="cbi-button cbi-button-reset" type="button" value="<%:Lock ARFCN%>"
-										onclick="lock_arfcn()" alt="<%:Lock ARFCN%>" title="<%:Lock ARFCN%>">
+										onclick="lock_arfcn()" alt="<%:Lock ARFCN%>" title="<%:Lock ARFCN%>"> -->
 								</div>
 							</td>
 						</tr>

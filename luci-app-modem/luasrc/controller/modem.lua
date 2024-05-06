@@ -655,38 +655,21 @@ end
 function setLockCell()
 	local at_port = http.formvalue("port")
 	local manufacturer = getManufacturer(at_port)
-	local pci = http.formvalue("pci")
-	local arfcn = http.formvalue("arfcn") 
-	local scs = http.formvalue("scs") --0:15KHz 1:30KHz 2:60KHz
-	local nrband = http.formvalue("nrband")
-	local celltype = http.formvalue("celltype") --0:LTE 1:NR
-	local lock = http.formvalue("lock") --0:unlock 1:lock_pci 2:lock_arfcn 3:lock_self
+	local func = http.formvalue("func") 
+	local pci = http.formvalue("pci") == nil and 0 or http.formvalue("pci")
+	local arfcn = http.formvalue("arfcn")  == nil and 0 or http.formvalue("arfcn")
+	local scs = http.formvalue("scs") == nil and 0 or http.formvalue("scs")
+	local nrband = http.formvalue("nrband") == nil and 0 or http.formvalue("nrband")
+	local celltype = http.formvalue("celltype") == nil and 0 or http.formvalue("celltype")
 	response={}
-	if (lock == "0") then
-		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_unlockcell "..at_port
-		local result=shell(command)
-		response["response"]=result
-		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
-		response["lock"]=0
-	elseif (lock == "1") then
-		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_lockpci "..at_port.." "..celltype.." "..arfcn.." "..pci.." "..scs.." "..nrband
-		local result=shell(command)
-		response["response"]=result
-		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
-		response["lock"]="pci"
-	elseif (lock == "2") then
-		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_lockarfcn "..at_port.." "..celltype.." "..arfcn
-		local result=shell(command)
-		response["response"]=result
-		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
-		response["lock"]="arfcn"
-	elseif (lock == "3") then
-		local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_lockcurrent "..at_port
-		local result=shell(command)
-		response["response"]=result
-		response["time"]=os.date("%Y-%m-%d %H:%M:%S")
-		response["lock"]="self"
-	end
+
+	local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_setlockcell "..at_port.." "..func .."  "..celltype.." "..arfcn.." "..pci.." "..scs.." "..nrband
+	local command=string.format("source %s%s.sh && %s_setlockcell \"%s\" \"%s\" \"%s\" \"%s\" \"%s\" \"%s\" \"%s\"",script_path,manufacturer,manufacturer,at_port,func,celltype,arfcn,pci,scs,nrband)
+	local result=shell(command)
+	response["response"]=result
+	response["time"]=os.date("%Y-%m-%d %H:%M:%S")
+	response["lock"]="pci"
+
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(response)
 end

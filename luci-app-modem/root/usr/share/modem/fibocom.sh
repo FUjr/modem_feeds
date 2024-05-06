@@ -636,6 +636,13 @@ fibocom_get_neighborcell()
     get_lockcell_command="AT+GTCELLLOCK?"
     cell_type="undefined"
     json_init
+    json_add_object "Feature"
+    json_add_string "unlockcell" "1"
+    json_add_string "lockpci" "2"
+    json_add_string "lockarfcn" "3"
+    json_add_string "lockcurrent" "4"
+    json_add_string "reboot modem" "5"
+    json_close_object
     json_add_array "NR"
     json_close_array
     json_add_array "LTE"
@@ -750,6 +757,39 @@ fibocom_get_neighborcell()
     json_close_object
 
     json_dump
+}
+
+fibocom_setlockcell(){
+    #at_port,func,celltype,arfcn,pci,scs,nrband
+    #  "unlockcell" "1"
+    #  "lockpci" "2"
+    #  "lockarfcn" "3"
+    #  "lockcurrent" "4"
+    #  "reboot modem" "5"
+    local at_port="$1"
+    local func="$2"
+    local cell_type="$3"
+    local arfcn="$4"
+    local pci="$5"
+    local scs="$6"
+    local nrband="$7"
+    case $func in
+        "1")
+            fibocom_unlockcell $at_port
+        ;;
+        "2")
+            fibocom_lockpci $at_port $cell_type $arfcn $pci $scs $nrband
+        ;;
+        "3")
+            fibocom_lockarfcn $at_port $cell_type $arfcn
+        ;;
+        "4")
+            fibocom_lockcurrent $at_port
+        ;;
+        "5")
+        sh ${SCRIPT_DIR}/modem_reboot.sh $at_port at+cfun=1,1
+        ;;
+    esac
 }
 
 fibocom_unlockcell()

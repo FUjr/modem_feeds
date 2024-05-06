@@ -247,3 +247,12 @@ config custom-commands
 config custom-commands
 	option description '重置模组 > AT+CFUN=15'
 	option command 'AT+CFUN=15'
+
+
+config dial-config 'defa0'
+        option network_bridge '0'
+        option enable '1'
+        option network 'wwan0'
+        option pdp_type 'ipv4v6'
+        option auth 'none'
+        option id 'defa0'
