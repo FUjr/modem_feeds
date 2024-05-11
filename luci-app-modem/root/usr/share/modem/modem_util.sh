@@ -453,7 +453,19 @@ m_set_modem_config()
 	local modem_name=$(uci -q get modem.modem${modem_no}.name)
 	[ -z "$modem_name" ] && {
 		local at_command="AT+CGMM?"
-   		modem_name=$(at ${at_port} ${at_command} | grep "+CGMM: " | awk -F'"' '{print $2}' | tr 'A-Z' 'a-z')
+   		modem_name=$(at ${at_port} ${at_command} | grep "+CGMM: " | awk -F'"' '{print $2}' | tr 'A-Z' 'a-z' |cut -d ' ' -f 1)
+	}
+	[ -z "$modem_name" ] && {
+		#通过模组id设置型号
+		if [ -f "${physical_path}/idVendor" ] && [ -f "${physical_path}/idProduct" ]; then
+			local manufacturer_id=$(cat "${physical_path}/idVendor")
+			local product_id=$(cat "${physical_path}/idProduct")
+			case "$manufacturer_id" in
+				2c7c)
+					modem_name="quectel_generic"
+					;;
+			esac
+		fi
 	}
 
 	#获取模组支持列表
