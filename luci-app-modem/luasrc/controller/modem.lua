@@ -41,6 +41,8 @@ function index()
 	entry({"admin", "network", "modem", "get_self_test_info"}, call("getSelfTestInfo"), nil).leaf = true
 	entry({"admin", "network", "modem", "get_quick_commands"}, call("getQuickCommands"), nil).leaf = true
 	entry({"admin", "network", "modem", "send_at_command"}, call("sendATCommand"), nil).leaf = true
+	entry({"admin", "network", "modem", "get_imei"}, call("getIMEI"), nil).leaf = true
+	entry({"admin", "network", "modem", "set_imei"}, call("setIMEI"), nil).leaf = true
 	-- entry({"admin", "network", "modem", "get_modem_debug_info"}, call("getModemDebugInfo"), nil).leaf = true
 
 	--插件设置
@@ -710,7 +712,31 @@ function setLockBand()
 	luci.http.write_json(lock_band_config)
 end
 
+function getIMEI()
+	local at_port = http.formvalue("port")
+	local manufacturer = getManufacturer(at_port)
+	local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_get_imei "..at_port
+	local result=shell(command)
+	local result_json = {}
+	result_json["imei"] = result
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(result_json)
 
+end
+
+function setIMEI()
+	local at_port = http.formvalue("port")
+	local imei = http.formvalue("imei")
+	local manufacturer = getManufacturer(at_port)
+	local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_set_imei "..at_port .." "..imei
+	shell(command)
+	local command1="source "..script_path..manufacturer..".sh && "..manufacturer.."_get_imei "..at_port
+	local result=shell(command1)
+	local result_json = {}
+	result_json["imei"] = result
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(result_json)
+end
 
 --[[
 @Description 获取自检信息
