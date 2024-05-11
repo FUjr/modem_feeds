@@ -89,6 +89,14 @@
                 "define_connect":"3",
                 "modes":["rndis"]
             },
+            "fm350-gl-00":{
+                "manufacturer_id":"0e8d",
+                "manufacturer":"fibocom",
+                "platform":"mediatek",
+                "data_interface":"usb",
+                "define_connect":"3",
+                "modes":["rndis"]
+            },
             "fm150-ae":{
                 "manufacturer_id":"2cb7",
                 "manufacturer":"fibocom",
@@ -120,6 +128,14 @@
                 "data_interface":"usb",
                 "define_connect":"1",
                 "modes":["qmi","gobinet","ecm","mbim","rndis"]
+            },
+            "quectel_generic":{
+                "manufacturer_id":"2c7c",
+                "manufacturer":"quectel",
+                "platform":"generic",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["qmi","gobinet","ecm","mbim","rndis","ncm"]
             }
         },
         "pcie":{
@@ -138,6 +154,14 @@
                 "modes":["qmi","gobinet","mbim"]
             },
             "rg500q-ea":{
+                "manufacturer":"quectel",
+                "platform":"qualcomm",
+                "data_interface":"pcie",
+                "define_connect":"1",
+                "modes":["qmi","gobinet","mbim"]
+            },
+            "rg501q-eu":{
+                "manufacturer_id":"2c7c",
                 "manufacturer":"quectel",
                 "platform":"qualcomm",
                 "data_interface":"pcie",
