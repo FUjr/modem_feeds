@@ -64,6 +64,20 @@ quectel_get_dns()
     echo "$dns"
 }
 
+quectel_get_imei(){
+    local at_port="$1"
+    at_command="AT+CGSN"
+    imei=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command | sed -n '2p' | grep -E '[0-9]+' )
+    echo "$imei"
+}
+
+quectel_set_imei(){
+    local at_port="$1"
+    local imei="$2"
+    at_command="AT+EGMR=1,7,\"$imei\""
+    res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command)
+}
+
 #获取拨号模式
 # $1:AT串口
 # $2:平台
@@ -592,10 +606,93 @@ quectel_get_lockband_qualcomm()
     echo "$json_result"
 }
 
+convert2band()
+{
+    hex_band=$1
+    hex=$(echo $hex_band | grep -o "[0-9A-F]\{1,16\}")
+    if [ -z "$hex" ]; then
+        echo Invalid band
+    fi
+    band_list=""
+    bin=$(echo "ibase=16;obase=2;$hex" | bc)
+    len=${#bin}
+    for i in $(seq 1 ${#bin}); do
+        if [ ${bin:$i-1:1} = "1" ]; then
+            band_list=$band_list"\n"$((len - i + 1))
+        fi
+    done
+    echo -e $band_list | sort -n | tr '\n' ' '
+}
+
+convert2hex()
+{
+    band_list=$1
+    #splite band_list
+    band_list=$(echo $band_list | tr ',' '\n' | sort -n | uniq)
+    hex="0"
+    for band in $band_list; do
+        add_hex=$(echo "obase=16;2^($band - 1 )" | bc)
+        hex=$(echo "obase=16;ibase=16;$hex + $add_hex" | bc)
+    done
+    if [ -n $hex ]; then
+        echo $hex
+    else
+        echo Invalid band
+    fi
+}
+
+
+
+quectel_get_lockband_lte()
+{
+    local at_port="$1"
+    local commamd="AT+QCFG=\"band\""
+    LTE_LOCK=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port  "$commamd" |grep '+QCFG:'| awk -F, '{print $3}' | sed 's/"//g' | tr '[:a-z:]' '[:A-Z:]')
+    if [ -z "$LOCK_BAND" ]; then
+        LOCK_BAND="Unknown"
+    fi
+    LOCK_BAND=$(convert2band $LTE_LOCK)
+    json_init
+    json_add_object available_band
+    json_add_string "1" "B01" 
+    json_add_string "3" "B03"
+    json_add_string "5" "B05" 
+    json_add_string "7" "B07"
+    json_add_string "8" "B08"
+    json_add_string "20" "B20"
+    json_add_string "34" "B34"
+    json_add_string "38" "B38"
+    json_add_string "39" "B39"
+    json_add_string "40" "B40"
+    json_add_string "41" "B41"
+    json_close_object
+    json_add_array "lock_band"
+    for band in $(echo $LOCK_BAND | tr ',' '\n' | sort -n | uniq); do
+        json_add_string "" $band
+    done
+    json_close_array
+    json_close_object
+    json_dump
+}
+
+quectel_get_lockband_generic()
+{
+    local at_port="$1"
+    local lte_lockband_cmd="AT+QCFG=?"
+    local nr_lockband_cmd="AT+QNWPREFCFG=?"
+    lte_response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $lte_lockband_cmd | grep "+QCFG:")
+    nr_response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $nr_lockband_cmd | grep "+QNWPREFCFG:")
+
+    if [ -n "$lte_response" ]; then
+        quectel_get_lockband_lte $at_port
+    else
+        quectel_get_lockband_qualcomm $at_port
+    fi
+}
+
 quectel_get_lockband()
 {
     local at_port="$1"
-
     local platform
     local modem_number=$(uci -q get modem.@global[0].modem_number)
     for i in $(seq 0 $((modem_number-1))); do
@@ -613,11 +710,34 @@ quectel_get_lockband()
             quectel_get_lockband_unisoc $at_port
         ;;
         *)
-            echo "unknown"
+            quectel_get_lockband_generic $at_port
         ;;
     esac
 }
 
+quectel_set_lockband_generic()
+{
+    local lte_lockband_cmd="AT+QCFG=?"
+    local nr_lockband_cmd="AT+QNWPREFCFG=?"
+    lte_response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $lte_lockband_cmd | grep "+QCFG:")
+    nr_response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $nr_lockband_cmd | grep "+QNWPREFCFG:")
+    if [ -n "$lte_response" ]; then
+        quectel_set_lockband_lte $1 $2
+    else
+        quectel_set_lockband_qualcomm $1 $2
+    fi
+}
+
+quectel_set_lockband_lte()
+{
+    at_port=$1
+    band=$2
+    if [ -z $band ]; then
+        echo "Invalid band"
+    fi
+    hex=$(convert2hex $band)
+    sh ${SCRIPT_DIR}/modem_at.sh  $at_port 'AT+QCFG="band",0,'${hex}',0'   2>&1 > /dev/null
+}
 
 quectel_set_lockband_qualcomm(){
     local at_port="$1"
@@ -683,6 +803,7 @@ quectel_set_lockband_qualcomm(){
     json_result=`json_dump`
     echo "$json_result"
 }
+
 #设置锁频
 quectel_set_lockband()
 {
@@ -704,8 +825,8 @@ quectel_set_lockband()
         "unisoc")
             quectel_set_lockband_unisoc $at_port $2
         ;;
-        *)
-            echo "unknown"
+        "generic")
+            quectel_set_lockband_generic $at_port $2
         ;;
     esac
     
@@ -714,18 +835,60 @@ quectel_set_lockband()
 quectel_get_neighborcell_qualcomm(){
     local at_port="$1"
     local at_command='AT+QENG="neighbourcell"'
+    nr_lock_check="AT+QNWLOCK=\"common\/5g\""
+    lte_lock_check="AT+QNWLOCK=\"common\/4g\""
+    lte_status=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $lte_lock_check | grep "+QNWLOCK:")
+    lte_lock_status=$(echo $lte_status | awk -F',' '{print $2}')
+    lte_lock_freq=$(echo $lte_status | awk -F',' '{print $3}')
+    lte_lock_pci=$(echo $lte_status | awk -F',' '{print $4}')
+    nr_status=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $nr_lock_check | grep "+QNWLOCK:")
+    nr_lock_status=$(echo $nr_status | awk -F',' '{print $2}')
+    nr_lock_pci=$(echo $nr_status | awk -F',' '{print $3}')
+    nr_lock_freq=$(echo $nr_status | awk -F',' '{print $4}')
+    nr_lock_scs=$(echo $nr_status | awk -F',' '{print $5}')
+    nr_lock_band=$(echo $nr_status | awk -F',' '{print $6}')
+    if [ "$lte_lock_status" = "1" ]; then
+        lte_lock_status="locked"
+    else
+        lte_lock_status=""
+    fi
+    if [ "$nr_lock_status" = "1" ]; then
+        nr_lock_status="locked"
+    else
+        nr_lock_status=""
+    fi
+
+
     sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command > /tmp/quectel_neighborcell
     json_init
     json_add_object "Feature"
-    json_add_string "lockpci" "1"
-    json_add_string "unlockcell" "2"
-    json_add_string "manually search" "3"
-    json_add_string "reboot modem" "4"
+    json_add_string "Unlock" "2"
+    json_add_string "Lock PCI" "1"
+    json_add_string "Reboot Modem" "4"
+    json_add_string "Manually Search" "3"
     json_close_object
     json_add_array "NR"
     json_close_array
     json_add_array "LTE"
     json_close_array
+    json_add_object "lockcell_status"
+    if [ -n "$lte_lock_status" ]; then
+        json_add_string "LTE" "$lte_lock_status"
+        json_add_string "LTE_Freq" "$lte_lock_freq"
+        json_add_string "LTE_PCI" "$lte_lock_pci"
+    else
+        json_add_string "LTE" "unlock"
+    fi
+    if [ -n "$nr_lock_status" ]; then
+        json_add_string "NR" "$nr_lock_status"
+        json_add_string "NR_Freq" "$nr_lock_freq"
+        json_add_string "NR_PCI" "$nr_lock_pci"
+        json_add_string "NR_SCS" "$nr_lock_scs"
+        json_add_string "NR_Band" "$nr_lock_band"
+    else
+        json_add_string "NR" "unlock"
+    fi
+    json_close_object
     while read line; do
         if [ -n "$(echo $line | grep "+QENG:")" ]; then
             # +QENG: "neighbourcell intra","LTE",<earfcn>,<PCID>,<
@@ -785,6 +948,89 @@ quectel_get_neighborcell_qualcomm(){
     echo "$json_result"
 }
 
+quectel_get_neighborcell_lte(){
+    local at_port="$1"
+    local at_command='AT+QENG="neighbourcell"'
+    lte_lock_check="AT+QNWLOCK=\"common/lte\""
+    lte_status=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $lte_lock_check | grep "+QNWLOCK:")
+    lte_lock_status=$(echo $lte_status | awk -F',' '{print $2}')
+    lte_lock_freq=$(echo $lte_status | awk -F',' '{print $3}')
+    lte_lock_pci=$(echo $lte_status | awk -F',' '{print $4}')
+    lte_lock_finish=$(echo $lte_status | awk -F',' '{print $5}')
+    if [ "$lte_lock_finish" == "1" ]; then
+        lte_lock_finish="finish"
+    else
+        lte_lock_finish="not finish"
+    fi
+    if [ "$lte_lock_status" == "1" ]; then
+        lte_lock_status="locked arfcn,$lte_lock_finish"
+    elif [ "$lte_lock_status" == "2" ]; then
+        lte_lock_status="lock pci,$lte_lock_finish"
+    else
+        lte_lock_status=""
+    fi
+    sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command > /tmp/quectel_neighborcell
+    json_init
+    json_add_object "Feature"
+    json_add_string "Unlock" "5"
+    json_add_string "Lock PCI" "6"
+    json_add_string "Lock ARFCN" "7"
+    json_close_object
+    json_add_array "NR"
+    json_close_array
+    json_add_array "LTE"
+    json_close_array
+    json_add_object "lockcell_status"
+    if [ -n "$lte_lock_status" ]; then
+        json_add_string "lockcell_status" "$lte_lock_status"
+        json_add_string "arfcn" "$lte_lock_freq"
+        json_add_string "pci" "$lte_lock_pci"
+    else
+        json_add_string "lockcell_status" "unlock"
+    fi
+    json_close_object
+    while read line; do
+        if [ -n "$(echo $line | grep "+QENG:")" ]; then
+            # +QENG: "neighbourcell intra","LTE",<earfcn>,<PCID>,<
+            # RSRQ>,<RSRP>,<RSSI>,<SINR>,<srxlev>,<cell_resel_pri
+            # ority>,<s_non_intra_search>,<thresh_serving_low>,<s_i
+            # ntra_search>
+            # …]
+            # [+QENG: "neighbourcell inter","LTE",<earfcn>,<PCID>,<
+            # RSRQ>,<RSRP>,<RSSI>,<SINR>,<srxlev>,<cell_resel_pri
+            # ority>,<threshX_low>,<threshX_high>
+            # …]
+            # [+QENG:"neighbourcell","WCDMA",<uarfcn>,<cell_resel
+            # _priority>,<thresh_Xhigh>,<thresh_Xlow>,<PSC>,<RSC
+            # P><eccno>,<srxlev>
+            # …]
+            line=$(echo $line | sed 's/+QENG: //g')
+            case $line in
+                *LTE*)
+                    type="LTE"
+                    neighbourcell=$(echo $line | awk -F',' '{print $1}' | tr -d '"')
+                    arfcn=$(echo $line | awk -F',' '{print $3}')
+                    pci=$(echo $line | awk -F',' '{print $4}')
+                    rsrq=$(echo $line | awk -F',' '{print $5}')
+                    rsrp=$(echo $line | awk -F',' '{print $6}')
+
+                    ;;
+            esac
+            json_select $type
+            json_add_object ""
+            json_add_string "neighbourcell" "$neighbourcell"
+            json_add_string "arfcn" "$arfcn"
+            json_add_string "pci" "$pci"
+            json_add_string "rsrp" "$rsrp"
+            json_add_string "rsrq" "$rsrq"
+            json_close_object
+            json_select ".."
+        fi
+    done < /tmp/quectel_neighborcell
+    json_result=`json_dump`
+    echo "$json_result"
+}
+
 quectel_get_neighborcell(){
     debug "quectel set lockband info"
     local at_port="$1"
@@ -799,13 +1045,13 @@ quectel_get_neighborcell(){
     done
     case "$platform" in
         "qualcomm")
-            quectel_get_neighborcell_qualcomm $at_port $2
+            quectel_get_neighborcell_qualcomm $at_port
         ;;
         "unisoc")
-            quectel_get_neighborcell_unisoc $at_port $2
+            quectel_get_neighborcell_unisoc $at_port
         ;;
         *)
-            echo "unknown"
+            quectel_get_neighborcell_lte $at_port
         ;;
     esac
 }
@@ -825,39 +1071,85 @@ quectel_setlockcell(){
     local nrband="$7"
     case $func in
         "1")
-            quectel_lockpci $at_port
+            quectel_lockpci $at_port  $cell_type $arfcn $pci $scs $nrband
         ;;
         "2")
-            quectel_unlockcell $at_port $cell_type $arfcn $pci $scs $nrband
+            quectel_unlockcell $at_port
         ;;
         
         "4")
-        sh ${SCRIPT_DIR}/modem_reboot.sh $at_port at+cfun=1,1
+            sh ${SCRIPT_DIR}/modem_reboot.sh $at_port at+cfun=1,1
+        ;;
+        "5")
+            quectel_unlockcell_lte $at_port
+        ;;
+        "6")
+            quectel_lockpci_lte $at_port  $cell_type $arfcn $pci $scs $nrband
+        ;;
+        "7")
+            quectel_lockarfn_lte $at_port  $cell_type $arfcn $pci $scs $nrband
         ;;
     esac
 }
 
 quectel_unlockcell(){
-    unlocklte="AT+QNWLOCK=\"common/4g\",0"
+    unlock4g="AT+QNWLOCK=\"common/4g\",0"
     unlocknr="AT+QNWLOCK=\"common/5g\",0"
-    res1=$(sh ${SCRIPT_DIR}/modem_at.sh $1 $unlocklte)
     res2=$(sh ${SCRIPT_DIR}/modem_at.sh $1 $unlocknr)
+    res3=$(sh ${SCRIPT_DIR}/modem_at.sh $1 $unlock4g)
 }
 
-quectel_lockpci(){
+quectel_unlockcell_lte(){
+    unlocklte="AT+QNWLOCK=\"common/lte\",0"
+    res1=$(sh ${SCRIPT_DIR}/modem_at.sh $1 $unlocklte)
+}
+
+quectel_lockpci_nr(){
     local at_port="$1"
     local cell_type="$2"
     local arfcn="$3"
     local pci="$4"
     local scs="$5"
     local nrband="$6"
-    if [ "$cell_type" = "LTE" ]; then
-        locklte="AT+QNWLOCK=\"common/4g\",1,$arfcn,$pci"
+    case $scs in
+    0)
+        scs=15;;
+    1)
+        scs=30;;
+    2)
+        scs=60;;
+    esac
+
+    if [ "$cell_type" = "0" ]; then
+        lock4g="AT+QNWLOCK=\"common/4g\",1,$arfcn,$pci"
         res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $locklte)
-    elif [ "$cell_type" = "NR" ]; then
-        locknr="AT+QNWLOCK=\"common/5g\",1,$arfcn,$pci,$scs,$nrband"
+    elif [ "$cell_type" = "1" ]; then
+        locknr="AT+QNWLOCK=\"common/5g\",1,$pci,$arfcn,$scs,$nrband"
+        echo $locknr
         res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $locknr)
     fi
+}
+
+quectel_lockpci_lte(){
+    local at_port="$1"
+    local cell_type="$2"
+    local arfcn="$3"
+    local pci="$4"
+    local scs="$5"
+    local nrband="$6"
+    locklte="AT+QNWLOCK=\"common/lte\",2,$arfcn,$pci"
+    res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $locklte)
+}
+
+quectel_lockarfn_lte(){
+    local at_port="$1"
+    local cell_type="$2"
+    local arfcn="$3"
+    local pci="$4"
+    local scs="$5"
+    local nrband="$6"
+    locklte="AT+QNWLOCK=\"common/lte\",1,$arfcn"
+    res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $locklte)
 }
 
 
