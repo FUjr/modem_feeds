@@ -297,10 +297,12 @@ quectel_get_temperature()
     at_command="AT+QTEMP"
 
     local line=1
-    while true; do
+    retry=0
+    while [ $retry -lt 5 ]; do
         response=$(sh ${SCRIPT_DIR}/modem_at.sh ${at_port} ${at_command} | grep "+QTEMP:" | sed -n "${line}p" | awk -F'"' '{print $4}')
         [ $response -gt 0 ] && break
         line=$((line+1))
+        retry=$((retry+1))
     done
 
     local temperature
