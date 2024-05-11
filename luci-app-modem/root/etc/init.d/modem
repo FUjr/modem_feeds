@@ -509,6 +509,50 @@ get_mode()
 	echo "$mode"
 }
 
+#获取拨号驱动
+#$1:模块号
+get_driver()
+{
+	local modem_no="$1"
+	local phy_id=$(uci -q get modem.modem${modem_no}.path)
+	for i in $(find $phy_id -name driver);do
+		lsfile=$(ls -l $i)
+		type=${lsfile:0:1}
+		if [ "$type" == "l" ];then
+			link=$(basename $(ls -l $i | awk '{print $11}'))
+			case $link in
+				"qmi_wwan"*) 
+					mode="qmi"
+					break
+				;;
+				"cdc_mbim")
+					mode="mbim"
+					break
+					;;
+				"cdc_ncm")
+					mode="ncm"
+					break
+					;;
+				"cdc_ether")
+					mode="ecm"
+					break
+					;;
+				"rndis_host")
+					mode="rndis"
+					break
+					;;
+				*)
+					if [ -z "$mode" ]; then
+						mode="unknown"
+					fi
+				;;
+			esac
+		fi
+	done
+	echo "$mode"
+
+}
+
 #网络预设
 connect_presets()
 {
@@ -621,11 +665,18 @@ dial()
 	
 	#获取模组的拨号模式
 	local mode
-	while true; do
+	mode=$(get_driver ${modem_no})
+	if [ "$mode" == "unknown" ]; then
+		time_start = $(date +%s)
+		timeout = 30
+		timeout=$(($time_start + $timeout))
+		while [ $(date +%s) -lt $timeout ]; do
 		mode=$(get_mode ${modem_no})
 		[ -n "$mode" ] && [ "$mode" != "unknown" ] && break
 		sleep 5s
     done
+	fi
+	
 
 	#查看该移动网络是否已经有拨号配置在运行
 	mkdir -m 0755 -p "${MODEM_RUNDIR}"
