@@ -78,6 +78,15 @@ s = m:section(NamedSection, arg[1], "modem-device", "")
 s.addremove = false
 s.dynamic = false
 
+-- 手动配置
+manual = s:option(Flag, "manual", translate("Manual"))
+manual.default = "1"
+manual.rmempty = false
+-- uci:set('modem','modem-device','manual',1)
+
+-- 隐藏手动配置
+m:append(Template("modem/hide_manual_config_modem"))
+
 -- 移动网络
 mobile_network = s:option(ListValue, "network", translate("Mobile Network"))
 mobile_network.rmempty = true
@@ -95,9 +104,11 @@ function getMobileNetwork()
 		-- local count=$(echo "${network_path}" | grep -o "/net" | wc -l)
 		-- [ "$count" -ge "2" ] && return
 	
-		-- 判断路径是否带有usb（排除其他eth网络设备）
+		-- 获取网络设备路径
 		local command="readlink -f /sys/class/net/"..network
 		local network_path=shell(command)
+
+		-- 判断路径是否带有usb（排除其他eth网络设备）
 		local flag="0"
 		if network_path:find("eth") and not network_path:find("usb") then
 			flag="1"
@@ -120,7 +131,7 @@ getMobileNetwork()
 
 -- 模组名称
 name = s:option(ListValue, "name", translate("Modem Name"))
-name.placeholder = translate("Not Null")
+name.placeholder = translate("Not null")
 name.rmempty = false
 
 -- 按照制造商给模组分类
@@ -142,7 +153,7 @@ end
 
 -- AT串口
 at_port = s:option(Value, "at_port", translate("AT Port"))
-at_port.placeholder = translate("Not Null")
+at_port.placeholder = translate("Not null")
 at_port.rmempty = false
 
 return m

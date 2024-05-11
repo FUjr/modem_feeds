@@ -21,7 +21,7 @@
 		for (var model in info)
 		{
 			//获取状态元素
-			var status_element=document.getElementById(model.replace(".ko","_status"));
+			var status_element=document.getElementById(model.toLowerCase().replace(".ko","_status"));
 			// 设置状态页面
 			set_status_view(info[model],status_element,translation);
 		}
@@ -38,6 +38,10 @@
 			if (info[plugin]=="Unknown") {
 				version_element.innerHTML=translation[info[plugin]];
 				version_element.style.color = "goldenrod";
+			}
+			else if (info[plugin]=="Not installed") {
+				version_element.innerHTML=translation[info[plugin]];
+				version_element.style.color = "red";
 			}
 			else
 			{
@@ -156,10 +160,15 @@
 						<td class="td cbi-value-field" data-title="<%:Status%>" id="usbnet_status">-</td>
 					</tr>
 					<tr class="tr cbi-section-table-row cbi-rowstyle-2">
-						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="serial"><%:Serial Port%></td>
-						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="serial_kernel_model_name">qcserial.ko</td>
-						<td class="td cbi-value-field" data-title="<%:Status%>" id="qcserial_status">-</td>
+						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="serial_port"><%:Serial Port%></td>
+						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="serial_port_kernel_model_name">option.ko</td>
+						<td class="td cbi-value-field" data-title="<%:Status%>" id="option_status">-</td>
 					</tr>
+					<!-- <tr class="tr cbi-section-table-row cbi-rowstyle-2">
+						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="serial_port"><%:Serial Port%></td>
+						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="serial_port_kernel_model_name">qcserial.ko</td>
+						<td class="td cbi-value-field" data-title="<%:Status%>" id="qcserial_status">-</td>
+					</tr> -->
 				</tbody>
 			</table>
 		</div>
@@ -182,21 +191,26 @@
 						<td class="td cbi-value-field" data-title="<%:Status%>" id="qmi_wwan_status">-</td>
 					</tr>
 					<tr class="tr cbi-section-table-row cbi-rowstyle-2">
+						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="gobinet"><%:GobiNet%></td>
+						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="gobinet_kernel_model_name">GobiNet.ko</td>
+						<td class="td cbi-value-field" data-title="<%:Status%>" id="gobinet_status">-</td>
+					</tr>
+					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
 						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="ecm"><%:ECM%></td>
 						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="ecm_kernel_model_name">cdc_ether.ko</td>
 						<td class="td cbi-value-field" data-title="<%:Status%>" id="cdc_ether_status">-</td>
 					</tr>
-					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
+					<tr class="tr cbi-section-table-row cbi-rowstyle-2">
 						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="mbim"><%:MBIM%></td>
 						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="mbim_kernel_model_name">cdc_mbim.ko</td>
 						<td class="td cbi-value-field" data-title="<%:Status%>" id="cdc_mbim_status">-</td>
 					</tr>
-					<tr class="tr cbi-section-table-row cbi-rowstyle-2">
+					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
 						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="rndis"><%:RNDIS%></td>
 						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="rndis_kernel_model_name">rndis_host.ko</td>
 						<td class="td cbi-value-field" data-title="<%:Status%>" id="rndis_host_status">-</td>
 					</tr>
-					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
+					<tr class="tr cbi-section-table-row cbi-rowstyle-2">
 						<td class="td cbi-value-field" data-title="<%:Driver Type%>" id="ecm"><%:NCM%></td>
 						<td class="td cbi-value-field" data-title="<%:Kernel Model%>" id="ncm_kernel_model_name">cdc_ncm.ko</td>
 						<td class="td cbi-value-field" data-title="<%:Status%>" id="cdc_ncm_status">-</td>

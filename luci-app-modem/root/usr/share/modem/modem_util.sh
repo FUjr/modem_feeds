@@ -364,6 +364,11 @@ handle_special_modem_name()
 		modem_name="fm350-gl"
 	}
 
+	#RM500U-CNV
+	[[ "$modem_name" = *"rm500u-cn"* ]] && {
+		modem_name="rm500u-cn"
+	}
+
 	echo "$modem_name"
 }
 
@@ -392,6 +397,12 @@ retry_set_modem_config()
 		#再一次获取模组名称
 		[ -z "$modem_name" ] && {
 			at_command="AT+CGMM"
+			modem_name=$(at ${at_port} ${at_command} | grep "+CGMM: " | awk -F': ' '{print $2}' | sed 's/\r//g' | tr 'A-Z' 'a-z')
+		}
+
+		#再一次获取模组名称
+		[ -z "$modem_name" ] && {
+			at_command="AT+CGMM"
 			modem_name=$(at ${at_port} ${at_command} | sed -n '2p' | sed 's/\r//g' | tr 'A-Z' 'a-z')
 		}
 
@@ -403,7 +414,7 @@ retry_set_modem_config()
 		#获取模组信息
 		local data_interface=$(uci -q get modem.modem${modem_no}.data_interface)
 		local modem_info=$(echo ${modem_support} | jq '.modem_support.'$data_interface'."'$modem_name'"')
-		
+
 		[ -n "$modem_name" ] && [ "$modem_info" != "null" ] && {
 
 			#获取制造商

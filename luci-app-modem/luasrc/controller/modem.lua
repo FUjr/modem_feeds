@@ -102,7 +102,6 @@ function getManufacturer(at_port)
 
 	local manufacturer
 	uci:foreach("modem", "modem-device", function (modem_device)
-		--设置模组AT串口
 		if at_port == modem_device["at_port"] then
 			manufacturer=modem_device["manufacturer"]
 			return true --跳出循环
@@ -140,7 +139,6 @@ function getModes(at_port)
 
 	local modes
 	uci:foreach("modem", "modem-device", function (modem_device)
-		--设置模组AT串口
 		if at_port == modem_device["at_port"] then
 			modes=modem_device["modes"]
 			return true --跳出循环
@@ -202,10 +200,10 @@ end
 	at_port AT串口
 	manufacturer 制造商
 ]]
-function getModemMoreInfo(at_port,manufacturer,define_connect)
+function getModemMoreInfo(at_port,manufacturer,platform,define_connect)
 
 	--获取模组信息
-	local command="sh "..script_path.."modem_info.sh".." "..at_port.." "..manufacturer.." "..define_connect
+	local command="sh "..script_path.."modem_info.sh".." "..at_port.." "..manufacturer.." "..platform.." "..define_connect
 	local result=shell(command)
 
 	--设置值
@@ -226,7 +224,7 @@ function getModemInfo()
 	local modem_more_info
 	if at_port then
 		modem_device_info=getModemDeviceInfo(at_port)
-		modem_more_info=getModemMoreInfo(at_port,modem_device_info["manufacturer"],modem_device_info["define_connect"])
+		modem_more_info=getModemMoreInfo(at_port,modem_device_info["manufacturer"],modem_device_info["platform"],modem_device_info["define_connect"])
 	end
 
 	--设置信息
@@ -531,7 +529,6 @@ function getModeInfo()
 	--获取值
 	local mode_info={}
 	uci:foreach("modem", "modem-device", function (modem_device)
-		--设置模组AT串口
 		if at_port == modem_device["at_port"] then
 
 			--获取制造商
@@ -780,25 +777,46 @@ function getQuickCommands()
 	--获取AT串口
 	local at_port = http.formvalue("port")
 
-	--获取制造商
-	local manufacturer=getManufacturer(at_port)
+	local manufacturer
+	local platform
+	uci:foreach("modem", "modem-device", function (modem_device)
+		if at_port == modem_device["at_port"] then
+			--获取制造商
+			manufacturer=modem_device["manufacturer"]
+			--获取平台
+			platform=modem_device["platform"]
+			return true --跳出循环
+		end
+	end)
 
 	--未适配模组时，快捷命令选项为自定义
-	if manufacturer=="unknown" then
+	if manufacturer=="unknown" or manufacturer=="unknown" then
 		quick_option="custom"
 	end
 
 	local quick_commands={}
 	local commands={}
 	if quick_option=="auto" then
-		--获取模组AT命令
-		-- local command="source "..script_path.."modem_debug.sh && get_quick_commands "..quick_option.." "..manufacturer
-		local command="cat "..script_path..manufacturer.."_at_commands.json"
-		local result=shell(command)
-		quick_commands=json.parse(result)
 
+		--获取通用模组AT命令
+		local command="jq '.quick_commands.general' \""..script_path.."at_commands.json\""
+		local result=shell(command)
+		local general_commands=json.parse(result)
+
+		--获取特殊模组AT命令
+		command="jq '.quick_commands."..manufacturer.."."..platform.."' \""..script_path.."at_commands.json\""
+		result=shell(command)
+		local special_commands=json.parse(result)
+
+		--把通用命令和特殊命令整合到一起
+		for i = 1, #special_commands do
+			local special_command = special_commands[i]
+			table.insert(general_commands,special_command)
+		end
+
+		quick_commands["quick_commands"]=general_commands
 	else
-		uci:foreach("modem", "custom-commands", function (custom_commands)
+		uci:foreach("custom_at_commands", "custom-commands", function (custom_commands)
 			local command={}
 			command[custom_commands["description"]]=custom_commands["command"]
 			table.insert(commands,command)
@@ -940,6 +958,7 @@ function getPluginInfo()
 	-- 设置翻译
 	translation={}
 	translation["Unknown"]=luci.i18n.translate("Unknown")
+	translation["Not installed"]=luci.i18n.translate("Not installed")
 	translation["Loaded"]=luci.i18n.translate("Loaded")
 	translation["Not loaded"]=luci.i18n.translate("Not loaded")
 
@@ -950,19 +969,21 @@ function getPluginInfo()
 
 	-- 获取拨号工具信息
 	local dial_tool_info={}
-	dial_tool_info["quectel-CM-5G"]="Unknown"
-	dial_tool_info["modemmanager"]="Unknown"
+	dial_tool_info["quectel-CM-5G"]="Not installed"
+	dial_tool_info["modemmanager"]="Not installed"
 	setPluginVersionInfo(dial_tool_info)
 
 	-- 获取通用驱动信息
 	local general_driver_info={}
 	general_driver_info["usbnet.ko"]="Not loaded"
-	general_driver_info["qcserial.ko"]="Not loaded"
+	general_driver_info["option.ko"]="Not loaded"
+	-- general_driver_info["qcserial.ko"]="Not loaded"
 	setModelStatus(general_driver_info)
 
 	-- 获取模组USB驱动信息
 	local usb_driver_info={}
 	usb_driver_info["qmi_wwan.ko"]="Not loaded"
+	usb_driver_info["GobiNet.ko"]="Not loaded"
 	usb_driver_info["cdc_ether.ko"]="Not loaded"
 	usb_driver_info["cdc_mbim.ko"]="Not loaded"
 	usb_driver_info["rndis_host.ko"]="Not loaded"

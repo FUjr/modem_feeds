@@ -19,7 +19,7 @@ function modem_scan()
 	disabled_function("modem_scan",true);
 
 	//修改描述信息
-	var description='<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle"/><%:Scaning modem...%>'
+	var description='<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>"/><%:Scaning modem...%>'
 	document.getElementById('modem_scan_description').innerHTML=description;
 
 	XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "modem_scan")%>', null,
@@ -37,7 +37,12 @@ function modem_scan()
 //]]>
 </script>
 
-<style type="text/css"></style>
+<style type="text/css">
+	/* 加载中样式 */
+	#modem_scan_description img {
+		vertical-align: middle;
+	}
+</style>
 
 <input class="btn cbi-button cbi-button-apply" type="button" id="modem_scan_button" value="<%:Scan%>" onclick="modem_scan()" alt="<%:Scan%>" title="<%:Scan%>"/>
 <div class="cbi-value-description" id="modem_scan_description">

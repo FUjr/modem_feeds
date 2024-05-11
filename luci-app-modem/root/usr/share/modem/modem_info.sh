@@ -4,9 +4,6 @@
 #脚本目录
 SCRIPT_DIR="/usr/share/modem"
 source "${SCRIPT_DIR}/modem_debug.sh"
-# source "${SCRIPT_DIR}/quectel.sh"
-# source "${SCRIPT_DIR}/fibocom.sh"
-# source "${SCRIPT_DIR}/simcom.sh"
 
 #初值化数据结构
 init_modem_info()
@@ -370,9 +367,10 @@ get_modem_info()
     debug "根据模组的制造商获取信息"
 	#更多信息获取
 	case $manufacturer in
-		"quectel") get_quectel_info "${at_port}" "${define_connect}" ;;
-		"fibocom") get_fibocom_info "${at_port}" "${define_connect}" ;;
-		"simcom") get_simcom_info "${at_port}" "${define_connect}" ;;
+		"quectel") get_quectel_info "${at_port}" "${platform}" "${define_connect}" ;;
+		"fibocom") get_fibocom_info "${at_port}" "${platform}" "${define_connect}" ;;
+		"meig") get_meig_info "${at_port}" "${platform}" "${define_connect}" ;;
+		"simcom") get_simcom_info "${at_port}" "${platform}" "${define_connect}" ;;
 		*) debug "未适配该模组" ;;
 	esac
 
@@ -383,7 +381,8 @@ get_modem_info()
 #获取模组数据信息
 # $1:AT串口
 # $2:制造商
-# $3:连接定义
+# $3:平台
+# $4:连接定义
 modem_info()
 {
 	#初值化模组信息
@@ -394,7 +393,8 @@ modem_info()
     #获取模组信息
 	at_port="$1"
 	manufacturer="$2"
-	define_connect="$3"
+	platform="$3"
+	define_connect="$4"
 	
 	debug "获取模组信息"
 	get_modem_info
@@ -402,9 +402,6 @@ modem_info()
     #整合模块信息
     info_to_json
 	echo $modem_info
-
-    #移动网络联网检查
-	# checkMobileNetwork
 }
 
-modem_info "$1" "$2" "$3"
+modem_info "$1" "$2" "$3" "$4"

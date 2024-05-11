@@ -134,6 +134,11 @@
 </script>
 
 <style type="text/css">
+	/* 加载中样式 */
+	#modem_status_view img {
+		vertical-align: middle;
+	}
+
 	#modem_status_view > div {
 		display: inline-block;
 		margin: 1rem;
@@ -149,7 +154,7 @@
 	<!-- <legend><%:Modem Status%></legend> -->
 	<h3><%:Modem Status%></h3>
 	<div id="modem_status_view">
-		<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle"/>
+		<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>"/>
 		<%:Loading modem status%>...
 	</div>
 </fieldset>

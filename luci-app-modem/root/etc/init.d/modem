@@ -402,6 +402,8 @@ stop_gobinet()
 		at_command='ATI'
 	elif [ "$manufacturer" = "fibocom" ]; then
 		at_command='AT$QCRMCALL=0,1'
+	elif [ "$manufacturer" = "meig" ]; then
+		at_command='ATI'
 	else
 		at_command='ATI'
 	fi
@@ -428,6 +430,8 @@ stop_ecm()
 		else
 			at_command="AT+GTRNDIS=0,${define_connect}"
 		fi
+	elif [ "$manufacturer" = "meig" ]; then
+		at_command="AT$QCRMCALL=0,1,${define_connect},2,1"
 	else
 		at_command='ATI'
 	fi
@@ -562,10 +566,6 @@ connect_presets()
 	local at_command='AT+COPS=0,0'
 	tmp=$(at "${at_port}" "${at_command}")
 
-	#设置IPv6地址格式
-	at_command='AT+CGPIAF=1,0,0,0'
-	tmp=$(at "${at_port}" "${at_command}")
-
 	#获取连接定义
 	local define_connect=$(uci -q get modem.modem${modem_no}.define_connect)
 	#获取PDP类型和APN
@@ -664,19 +664,26 @@ dial()
 	[ -z "${modem_no}" ] && return 0
 	
 	#获取模组的拨号模式
+	local time=0
 	local mode
+
 	mode=$(get_driver ${modem_no})
 	if [ "$mode" == "unknown" ]; then
-		time_start = $(date +%s)
-		timeout = 30
-		timeout=$(($time_start + $timeout))
-		while [ $(date +%s) -lt $timeout ]; do
-		mode=$(get_mode ${modem_no})
-		[ -n "$mode" ] && [ "$mode" != "unknown" ] && break
-		sleep 5s
-    done
+		while [ $time -lt 5 ]; do
+			mode=$(get_mode ${modem_no})
+			[ -n "$mode" ] && [ "$mode" != "unknown" ] && break
+			sleep 5s
+			time=$((time+1))
+		done
 	fi
 	
+
+	#获取不到拨号模式
+	[ -z "$mode" ] || [ "$mode" = "unknown" ] && {
+		uci set modem.$1.enable=0
+		uci commit modem
+		return 0
+	}
 
 	#查看该移动网络是否已经有拨号配置在运行
 	mkdir -m 0755 -p "${MODEM_RUNDIR}"
@@ -770,7 +777,7 @@ manual_set_modem_config()
 	m_set_modem_port "${physical_path}"
 	
 	#获取模组数量
-	local modem_number=$(uci -q get modem.@global[0].modem_number)
+	modem_number=$(uci -q get modem.@global[0].modem_number)
 	#获取模组序号
 	local modem_no
 	for i in $(seq 0 $((modem_number-1))); do
@@ -830,22 +837,24 @@ service_triggers()
 }
 
 start_service() {
+
+	#加载模组配置
+	config_load modem
+
+	#统计模组数量
+	modem_count=0
+	config_foreach count_modem_number "modem-device"
+	#设置模组数量
+	uci set modem.@global[0].modem_number=${modem_count}
+	uci commit modem
+
+	#手动设置模组信息
+	config_foreach manual_set_modem_config "modem-device"
+
 	local enable_dial=$(uci -q get modem.@global[0].enable_dial)
 	if [ "$enable_dial" = "0" ]; then
 		stop_service
 	else
-		#加载模组配置
-		config_load modem
-		#手动设置模组信息
-		config_foreach manual_set_modem_config "modem-device"
-
-		#统计模组数量
-		modem_count=0
-		config_foreach count_modem_number "modem-device"
-		#设置模组数量
-		uci set modem.@global[0].modem_number=${modem_count}
-		uci commit modem
-
 		#删除拨号配置
 		del_dial_config
 		#加载拨号配置

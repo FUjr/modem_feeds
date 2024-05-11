@@ -36,11 +36,17 @@ s.extedit = d.build_url("admin", "network", "modem", "modem_config", "%s")
 
 function s.create(uci, t)
     -- 获取模组序号
-    local modem_no=tonumber(uci.map:get("@global[0]","modem_number")) -- 将字符串转换为数字类型
+    -- local modem_no=tonumber(uci.map:get("@global[0]","modem_number")) -- 将字符串转换为数字类型
+    local modem_no=0
+    local uci_tmp=luci.model.uci.cursor()
+    uci_tmp:foreach("modem", "modem-device", function (modem_device)
+		modem_no=modem_no+1
+	end)
+
     t="modem"..modem_no
     TypedSection.create(uci, t)
     -- 设置手动配置
-    uci.map:set(t,"manual","1")
+    -- uci.map:set(t,"manual","1")
     luci.http.redirect(uci.extedit:format(t))
 end
 
@@ -61,10 +67,10 @@ o.cfgvalue = function(t, n)
 end
 
 -- AT串口
--- o = s:option(DummyValue, "at_port", translate("AT Port"))
-o = s:option(Value, "at_port", translate("AT Port"))
-o.placeholder = translate("Not Null")
-o.rmempty = false
-o.optional = false
+o = s:option(DummyValue, "at_port", translate("AT Port"))
+-- o = s:option(Value, "at_port", translate("AT Port"))
+-- o.placeholder = translate("Not null")
+-- o.rmempty = false
+-- o.optional = false
 
 return m

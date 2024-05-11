@@ -7,6 +7,10 @@ source /usr/share/libubox/jshn.sh
 #预设
 fibocom_presets()
 {
+    #设置IPv6地址格式
+	at_command='AT+CGPIAF=1,0,0,0'
+	sh "${SCRIPT_DIR}/modem_at.sh" "$at_port" "$at_command"
+
     #自动DHCP
 	at_command='AT+GTAUTODHCP=1'
 	sh "${SCRIPT_DIR}/modem_at.sh" "$at_port" "$at_command"
@@ -270,6 +274,7 @@ fibocom_get_network_prefer()
 # $2:网络偏好配置
 fibocom_set_network_prefer()
 {
+    local at_port="$1"
     local network_prefer="$2"
 
     #获取网络偏好数字
@@ -306,7 +311,6 @@ fibocom_set_network_prefer()
     esac
 
     #设置模组
-    local at_port="$1"
     at_command="AT+GTACT=$network_prefer_num"
     sh ${SCRIPT_DIR}/modem_at.sh $at_port "$at_command"
 }
@@ -334,8 +338,15 @@ fibocom_get_temperature()
 	response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command | grep "+MTSM: " | sed 's/+MTSM: //g' | sed 's/\r//g')
 
     [ -z "$response" ] && {
+        #Fx160及以后型号
+        at_command="AT+GTLADC"
+	    response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command | grep "cpu" | awk -F' ' '{print $2}' | sed 's/\r//g')
+        response="${response:0:2}"
+    }
+
+    [ -z "$response" ] && {
         #联发科平台
-        at_command="AT+GTSENRDTEMP=0"
+        at_command="AT+GTSENRDTEMP=1"
         response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command | grep "+GTSENRDTEMP: " | awk -F',' '{print $2}' | sed 's/\r//g')
         response="${response:0:2}"
     }
@@ -392,7 +403,7 @@ fibocom_base_info()
     revision=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command | grep "+CGMR: " | awk -F'"' '{print $2}')
 
     #Mode（拨号模式）
-    mode=$(fibocom_get_mode $at_port | tr 'a-z' 'A-Z')
+    mode=$(fibocom_get_mode ${at_port} ${platform} | tr 'a-z' 'A-Z')
 
     #Temperature（温度）
     temperature=$(fibocom_get_temperature $at_port)
@@ -541,7 +552,7 @@ fibocom_network_info()
 
     [ -z "$network_type" ] && {
         at_command='AT+COPS?'
-        rat_num=$(sh ${SCRIPT_DIR}/modem_at.sh ${at_port} ${at_command} | grep "+COPS:" | awk -F',' '{print $4}' | sed 's/\r//g')
+        local rat_num=$(sh ${SCRIPT_DIR}/modem_at.sh ${at_port} ${at_command} | grep "+COPS:" | awk -F',' '{print $4}' | sed 's/\r//g')
         network_type=$(fibocom_get_rat ${rat_num})
     }
 
@@ -862,46 +873,36 @@ fibocom_get_band()
     echo "$band"
 }
 
-#获取上行带宽
-# $1:上行带宽数字
-fibocom_get_ul_bandwidth()
+#获取带宽
+# $1:网络类型
+# $2:带宽数字
+fibocom_get_bandwidth()
 {
-    local ul_bandwidth
-	case $1 in
-        "6") ul_bandwidth="1.4" ;;
-		"15"|"25"|"50"|"75"|"100") ul_bandwidth=$(( $1 / 5 )) ;;
-	esac
-    echo "$ul_bandwidth"
-}
+    local network_type="$1"
+    local bandwidth_num="$2"
 
-#获取下行带宽
-# $1:下行带宽数字
-fibocom_get_dl_bandwidth()
-{
-    local dl_bandwidth
-	case $1 in
-        "6") ul_bandwidth="1.4" ;;
-        "15"|"25"|"50"|"75"|"100") ul_bandwidth=$(( $1 / 5 )) ;;
+    local bandwidth
+    case $network_type in
+		"LTE")
+            case $bandwidth_num in
+                "6") bandwidth="1.4" ;;
+                "15"|"25"|"50"|"75"|"100") bandwidth=$(( $bandwidth_num / 5 )) ;;
+            esac
+        ;;
+        "NR")
+            case $bandwidth_num in
+                "0") bandwidth="5" ;;
+                "10"|"15"|"20"|"25"|"30"|"40"|"50"|"60"|"70"|"80"|"90"|"100"|"200"|"400") bandwidth="$bandwidth_num" ;;
+            esac
+        ;;
 	esac
-    echo "$dl_bandwidth"
-}
-
-#获取NR下行带宽
-# $1:下行带宽数字
-fibocom_get_nr_dl_bandwidth()
-{
-    local nr_dl_bandwidth
-	case $1 in
-		"0") nr_dl_bandwidth="5" ;;
-		"10"|"15"|"20"|"25"|"30"|"40"|"50"|"60"|"70"|"80"|"90"|"100"|"200"|"400") nr_dl_bandwidth="$1" ;;
-	esac
-    echo "$nr_dl_bandwidth"
+    echo "$bandwidth"
 }
 
 #获取信噪比
 # $1:网络类型
 # $2:信噪比数字
-fibocom_get_sinr_num()
+fibocom_get_sinr()
 {
     local sinr
     case $1 in
@@ -974,7 +975,6 @@ fibocom_cell_info()
 {
     debug "Fibocom cell info"
 
-    #RSRQ，RSRP，SINR
     at_command='AT+GTCCINFO?'
     response=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $at_command)
     
@@ -1003,9 +1003,9 @@ fibocom_cell_info()
                     nr_band_num=$(echo "$response" | awk -F',' '{print $9}')
                     nr_band=$(fibocom_get_band "NR" ${nr_band_num})
                     nr_dl_bandwidth_num=$(echo "$response" | awk -F',' '{print $10}')
-                    nr_dl_bandwidth=$(fibocom_get_nr_dl_bandwidth ${nr_dl_bandwidth_num})
+                    nr_dl_bandwidth=$(fibocom_get_bandwidth "NR" ${nr_dl_bandwidth_num})
                     nr_sinr_num=$(echo "$response" | awk -F',' '{print $11}')
-                    nr_sinr=$(fibocom_get_sinr_num "NR" ${nr_sinr_num})
+                    nr_sinr=$(fibocom_get_sinr "NR" ${nr_sinr_num})
                     nr_rxlev_num=$(echo "$response" | awk -F',' '{print $12}')
                     nr_rxlev=$(fibocom_get_rxlev "NR" ${nr_rxlev_num})
                     nr_rsrp_num=$(echo "$response" | awk -F',' '{print $13}')
@@ -1025,7 +1025,7 @@ fibocom_cell_info()
                     endc_lte_band_num=$(echo "$response" | awk -F',' '{print $9}')
                     endc_lte_band=$(fibocom_get_band "LTE" ${endc_lte_band_num})
                     ul_bandwidth_num=$(echo "$response" | awk -F',' '{print $10}')
-                    endc_lte_ul_bandwidth=$(fibocom_get_ul_bandwidth ${ul_bandwidth_num})
+                    endc_lte_ul_bandwidth=$(fibocom_get_bandwidth "LTE" ${ul_bandwidth_num})
                     endc_lte_dl_bandwidth="$endc_lte_ul_bandwidth"
                     endc_lte_rssnr_num=$(echo "$response" | awk -F',' '{print $11}')
                     endc_lte_rssnr=$(fibocom_get_rssnr ${endc_lte_rssnr_num})
@@ -1045,9 +1045,9 @@ fibocom_cell_info()
                     endc_nr_band_num=$(echo "$response" | awk -F',' '{print $9}')
                     endc_nr_band=$(fibocom_get_band "NR" ${endc_nr_band_num})
                     nr_dl_bandwidth_num=$(echo "$response" | awk -F',' '{print $10}')
-                    endc_nr_dl_bandwidth=$(fibocom_get_nr_dl_bandwidth ${nr_dl_bandwidth_num})
+                    endc_nr_dl_bandwidth=$(fibocom_get_bandwidth "NR" ${nr_dl_bandwidth_num})
                     endc_nr_sinr_num=$(echo "$response" | awk -F',' '{print $11}')
-                    endc_nr_sinr=$(fibocom_get_sinr_num "NR" ${endc_nr_sinr_num})
+                    endc_nr_sinr=$(fibocom_get_sinr "NR" ${endc_nr_sinr_num})
                     endc_nr_rxlev_num=$(echo "$response" | awk -F',' '{print $12}')
                     endc_nr_rxlev=$(fibocom_get_rxlev "NR" ${endc_nr_rxlev_num})
                     endc_nr_rsrp_num=$(echo "$response" | awk -F',' '{print $13}')
@@ -1066,7 +1066,7 @@ fibocom_cell_info()
                     lte_band_num=$(echo "$response" | awk -F',' '{print $9}')
                     lte_band=$(fibocom_get_band "LTE" ${lte_band_num})
                     ul_bandwidth_num=$(echo "$response" | awk -F',' '{print $10}')
-                    lte_ul_bandwidth=$(fibocom_get_ul_bandwidth ${ul_bandwidth_num})
+                    lte_ul_bandwidth=$(fibocom_get_bandwidth "LTE" ${ul_bandwidth_num})
                     lte_dl_bandwidth="$lte_ul_bandwidth"
                     lte_rssnr=$(echo "$response" | awk -F',' '{print $11}')
                     lte_rxlev_num=$(echo "$response" | awk -F',' '{print $12}')
@@ -1241,15 +1241,17 @@ Fibocom_Cellinfo()
     fi
 }
 
-#获取Fibocom模块信息
+#获取广和通模组信息
 # $1:AT串口
-# $2:连接定义
+# $2:平台
+# $3:连接定义
 get_fibocom_info()
 {
     debug "get fibocom info"
     #设置AT串口
     at_port="$1"
-    define_connect="$2"
+    platform="$2"
+    define_connect="$3"
 
     #基本信息
     fibocom_base_info

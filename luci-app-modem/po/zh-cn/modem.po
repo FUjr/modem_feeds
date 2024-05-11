@@ -43,6 +43,9 @@ msgstr "查看已适配模组的信息"
 msgid "Not adapted to this modem"
 msgstr "未适配该模组"
 
+msgid "(Check adapted modem)"
+msgstr "（查看已适配模组）"
+
 msgid "Loading modem information"
 msgstr "正在加载模组信息"
 
@@ -195,6 +198,9 @@ msgstr "模组信息"
 
 msgid "No modems found"
 msgstr "没有找到模组"
+
+msgid "(Check the reason)"
+msgstr "（查看原因）"
 
 msgid "Enable dial configurations"
 msgstr "启用拨号配置"
@@ -394,6 +400,9 @@ msgstr "LTE 模式"
 msgid "WCDMA Mode"
 msgstr "WCDMA 模式"
 
+msgid "GSM Mode"
+msgstr "GSM 模式"
+
 msgid "MCC"
 msgstr "移动国家代码 (MCC)"
 
@@ -577,6 +586,12 @@ msgstr "启用手动配置模组信息"
 msgid "(After enable, the automatic scanning and configuration function for modem information will be disabled)"
 msgstr "（启用后将禁用自动扫描并配置模组信息功能）"
 
+msgid "Not null"
+msgstr "不能为空"
+
+msgid "missing"
+msgstr "有必填选项为空值"
+
 msgid "Plugin Info"
 msgstr "插件信息"
 
@@ -594,6 +609,9 @@ msgstr "quectel-CM 版本"
 
 msgid "modemmanager Version"
 msgstr "modemmanager 版本"
+
+msgid "Not installed"
+msgstr "未安装"
 
 msgid "Modem General Driver Info"
 msgstr "模组通用驱动信息"

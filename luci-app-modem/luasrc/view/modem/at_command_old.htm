@@ -1,6 +1,21 @@
 <%+header%>
 
 <style type="text/css">
+	/* 消息样式 */
+	#info_message {
+		text-align: left;
+		font-size: 1.8em;
+	}
+
+	#info_message img {
+		vertical-align: middle;
+	}
+
+	#info_message a {
+		color: rgb(61, 143, 173);
+		font-size: 50%;
+	}
+
 	#modem_status_view > div {
 		display: inline-block;
 		margin: 1rem;
@@ -127,7 +142,7 @@
 			if (Object.keys(at_ports).length==0)
 			{
 				// 更新提示信息
-				document.getElementById("info_message").innerHTML="<strong><%:No modems found%></strong>";
+				document.getElementById("info_message").innerHTML='<strong><%:No modems found%></strong> <a href="https://blog.siriling.com:1212/2023/03/18/openwrt-5g-modem/#zi-dong-sao-miao-shi-bie-gong-neng" target="_blank"><%:(Check the reason)%></a>';
 				// 显示提示信息
 				document.getElementById("cbi-info").style.display="block";
 				// 隐藏AT命令界面
@@ -216,8 +231,8 @@
 			<table class="table" id="message">
 				<tr class="tr">
 					<td colspan="2" class="td left">
-						<div align="left" id="info_message" style="font-size:1.875em">
-							<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle"/>
+						<div id="info_message">
+							<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>"/>
 							<%:Loading modem%>...
 						</div>
 					</td>

@@ -22,6 +22,22 @@ end
 		}
 	} */
 
+	/* 消息样式 */
+	#info_message {
+		text-align: left;
+		font-size: 1.8em;
+	}
+
+	#info_message img {
+		vertical-align: middle;
+	}
+
+	#info_message a {
+		color: rgb(61, 143, 173);
+		font-size: 50%;
+	}
+
+	/* 信号样式 */
 	.signal-view {
 		position: relative;
 		min-width: 11rem;
@@ -33,6 +49,7 @@ end
 		overflow: hidden;
 	}
 
+	/* 信号百分比样式 */
 	.signal-percent {
 		width: 0;
 		height: 100%;
@@ -43,6 +60,7 @@ end
     	border-bottom-right-radius: 4px; */
 	}
 
+	/* 信号文字内容样式 */
 	.signal-context{
 		font-family: monospace;
 		/* font-size: 1em; */
@@ -597,7 +615,7 @@ end
 		else //未适配模组
 		{
 			// 更新提示信息
-			document.getElementById("info_message").innerHTML="<strong><%:Not adapted to this modem%></strong>";
+			document.getElementById("info_message").innerHTML='<strong><%:Not adapted to this modem%></strong> <a href="https://github.com/Siriling/5G-Modem-Support/blob/main/luci-app-modem/README.md" target="_blank"><%:(Check adapted modem)%></a>';
 			// 显示提示信息
 			document.getElementById("cbi-info").style.display="block";
 			// 显示基本信息
@@ -803,11 +821,11 @@ end
 		}
 	);
 
-	//无模块界面
+	//无模组界面
 	function no_modems_view()
 	{
 		// 更新提示信息
-		document.getElementById("info_message").innerHTML="<strong><%:No modems found%></strong>";
+		document.getElementById("info_message").innerHTML='<strong><%:No modems found%></strong> <a href="https://blog.siriling.com:1212/2023/03/18/openwrt-5g-modem/#zi-dong-sao-miao-shi-bie-gong-neng" target="_blank"><%:(Check the reason)%></a>';
 		// 显示提示信息
 		document.getElementById("cbi-info").style.display="block";
 		// 隐藏基本信息
@@ -833,8 +851,8 @@ end
 				<tbody id="message">
 					<tr class="tr">
 						<td class="td left">
-							<div align="left" id="info_message" style="font-size:1.875em">
-								<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>" style="vertical-align:middle"/>
+							<div id="info_message">
+								<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>"/>
 								<%:Loading modem information%>...
 							</div>
 						</td>
