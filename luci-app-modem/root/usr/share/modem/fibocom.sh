@@ -482,6 +482,22 @@ fibocom_sim_info()
 	iccid=$(sh ${SCRIPT_DIR}/modem_at.sh ${at_port} ${at_command} | grep -o "+ICCID:[ ]*[-0-9]\+" | grep -o "[-0-9]\{1,4\}")
 }
 
+fibocom_get_imei()
+{
+    local at_port="$1"
+    at_command="AT+CGSN?"
+    imei=$(sh ${SCRIPT_DIR}/modem_at.sh ${at_port} ${at_command} | grep "+CGSN: " | awk -F'"' '{print $2}'| grep -E '[0-9]+')
+    echo "$imei"
+}
+
+fibocom_set_imei()
+{
+    local at_port="$1"
+    local imei="$2"
+    at_command="AT+GTSN=1,7,\"$imei\""
+    #重定向stderr
+    res=$(sh ${SCRIPT_DIR}/modem_at.sh ${at_port} "${at_command}") 2>&1
+}
 #获取网络类型
 # $1:网络类型数字
 fibocom_get_rat()
@@ -637,11 +653,11 @@ fibocom_get_neighborcell()
     cell_type="undefined"
     json_init
     json_add_object "Feature"
-    json_add_string "unlockcell" "1"
-    json_add_string "lockpci" "2"
-    json_add_string "lockarfcn" "3"
-    json_add_string "lockcurrent" "4"
-    json_add_string "reboot modem" "5"
+    json_add_string "Unlock" "1"
+    json_add_string "Lock PCI" "2"
+    json_add_string "Lock ARFCN" "3"
+    json_add_string "Lock Current" "4"
+    json_add_string "Reboot Modem" "5"
     json_close_object
     json_add_array "NR"
     json_close_array
