@@ -3,6 +3,8 @@
 	<script type="text/javascript">//<![CDATA[
 
 		window.onload = function () {
+
+
 			//获取模组选择框元素
 			var modem_select = document.getElementById('modem_select');
 			//更换模组（AT串口）时触发
@@ -49,7 +51,7 @@
 
 		//设置标签菜单事件
 		function set_tab_event(parent_element) {
-			
+
 			//获取子元素
 			var childElements = parent_element.children;
 			//获取需要禁用的元素
@@ -62,7 +64,7 @@
 					get_modem_debug_info(debug_params);
 				});
 
-				
+
 			}
 		}
 
@@ -264,7 +266,7 @@
 			//显示模组选择界面
 			document.getElementById("cbi-modem").style.display = "block";
 			//显示标签菜单界面
-			document.getElementById("tab_menu").style.display = "block";
+			document.getElementById("tab_menu").style.display = "flex";
 			//显示标签内容界面
 			document.getElementById("tab_context").style.display = "block";
 			//隐藏AT命令标题
@@ -459,7 +461,7 @@
 					current_prefer_view += key + " ";
 				}
 			}
-			
+
 
 			return current_prefer_view;
 		}
@@ -475,22 +477,22 @@
 			if (dont_edit_flag == null) {
 				document.getElementById("tab_menu").setAttribute("dont_edit", "true");
 				for (key in network_prefer) {
-						//设置偏好配置
-						var prefer_config_element = document.getElementById('prefer_config_' + key.toLowerCase());
-						if (prefer_config_element != null) {
-							prefer_config_element.checked = network_prefer[key];
-						}
+					//设置偏好配置
+					var prefer_config_element = document.getElementById('prefer_config_' + key.toLowerCase());
+					if (prefer_config_element != null) {
+						prefer_config_element.checked = network_prefer[key];
 					}
-				
+				}
+
 			}
-			}
+		}
 
 		function set_lockband_info(lockband_info, first_cache) {
 			//获取锁频
 			var current_lockband = lockband_info["lock_band"];
 			var avalible_lockband = lockband_info["available_band"];
 			//可选锁频配置td
-			var avalible_lockband_td = document.getElementById('lockband_custom_config_values');
+			var avalible_lockband_td = document.getElementById('lockband_custom_config');
 
 			//设置偏好选项和复选框
 			if (first_cache) {
@@ -595,7 +597,7 @@
 		// 设置网络偏好
 		function set_network_prefer() {
 			//禁用功能
-			
+
 			disabled_function("network_prefer", true);
 
 			//获取选中的模组
@@ -605,10 +607,12 @@
 			var network_prefer_config = {};
 			var checkboxes = document.getElementById('prefer_custom_config').querySelectorAll('input[type="checkbox"]');
 
-				for (checkbox of checkboxes) {
-					network_prefer_config[checkbox.value.toUpperCase()] = Number(checkbox.checked);
-				}
+			for (checkbox of checkboxes) {
+				network_prefer_config[checkbox.value.toUpperCase()] = Number(checkbox.checked);
+			}
 
+			//stringify
+			network_prefer_config = JSON.stringify(network_prefer_config);
 			//设置偏好
 			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_network_prefer")%>', { "port": at_port, "prefer_config": network_prefer_config },
 				function (x, data) {
@@ -632,7 +636,6 @@
 			var at_port = document.getElementById("modem_select").value;
 
 			//获取偏好配置
-			var network_prefer_config = {};
 			lockband_config = ""
 			var checkboxes = document.querySelectorAll('input[name="lockband_option"]:checked');
 			for (checkbox of checkboxes) {
@@ -645,7 +648,7 @@
 				function (x, data) {
 					var current_lockband = data["lock_band"];
 					var avalible_lockband = data["available_band"];
-					var avalible_lockband_td = document.getElementById('lockband_custom_config_values');
+					var avalible_lockband_td = document.getElementById('lockband_custom_config');
 					for (key in avalible_lockband) {
 						id = "lockband_config_" + key;
 						checkbox_get = document.getElementById(id);
@@ -742,6 +745,9 @@
 					}
 				);
 			}
+			else if (data_tab == "set_imei") {
+				get_imei_info();
+			}
 		}
 
 		// 更新neighbor cell信息
@@ -790,7 +796,7 @@
 							var rat = document.getElementById("rat_select").value;
 							var scs = document.getElementById("scs_select").value;
 							var nrband = document.getElementById("nrband_input").value;
-							XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "func": this.id.replace("lockcell_feature_",""), "pci": pci, "arfcn": arfcn, "celltype": rat, "scs": scs, "nrband": nrband},
+							XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "func": this.id.replace("lockcell_feature_", ""), "pci": pci, "arfcn": arfcn, "celltype": rat, "scs": scs, "nrband": nrband },
 								function (x, data) {
 									console.log(data["response"]);
 									update_cell_config();
@@ -799,46 +805,52 @@
 						};
 						lockcell_feature_div.appendChild(feature_button);
 					}
-					
+
 					lockcell_status = data["lockcell_status"];
 					neighbor_cells = {
-						"LTE" : data["LTE"],
-						"NR" : data["NR"]
+						"LTE": data["LTE"],
+						"NR": data["NR"]
 					}
-					for (type in neighbor_cells) {
-						for (cell_info of neighbor_cells[type]) {
-							
-							rat = type == "LTE" ? 0 : 1;
-							cell_info["rat"] = rat;
-							innerHTML = `RAT:${type} `
-							console.log(innerHTML)
-							for (cell_info_key in cell_info){
-								if (cell_info[cell_info_key] == "") {
-									continue
-								}
-								innerHTML += `${cell_info_key}:${cell_info[cell_info_key]} `
-							}
-							cell_tr = document.createElement('tr');
-							cell_tr.className = "tr";
-							cell_td_left = document.createElement('td');
-							cell_td_left.className = "td";
-							cell_td_left.innerHTML = innerHTML;
-							cell_td_right = document.createElement('td');
-							cell_td_right.className = "td";
-							copy_botton = document.createElement('input');
-							copy_botton.type = "button";
-							copy_botton.innerHTML = "Copy";
-							copy_botton.className = "cbi-button";
-							copy_botton.value = "Copy";
+					try{
+						for (type in neighbor_cells) {
+							for (cell_info of neighbor_cells[type]) {
 
-							copy_botton.onclick = onclick_copy_fun_gen(cell_info);
-							cell_td_right.appendChild(copy_botton);
-							cell_tr.appendChild(cell_td_left);
-							cell_tr.appendChild(cell_td_right);
-							neighbor_cell_info.appendChild(cell_tr);
+								rat = type == "LTE" ? 0 : 1;
+								cell_info["rat"] = rat;
+								innerHTML = `RAT:${type} `
+								console.log(innerHTML)
+								for (cell_info_key in cell_info) {
+									if (cell_info[cell_info_key] == "") {
+										continue
+									}
+									innerHTML += `${cell_info_key}:${cell_info[cell_info_key]} `
+								}
+								cell_tr = document.createElement('tr');
+								cell_tr.className = "tr";
+								cell_td_left = document.createElement('td');
+								cell_td_left.className = "td";
+								cell_td_left.innerHTML = innerHTML;
+								cell_td_right = document.createElement('td');
+								cell_td_right.className = "td";
+								copy_botton = document.createElement('input');
+								copy_botton.type = "button";
+								copy_botton.innerHTML = "Copy";
+								copy_botton.className = "cbi-button";
+								copy_botton.value = "Copy";
+
+								copy_botton.onclick = onclick_copy_fun_gen(cell_info);
+								cell_td_right.appendChild(copy_botton);
+								cell_tr.appendChild(cell_td_left);
+								cell_tr.appendChild(cell_td_right);
+								neighbor_cell_info.appendChild(cell_tr);
+							}
 						}
 					}
+					catch (e) {
+						console.log(e);
+					}
 					
+
 					lockcell_status_div = document.getElementById('current_cell_status');
 					childElements = lockcell_status_div.childNodes;
 					keys = Object.keys(lockcell_status);
@@ -850,7 +862,7 @@
 						}
 
 					}
-					
+
 					for (key of keys) {
 						if (lockcell_status[key] == "") {
 							if (eleids.includes(key)) {
@@ -875,7 +887,7 @@
 							lockcell_status_div.appendChild(tr);
 							tr.appendChild(td_left);
 							tr.appendChild(td_right);
-							
+
 						}
 						td_left.innerHTML = key.toUpperCase();
 						td_right.innerHTML = lockcell_status[key].toUpperCase();
@@ -893,6 +905,37 @@
 				document.getElementById("scs_input_tr").style.display = "none";
 				document.getElementById("nr_input_tr").style.display = "none";
 			}
+		}
+
+		function set_imei() {
+			var at_port = document.getElementById("modem_select").value;
+			var imei = document.getElementById("imei1_input").value;
+			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_imei")%>', { "port": at_port, "imei": imei },
+				function (x, data) {
+					set_imei_view(data);
+				}
+			);
+		}
+
+		function set_imei_view(imei_info) {
+			var imei = imei_info["imei"];
+			document.getElementById("imei1_input").value = imei;
+		}
+
+		function get_imei_info() {
+			var at_port = document.getElementById("modem_select").value;
+			//set dont_edit flag
+			var dont_edit = document.getElementById("tab_menu").getAttribute("dont_edit");
+			if (dont_edit == null) {
+				document.getElementById("tab_menu").setAttribute("dont_edit", "true");
+				XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_imei")%>', { "port": at_port },
+					function (x, data) {
+						set_imei_view(data);
+					}
+				);
+			}
+
+
 		}
 
 		// 定时触发更新AT串口
@@ -1024,6 +1067,12 @@
 					text-align: center;
 					display: none;
 				}
+
+				#lockcell_feature {
+					display: flex;
+					justify-content: space-between;
+					flex-wrap: wrap;
+				}
 			</style>
 		</head>
 
@@ -1089,6 +1138,9 @@
 			<li class="cbi-tab-disabled" data-tab="at_command_tab"><a href="#">
 					<%:AT Command%>
 				</a></li>
+			<li class="cbi-tab-disabled" data-tab="set_imei_tab"><a href="#">
+					<%:Set IMEI%>
+				</a></li>
 		</ul>
 
 		<div class="cbi-section-node cbi-section-node-tabbed" id="tab_context">
@@ -1136,10 +1188,8 @@
 							</td>
 							<td class="td">
 								<div>
-									<button class="btn cbi-button cbi-button-apply" id="mode_button"
-										onclick="set_mode()" alt="<%:Apply%>" title="<%:Apply%>">
-										<%:Apply%>
-									</button>
+									<input type="button" class="cbi-button-apply" id="mode_button" onclick="set_mode()"
+										alt="<%:Apply%>" value="<%:Apply%>">
 								</div>
 							</td>
 						</tr>
@@ -1157,7 +1207,9 @@
 							<th class="th cbi-section-table-cell">
 								<%:Config%>
 							</th>
-							<th class="th cbi-section-table-cell cbi-section-actions"></th>
+							<th class="th cbi-section-table-cell cbi-section-actions">
+								<%:Apply%>
+							</th>
 						</tr>
 						<tr class="tr cbi-section-table-row cbi-rowstyle-1">
 							<td class="td cbi-value-field" data-title="<%:Config%>" id="prefer_custom_config">
@@ -1186,14 +1238,11 @@
 								</div>
 							</td>
 							<td class="td">
-								<div>
-									<button class="btn cbi-button cbi-button-apply" id="network_prefer_button"
-										onclick="set_network_prefer()" alt="<%:Apply%>" title="<%:Apply%>">
-										<%:Apply%>
-									</button>
-								</div>
+								<input type="button" class="cbi-button-apply" id="network_prefer_button"
+									onclick="set_network_prefer()" value="<%:Apply%>">
 							</td>
 						</tr>
+
 					</tbody>
 				</table>
 			</div>
@@ -1209,249 +1258,255 @@
 							</th>
 						</tr>
 						<tr class="tr cbi-section-table-row">
-							<td class="td cbi-value-field" data-title="<%:Config%>" id="lockband_custom_config"
-								class="width:80%;">
-								<div id="lockband_custom_config_values">
-
-								</div>
-								<div>
-									<div>
-										<button class="btn cbi-button cbi-button-apply" id="lockband_button"
-											onclick="all_choose_lockband_custom_config()" alt="<%:Select All Band>"
-											title="<%:Select All Band%>">
-											<%:Select All Band%>
-										</button>
-
-										<button class="btn cbi-button cbi-button-apply" id="lockband_button"
-											onclick="set_lockband()" alt="<%:Apply%>" title="<%:Apply%>">
-											<%:Apply%>
-										</button>
-									</div>
-								</div>
-
+	
+							<td class="td cbi-value-field" data-title="<%:Config%>" id="lockband_custom_config">
 							</td>
+
 						</tr>
+
 					</tbody>
 				</table>
+			<input type="button" class="cbi-button-apply" onclick="all_choose_lockband_custom_config()"value="<%:Select All Band%>">
+			<input type="button" class="cbi-button-apply" onclick="set_lockband()" value="<%:Apply%>">
 			</div>
 
-			<div class="cbi-section" data-tab="lockcell_tab" data-tab-title="<%:Lock Cell/Arfcn Settings%>"
-				data-tab-active="false" style="display: none;">
-				<h3 id="Lock Cell/Arfcn_title">
-					<%:Current Settings%>
-				</h3>
-				<table class="table" id="CurrentStatus">
-					<tbody id="current_cell_status">
-					</tbody>
-				</table>
-				<h3 id="Lock Cell/Arfcn_title">
-					<%:Available Neighbor%>
-				</h3>
-				<table class="table" id="AvailableNeighbor">
-					<tbody id="neighbor_cell_info">
-					</tbody>
-				</table>
-				<!-- <legend><%:AT Command%></legend> -->
-				<h3 id="Lock Cell/Arfcn_title">
-					<%:Lock Cell/Arfcn Settings%>
-				</h3>
-				<table class="table" id="lockcell_info">
-					<tbody>
-						<tr class="tr">
-							<td class="td left">
-								<%:Select Rat%>
-							</td>
-							<td class="td left">
-								<select name="rat_select" id="rat_select" class="cbi-input-select" onchange="lockcell_rat_onchange()">
-									<option value="0">4G</option>
-									<option value="1" >5G</option>
-								</select>
-							</td>
-						</tr>
-						<tr class="tr">
-							<td class="td left">
-								<%:Enter Arfcn%>
-							</td>
-							<td class="td left">
-								<div>
-									<input type="text" id="arfcn_input" class="cbi-input-text"></input>
 
-								</div>
-							</td>
-						</tr>
-						<tr class="tr">
-							<td class="td left">
-								<%:Enter PCI%>
-							</td>
-							<td class="td left">
-								<div>
-									<input type="text" id="pci_input" class="cbi-input-text"></input>
-								</div>
-							</td>
-						</tr>
-						<tr class="tr" id="scs_input_tr" style="display:none;">
-							<td class="td left">
-								<%:Enter SCS%>
-							</td>
-							<td class="td left">
-								<select name="rat_select" id="scs_select" class="cbi-input-select">
-									<option value="0">15KHZ</option>
-									<option value="1" >30KHZ</option>
-									<option value="2" >60KHZ</option>
-								</select>
-							</td>
-						</tr>
-						<tr class="tr" id="nr_input_tr" style="display:none;">
-							<td class="td left">
-								<%:Enter NRBAND%>
-							</td>
-							<td class="td left">
-								<div>
-									<input type="text" id="nrband_input" class="cbi-input-text"></input>
-								</div>
-							</td>
-						</tr>
-						<tr class="tr">
-							<td class="td left">
-								<%:Submit%>
-							</td>
-							<td class="td left">
-								<div id="lockcell_feature">
-									<!-- <input class="cbi-button cbi-button-apply" type="button" value="<%:Unlock Cell%>"
-										onclick="unlock_cell()" alt="<%:Unlock Cell%>" title="<%:Unlock Cell%>">
-									<input class="cbi-button cbi-button-apply" type="button" value="<%:Lock Current%>"
-										onclick="lock_current_cell()" alt="<%:Lock Current%>" title="<%:Lock Current%>">
-									<input class="cbi-button cbi-button-reset" type="button" value="<%:Lock PCI%>"
-										onclick="lock_pci()" alt="<%:Lock PCI%>" title="<%:Lock PCI%>">
-									<input class="cbi-button cbi-button-reset" type="button" value="<%:Lock ARFCN%>"
-										onclick="lock_arfcn()" alt="<%:Lock ARFCN%>" title="<%:Lock ARFCN%>"> -->
-								</div>
-							</td>
-						</tr>
-						<span></span>
-					</tbody>
-				</table>
-				
+		<div class="cbi-section" data-tab="lockcell_tab" data-tab-title="<%:Lock Cell/Arfcn Settings%>"
+			data-tab-active="false" style="display: none;">
+			<h3 id="Lock Cell/Arfcn_title">
+				<%:Current Settings%>
+			</h3>
+			<table class="table" id="CurrentStatus">
+				<tbody id="current_cell_status">
+				</tbody>
+			</table>
+			<h3 id="Lock Cell/Arfcn_title">
+				<%:Available Neighbor%>
+			</h3>
+			<table class="table" id="AvailableNeighbor">
+				<tbody id="neighbor_cell_info">
+				</tbody>
+			</table>
+			<!-- <legend><%:AT Command%></legend> -->
+			<h3 id="Lock Cell/Arfcn_title">
+				<%:Lock Cell/Arfcn Settings%>
+			</h3>
+			<table class="table" id="lockcell_info">
+				<tbody>
+					<tr class="tr">
+						<td class="td left">
+							<%:Select Rat%>
+						</td>
+						<td class="td left">
+							<select name="rat_select" id="rat_select" class="cbi-input-select"
+								onchange="lockcell_rat_onchange()">
+								<option value="0">4G</option>
+								<option value="1">5G</option>
+							</select>
+						</td>
+					</tr>
+					<tr class="tr">
+						<td class="td left">
+							<%:Enter Arfcn%>
+						</td>
+						<td class="td left">
+							<div>
+								<input type="text" id="arfcn_input" class="cbi-input-text"></input>
+
+							</div>
+						</td>
+					</tr>
+					<tr class="tr">
+						<td class="td left">
+							<%:Enter PCI%>
+						</td>
+						<td class="td left">
+							<div>
+								<input type="text" id="pci_input" class="cbi-input-text"></input>
+							</div>
+						</td>
+					</tr>
+					<tr class="tr" id="scs_input_tr" style="display:none;">
+						<td class="td left">
+							<%:Enter SCS%>
+						</td>
+						<td class="td left">
+							<select name="rat_select" id="scs_select" class="cbi-input-select">
+								<option value="0">15KHZ</option>
+								<option value="1">30KHZ</option>
+								<option value="2">60KHZ</option>
+							</select>
+						</td>
+					</tr>
+					<tr class="tr" id="nr_input_tr" style="display:none;">
+						<td class="td left">
+							<%:Enter NRBAND%>
+						</td>
+						<td class="td left">
+							<div>
+								<input type="text" id="nrband_input" class="cbi-input-text"></input>
+							</div>
+						</td>
+					</tr>
+					<tr class="tr">
+						<td class="td left">
+							<%:Submit%>
+						</td>
+						<td class="td left">
+							<div id="lockcell_feature">
+							</div>
+						</td>
+					</tr>
+					<span></span>
+				</tbody>
+			</table>
 
 
-			</div>
-			<!-- <div class="cbi-section fade-in"> -->
-			<div class="cbi-section" data-tab="self_test_tab" data-tab-title="<%:Self Test%>" data-tab-active="false"
-				style="display: none;">
-				<!-- <legend><%:Self Test%></legend> -->
-				<!-- <h3><%:Self Test%></h3> -->
-				<table class="table cbi-section-table">
-					<tbody>
-						<tr class="tr cbi-section-table-titles anonymous">
-							<th class="th cbi-section-table-cell">
-								<%:Item%>
-							</th>
-							<th class="th cbi-section-table-cell">
-								<%:Current%>
-							</th>
-							<th class="th cbi-section-table-cell">
-								<%:Status%>
-							</th>
-						</tr>
-						<tr class="tr cbi-section-table-row cbi-rowstyle-1">
-							<td class="td cbi-value-field" data-title="<%:Item%>" id="voltage_label">
-								<%:Voltage%>
-							</td>
-							<td class="td cbi-value-field" data-title="<%:Current%>" id="current_voltage"></td>
-							<td class="td cbi-value-field" data-title="<%:Status%>" id="voltage_status">-</td>
-						</tr>
-						<tr class="tr cbi-section-table-row cbi-rowstyle-2">
-							<td class="td cbi-value-field" data-title="<%:Item%>" id="temperature_label">
-								<%:Temperature%>
-							</td>
-							<td class="td cbi-value-field" data-title="<%:Current%>" id="current_temperature"></td>
-							<td class="td cbi-value-field" data-title="<%:Status%>" id="temperature_status">-</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-			<!-- <div class="cbi-section fade-in"> -->
-			<div class="cbi-section" data-tab="at_command_tab" data-tab-title="<%:AT Command%>" data-tab-active="false"
-				style="display: none;">
-				<!-- <legend><%:AT Command%></legend> -->
-				<h3 id="at_command_title">
-					<%:AT Command%>
-				</h3>
-				<table class="table" id="at_command_info">
-					<tbody>
-						<!-- <tr class="tr">
+
+		</div>
+		<!-- <div class="cbi-section fade-in"> -->
+		<div class="cbi-section" data-tab="self_test_tab" data-tab-title="<%:Self Test%>" data-tab-active="false"
+			style="display: none;">
+			<!-- <legend><%:Self Test%></legend> -->
+			<!-- <h3><%:Self Test%></h3> -->
+			<table class="table cbi-section-table">
+				<tbody>
+					<tr class="tr cbi-section-table-titles anonymous">
+						<th class="th cbi-section-table-cell">
+							<%:Item%>
+						</th>
+						<th class="th cbi-section-table-cell">
+							<%:Current%>
+						</th>
+						<th class="th cbi-section-table-cell">
+							<%:Status%>
+						</th>
+					</tr>
+					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
+						<td class="td cbi-value-field" data-title="<%:Item%>" id="voltage_label">
+							<%:Voltage%>
+						</td>
+						<td class="td cbi-value-field" data-title="<%:Current%>" id="current_voltage"></td>
+						<td class="td cbi-value-field" data-title="<%:Status%>" id="voltage_status">-</td>
+					</tr>
+					<tr class="tr cbi-section-table-row cbi-rowstyle-2">
+						<td class="td cbi-value-field" data-title="<%:Item%>" id="temperature_label">
+							<%:Temperature%>
+						</td>
+						<td class="td cbi-value-field" data-title="<%:Current%>" id="current_temperature"></td>
+						<td class="td cbi-value-field" data-title="<%:Status%>" id="temperature_status">-</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<!-- <div class="cbi-section fade-in"> -->
+		<div class="cbi-section" data-tab="at_command_tab" data-tab-title="<%:AT Command%>" data-tab-active="false"
+			style="display: none;">
+			<!-- <legend><%:AT Command%></legend> -->
+			<h3 id="at_command_title">
+				<%:AT Command%>
+			</h3>
+			<table class="table" id="at_command_info">
+				<tbody>
+					<!-- <tr class="tr">
 						<td class="td left"><%:Modem Select%></td>
 						<td class="td left"><select name="modem_select" id="modem_select" class="cbi-input-select"></select></td>
 					</tr> -->
-						<tr class="tr">
-							<td class="td left">
-								<%:Quick Option%>
-							</td>
-							<td class="td left" id="quick_option_td">
-								<div>
-									<span class="cbi-radio">
-										<input type="radio" name="quick_option" value="auto" checked="true">
-										<span>
-											<%:Auto%>
-										</span>
-									</span>&nbsp;
-									<span class="cbi-radio">
-										<input type="radio" name="quick_option" value="custom">
-										<span>
-											<%:Custom%>
-										</span>
+					<tr class="tr">
+						<td class="td left">
+							<%:Quick Option%>
+						</td>
+						<td class="td left" id="quick_option_td">
+							<div>
+								<span class="cbi-radio">
+									<input type="radio" name="quick_option" value="auto" checked="true">
+									<span>
+										<%:Auto%>
 									</span>
-								</div>
-							</td>
-						</tr>
-						<tr class="tr">
-							<td class="td left">
-								<%:Quick Commands%>
-							</td>
-							<td class="td left"><select name="command_select" id="command_select"
-									class="cbi-input-select"></select></td>
-						</tr>
-						<tr class="tr">
-							<td class="td left">
-								<%:Enter Command%>
-							</td>
-							<td class="td left">
-								<div>
-									<input type="text" id="at_command" class="cbi-input-text"></input>
-								</div>
-								<div>
-									<input class="cbi-button cbi-button-apply" type="button" value="<%:Send%>"
-										onclick="send_at_command()" alt="<%:Send%>" title="<%:Send%>">
-									<input class="cbi-button cbi-button-reset" type="button" value="<%:Clean%>"
-										onclick="clean_at_command()" alt="<%:Clean%>" title="<%:Clean%>">
-								</div>
-							</td>
-						</tr>
-						<tr class="tr">
-							<td colspan="2" class="td left">
-								<div id="response_label">
-									<%:Response%>
-								</div><br />
-								<div><textarea readonly="readonly" id="response" rows="20" maxlength="160"></textarea>
-								</div>
-								<div class="cbi-page-actions">
-									<input class="btn cbi-button cbi-button-link" type="button"
-										value="<%:Return to old page%>"
-										onclick="location.href='/cgi-bin/luci/admin/network/modem/at_command_old'"
-										alt="<%:Return to old page%>" title="<%:Return to old page%>">
-									<input class="btn cbi-button cbi-button-link" type="button"
-										value="<%:Custom quick commands%>"
-										onclick="location.href='/cgi-bin/luci/admin/network/modem/quick_commands_config'"
-										alt="<%:Custom quick commands%>" title="<%:Custom quick commands%>">
-									<input class="cbi-button cbi-button-reset" type="button" value="<%:Clean%>"
-										onclick="clean_response()" alt="<%:Clean%>" title="<%:Clean%>">
-								</div>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
+								</span>&nbsp;
+								<span class="cbi-radio">
+									<input type="radio" name="quick_option" value="custom">
+									<span>
+										<%:Custom%>
+									</span>
+								</span>
+							</div>
+						</td>
+					</tr>
+					<tr class="tr">
+						<td class="td left">
+							<%:Quick Commands%>
+						</td>
+						<td class="td left"><select name="command_select" id="command_select"
+								class="cbi-input-select"></select></td>
+					</tr>
+					<tr class="tr">
+						<td class="td left">
+							<%:Enter Command%>
+						</td>
+						<td class="td left">
+							<div>
+								<input type="text" id="at_command" class="cbi-input-text"></input>
+							</div>
+							<div>
+								<input class="cbi-button cbi-button-apply" type="button" value="<%:Send%>"
+									onclick="send_at_command()" alt="<%:Send%>" title="<%:Send%>">
+								<input class="cbi-button cbi-button-reset" type="button" value="<%:Clean%>"
+									onclick="clean_at_command()" alt="<%:Clean%>" title="<%:Clean%>">
+							</div>
+						</td>
+					</tr>
+					<tr class="tr">
+						<td colspan="2" class="td left">
+							<div id="response_label">
+								<%:Response%>
+							</div><br />
+							<div><textarea readonly="readonly" id="response" rows="20" maxlength="160"></textarea>
+							</div>
+							<div class="cbi-page-actions">
+								<input class="btn cbi-button cbi-button-link" type="button"
+									value="<%:Return to old page%>"
+									onclick="location.href='/cgi-bin/luci/admin/network/modem/at_command_old'"
+									alt="<%:Return to old page%>" title="<%:Return to old page%>">
+								<input class="btn cbi-button cbi-button-link" type="button"
+									value="<%:Custom quick commands%>"
+									onclick="location.href='/cgi-bin/luci/admin/network/modem/quick_commands_config'"
+									alt="<%:Custom quick commands%>" title="<%:Custom quick commands%>">
+								<input class="cbi-button cbi-button-reset" type="button" value="<%:Clean%>"
+									onclick="clean_response()" alt="<%:Clean%>" title="<%:Clean%>">
+							</div>
+						</td>
+					</tr>
+				</tbody>
+			</table>
 		</div>
+
+		<div class="cbi-section" data-tab="set_imei_tab" data-tab-title="<%:Set IMEI%>" data-tab-active="false"
+			style="display: none;">
+			<table class="table cbi-section-table">
+				<tbody id="imei_setting">
+					<tr class="tr cbi-section-table-titles anonymous">
+						<th>
+							<%:IMEI%>
+						</th>
+						<th>
+							<%:Set IMEI%>
+						</th>
+					</tr>
+					<tr class="tr">
+						<td class="td" style="width: auto;">
+							<%:IMEI%>
+						</td>
+						<td class="td cbi-value-field">
+							<input type="text" id="imei1_input" class="cbi-input-text"></input>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<input type="button" class="cbi-button-apply" onclick="set_imei()" value="<%:Apply%>">
+
+		</div>
+	</div>
 
 	</div>
 
