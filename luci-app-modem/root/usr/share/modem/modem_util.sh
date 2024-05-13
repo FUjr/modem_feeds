@@ -411,6 +411,7 @@ retry_set_modem_config()
 			modem_name="$(handle_special_modem_name ${modem_name})"
 		}
 
+		
 		#获取模组信息
 		local data_interface=$(uci -q get modem.modem${modem_no}.data_interface)
 		local modem_info=$(echo ${modem_support} | jq '.modem_support.'$data_interface'."'$modem_name'"')
@@ -462,21 +463,34 @@ m_set_modem_config()
 
 	#获取模组名称
 	local modem_name=$(uci -q get modem.modem${modem_no}.name)
+	if [ "$modem_name" == "unknown" ]; then
+		#返回空
+		modem_name=""
+	fi
 	[ -z "$modem_name" ] && {
 		local at_command="AT+CGMM?"
    		modem_name=$(at ${at_port} ${at_command} | grep "+CGMM: " | awk -F'"' '{print $2}' | tr 'A-Z' 'a-z' |cut -d ' ' -f 1)
+		logger -t modem_ttl "try_1_get_modem_name: ${modem_name}"
 	}
+
+	#再一次获取模组名称
 	[ -z "$modem_name" ] && {
-		#通过模组id设置型号
-		if [ -f "${physical_path}/idVendor" ] && [ -f "${physical_path}/idProduct" ]; then
-			local manufacturer_id=$(cat "${physical_path}/idVendor")
-			local product_id=$(cat "${physical_path}/idProduct")
-			case "$manufacturer_id" in
-				2c7c)
-					modem_name="quectel_generic"
-					;;
-			esac
-		fi
+		at_command="AT+CGMM"
+		modem_name=$(at ${at_port} ${at_command} | grep "+CGMM: " | awk -F': ' '{print $2}' | sed 's/\r//g' | tr 'A-Z' 'a-z')
+		logger -t modem_ttl "try_2_get_modem_name: ${modem_name}"
+	}
+
+	#再一次获取模组名称
+	[ -z "$modem_name" ] && {
+		at_command="AT+CGMM"
+		modem_name=$(at ${at_port} ${at_command} | sed -n '2p' | sed 's/\r//g' | tr 'A-Z' 'a-z')
+		logger -t modem_ttl "try_3_get_modem_name: ${modem_name}"
+	}
+
+	#处理特殊的模组名称
+	[ -n "$modem_name" ] && {
+		logger -t modem_ttl "handle_special_modem_name: ${modem_name}"
+		modem_name="$(handle_special_modem_name ${modem_name})"
 	}
 
 	#获取模组支持列表
