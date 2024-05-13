@@ -2,6 +2,7 @@
 <script type="text/javascript" src="<%=resource%>/xhr.js"></script>
 <script type="text/javascript">//<![CDATA[
 
+	
 	window.onload=function()
 	{
 		//获取模组选择框元素
@@ -780,7 +781,7 @@
 				//获取网络偏好信息
 				XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_lockband")%>', { "port": at_port },
 					function (x, data) {
-						set_lockband_info(data);
+						set_lockband_tab(data);
 					}
 				);
 			}
@@ -1057,119 +1058,160 @@
 
 		}
 
-		//锁频
-		function set_lockband() {
-			console.log("set_lockband")
-			//禁用功能
-			disabled_function("lockband", true);
-			//获取选中的模组
-			var at_port = document.getElementById("modem_select").value;
+		//锁频功能
+		class Lockband {
+			#lockband_config
+			#available_band
+			avalibale_bandid
+			#checkboxs = {}
 
-			//获取偏好配置
-			lockband_config = ""
-			var checkboxes = document.querySelectorAll('input[name="lockband_option"]:checked');
-			for (checkbox of checkboxes) {
-				lockband_config = checkbox.value + "," + lockband_config;
+
+			set lock(band){
+				if (!this.#lockband_config.includes(band)){
+					this.#lockband_config.push(band)
+					//set checkbox
+					
+				}
+				this.#checkboxs[band].checked = true;
 			}
-			//去掉最后一个逗号
-			lockband_config = lockband_config.substring(0, lockband_config.length - 1);
-			//设置锁频
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lockband")%>', { "port": at_port, "lock_band_config": lockband_config },
-				function (x, data) {
-					var current_lockband = data["lock_band"];
-					var avalible_lockband = data["available_band"];
-					var avalible_lockband_td = document.getElementById('lockband_custom_config');
-					for (key in avalible_lockband) {
-						id = "lockband_config_" + key;
-						checkbox_get = document.getElementById(id);
-						if (checkbox_get == null) {
-							checkbox_span = document.createElement('span');
-							checkbox_span.className = "cbi-checkbox";
-							checkbox = document.createElement('input');
-							checkbox.id = "lockband_config_" + key;
-							checkbox.name = "lockband_option";
-							checkbox.type = "checkbox";
-							checkbox.className = "cbi-input-checkbox";
-							checkbox.value = key;
-							checkbox_span.appendChild(checkbox);
-							span = document.createElement('span');
-							span.innerHTML = avalible_lockband[key];
-							checkbox_span.appendChild(span);
-							if (current_lockband.includes(key)) {
-								checkbox.checked = true;
+			set unlock(band){
+				this.#lockband_config = this.#lockband_config.filter(x => x != band)
+				//set checkbox
+				this.#checkboxs[band].checked = false;
+			}
+
+			createCheckbox(value,band){
+				let checkbox = document.createElement('input');
+				checkbox.type = "checkbox";
+				checkbox.className = "cbi-input-checkbox";
+				checkbox.value = band;
+				checkbox.setAttribute("display-band",value);
+				if (this.#lockband_config.includes(value)) {
+					this.lock(band);
+				}
+				let self = this;
+				checkbox.addEventListener("change",function(){
+					if (checkbox.checked){
+						self.lock = band;
+					}
+					else{
+						self.unlock = band;
+					}
+				});
+				this.#checkboxs[band] = checkbox;
+			}
+		
+			createCheckboxs(){
+				for (let key in this.#available_band) {
+					let display_value = this.#available_band[key]
+					this.createCheckbox(display_value,key);
+				}
+			}
+
+			update(lockband_config){
+				for (let band in this.#available_band) {
+					if (lockband_config.includes(band)) {
+						this.lock = band;
+					}
+					else{
+						this.#checkboxs[band].checked = false;
+						this.unlock = band;
+					}
+				}
+			}
+
+			submit()
+			{
+				return this.#lockband_config;
+			}
+
+			render(){
+				let tr = document.createElement('tr');
+				tr.className = "tr cbi-section-table-row";
+				let td = document.createElement('td');
+				td.className = "td";
+				for (let checkbox in this.#checkboxs) {
+					let display_value = this.#checkboxs[checkbox].getAttribute("display-band");
+					let span = document.createElement('span');
+					span.innerHTML = display_value;
+					td.appendChild(this.#checkboxs[checkbox]);
+					td.appendChild(span);
+				}
+				tr.appendChild(td);
+				return tr;
+			}
+
+			constructor(lockband_info){
+				this.#lockband_config = lockband_info["lock_band"];
+				this.#available_band = lockband_info["available_band"];
+				this.avalibale_bandid = Object.keys(this.#available_band);
+				this.#checkboxs = [];
+				this.createCheckboxs();
+				this.update(this.#lockband_config);
+			}
+		}
+		
+		function set_lockband_tab(lockband_info) {
+			if (typeof lb == "undefined") {
+				lb = {}
+				for (let RAT of Object.keys(lockband_info)) {
+					tr_header = document.createElement('div');
+					tr_header.className = "tr cbi-section-table-titles anonymous";
+					th = document.createElement('div');
+					th.className = "th cbi-section-table-cell";
+					th.innerHTML = RAT;
+					tr_header.appendChild(th);
+					document.getElementById('lockband_custom_config').appendChild(tr_header);
+
+					lb[RAT] = new Lockband(lockband_info[RAT]);
+					submit_btn = document.createElement('input');
+					submit_btn.type = "button";
+					submit_btn.value = "Submit";
+					submit_btn.addEventListener('click',
+						function () {
+							var at_port = document.getElementById("modem_select").value;
+							var config = lb[RAT].submit()
+							submit_config = ''
+							for (key of config) {
+								submit_config = key + "," + submit_config
 							}
-							avalible_lockband_td.appendChild(checkbox_span);
+							submit_config = submit_config.substring(0, submit_config.length - 1)
+							XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lockband")%>', { "port": at_port, "lock_band_config": submit_config, "rat": RAT },
+								function (x, data) {
+									lb[RAT].update(data[RAT]["lock_band"])
+								}
+							);
+						})
+					select_all_btn = document.createElement('input');
+					select_all_btn.type = "button";
+					select_all_btn.value = "Select All";
+					select_all_btn.addEventListener('click', function () {
+						if (lb[RAT].submit().length == lb[RAT].avalibale_bandid.length) {
+							lb[RAT].update([])
 						}
 						else {
-							checkbox_get.checked = current_lockband.includes(key);
+							lb[RAT].update(lb[RAT].avalibale_bandid)
 						}
-
 					}
-					//启用功能
-					disabled_function("lockband", false);
-				}
-			);
-		}
-
-		function set_lockband_info(lockband_info) {
-			//获取锁频
-			var current_lockband = lockband_info["lock_band"];
-			var avalible_lockband = lockband_info["available_band"];
-			//可选锁频配置td
-			var avalible_lockband_td = document.getElementById('lockband_custom_config');
-
-			//设置偏好选项和复选框
-			//设置偏好选项和复选框
-			var first_cache=document.getElementById("first_cache");
-			if (first_cache.checked)
-			{	
-				sortted_keys = Object.keys(avalible_lockband).sort();
-				for (key of sortted_keys) {
-					id = "lockband_config_" + key;
-					checkbox_get = document.getElementById(id);
-					if (checkbox_get == null) {
-						checkbox_span = document.createElement('span');
-						checkbox_span.className = "cbi-checkbox";
-
-						checkbox = document.createElement('input');
-						checkbox.id = "lockband_config_" + key;
-						checkbox.name = "lockband_option";
-						checkbox.type = "checkbox";
-						checkbox.className = "cbi-input-checkbox";
-						checkbox.value = key;
-						checkbox_span.appendChild(checkbox);
-						span = document.createElement('span');
-						span.innerHTML = avalible_lockband[key];
-						checkbox_span.appendChild(span);
-						if (current_lockband.includes(key)) {
-							checkbox.checked = true;
-						}
-						avalible_lockband_td.appendChild(checkbox_span);
-					}
-					first_cache.checked = false;
-				}
-
-				//设置第一次获取数据标志
-
-			}
-		}
-
-		// 全选锁频复选框
-		function all_choose_lockband_custom_config() {
-			var checkboxes = document.getElementById('lockband_custom_config').querySelectorAll('input[type="checkbox"]');
-			has_checked = false;
-			for (checkbox of checkboxes) {
-				//设置网络偏好复选框状态
-				checkbox.checked = checkbox.checked ? false : true;
-				if (checkbox.checked) {
-					has_checked = true;
+					)
+					lockband_custom_config = document.getElementById('lockband_custom_config');
+					lockband_custom_config.appendChild(lb[RAT].render())
+					lockband_custom_config.appendChild(submit_btn);
+					lockband_custom_config.appendChild(select_all_btn);
+					
 				}
 			}
-			for (checkbox of checkboxes) {
-				//设置网络偏好复选框状态
-				checkbox.checked = has_checked ? has_checked : false;
+			var first_cache = document.getElementById("first_cache");
+			if (first_cache.checked) {
+				for (let RAT of Object.keys(lockband_info)) {
+					lb[RAT].update(lockband_info[RAT])
+				}
+				first_cache.checked = false;
 			}
+			
 		}
+
+
 </script>
 
 <div class="cbi-map" id="cbi-modem-debug">
@@ -1495,25 +1537,16 @@
 			style="display: none;">
 			<!-- <legend><%:Network Preferences%></legend> -->
 			<!-- <h3><%:Network Preferences%></h3> -->
-			<table class="table cbi-section-table">
-				<tbody>
+			<table class="table cbi-section-table" >
+				<tbody id="lockband_custom_config">
 					<tr class="tr cbi-section-table-titles anonymous">
 						<th class="th cbi-section-table-cell">
 							<%:Config%>
 						</th>
 					</tr>
-					<tr class="tr cbi-section-table-row">
-		
-						<td class="td cbi-value-field" data-title="<%:Config%>" id="lockband_custom_config">
-						</td>
-		
-					</tr>
 		
 				</tbody>
 			</table>
-			<input type="button" class="cbi-button-apply" onclick="all_choose_lockband_custom_config()"
-				value="<%:Select All Band%>">
-			<input type="button" class="cbi-button-apply" onclick="set_lockband()" value="<%:Apply%>">
 		</div>
 		
 		<!-- 锁小区、频点 -->

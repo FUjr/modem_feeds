@@ -596,7 +596,25 @@ fibocom_get_lockband()
     get_lockband_config_res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $get_lockband_config_command)
     get_available_band_res=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $get_available_band_command)
     json_init
+    
+    json_add_object "UMTS"
     json_add_object "available_band"
+    json_close_object
+    json_add_array "lock_band"
+    json_close_object
+    json_close_object
+    json_add_object "LTE"
+    json_add_object "available_band"
+    json_close_object
+    json_add_array "lock_band"
+    json_close_object
+    json_close_object
+    json_add_object "NR"
+    json_add_object "available_band"
+    json_close_object
+    json_add_array "lock_band"
+    json_close_object
+    json_close_object
     index=0
     for i in $(echo "$get_available_band_res"| sed 's/\r//g' | awk -F"[()]" '{for(j=8; j<NF;j+=2) if ($j) print $j; else print 0;}' ); do
         case $index in
@@ -606,14 +624,22 @@ fibocom_get_lockband()
             1) 
             #"umts_band" 
             for j in $(echo "$i" | awk -F"," '{for(k=1; k<=NF; k++) print $k}'); do
+                json_select "UMTS"
+                json_select "available_band"
                 json_add_string  "$j" "UMTS_$j"
+                json_select ".."
+                json_select ".."
             done
             ;;
             2) 
             #"LTE" "$i" 
             for j in $(echo "$i" | awk -F"," '{for(k=1; k<=NF; k++) print $k}'); do
                 trim_first_letter=$(echo "$j" | sed 's/^.//')
+                json_select "LTE"
+                json_select "available_band"
                 json_add_string  "$j" "LTE_$trim_first_letter"
+                json_select ".."
+                json_select ".."
             done
             ;;
             3)  
@@ -626,16 +652,43 @@ fibocom_get_lockband()
             #"nr5g"
             for j in $(echo "$i" | awk -F"," '{for(k=1; k<=NF; k++) print $k}'); do
                 trim_first_letter=$(echo "$j" | sed 's/^.//')
+                json_select "NR"
+                json_select "available_band"
                 json_add_string  "$j" "NR_$trim_first_letter"
+                json_select ".."
+                json_select ".."
             done
             ;;
         esac
         index=$((index+1))
     done
-    json_close_object
-    json_add_array "lock_band"
+    
     for i in $(echo "$get_lockband_config_res" | sed 's/\r//g' | awk -F"," '{for(k=4; k<=NF; k++) print $k}' ); do
-        json_add_string "" "$i"
+        # i 0,100 UMTS
+        # i 100,5000 LTE
+        # i 5000,10000 NR
+        if [ -z "$i" ]; then
+            continue
+        fi
+        if [ $i -lt 100 ]; then
+            json_select "UMTS"
+            json_select "lock_band"
+            json_add_string "" "$i"
+            json_select ".."
+            json_select ".."
+        elif [ $i -lt 500 ]; then
+            json_select "LTE"
+            json_select "lock_band"
+            json_add_string "" "$i"
+            json_select ".."
+            json_select ".."
+        else
+            json_select "NR"
+            json_select "lock_band"
+            json_add_string "" "$i"
+            json_select ".."
+            json_select ".."
+        fi
     done
     json_close_array
     json_result=`json_dump`
