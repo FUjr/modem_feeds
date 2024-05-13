@@ -70,7 +70,36 @@
 				{"切换为USB3.1 Gen1（5Gbps） > AT+QCFG=\"usbspeed\",\"311\"":"AT+QCFG=\"usbspeed\",\"311\""},
 				{"切换为USB3.1 Gen1（10Gbps） > AT+QCFG=\"usbspeed\",\"312\"":"AT+QCFG=\"usbspeed\",\"312\""},
 				{"重置模组 > AT+QCFG=\"ResetFactory\"":"AT+QCFG=\"ResetFactory\""}
+			],
+			"lte":[
+				{"SIM卡状态上报 > AT+QSIMSTAT?":"AT+QSIMSTAT?"},
+				{"设置当前使用的为卡1 > AT+QUIMSLOT=1":"AT+QUIMSLOT=1"},
+				{"设置当前使用的为卡2 > AT+QUIMSLOT=2":"AT+QUIMSLOT=2"},
+				{"查询网络信息 > AT+QNWINFO":"AT+QNWINFO"},
+				{"查询载波聚合参数 > AT+QCAINFO":"AT+QCAINFO"},
+				{"查询当前拨号模式 > AT+QCFG=\"usbnet\"":"AT+QCFG=\"usbnet\""},
+				{"QMI/GobiNet拨号模式 > AT+QCFG=\"usbnet\",0":"AT+QCFG=\"usbnet\",0"},
+				{"ECM拨号模式 > AT+QCFG=\"usbnet\",1":"AT+QCFG=\"usbnet\",1"},
+				{"MBIM拨号模式 > AT+QCFG=\"usbnet\",2":"AT+QCFG=\"usbnet\",2"},
+				{"RNDIS拨号模式 > AT+QCFG=\"usbnet\",3":"AT+QCFG=\"usbnet\",3"},
+				{"NCM拨号模式 > AT+QCFG=\"usbnet\",5":"AT+QCFG=\"usbnet\",5"},
+				{"锁4G > AT+QNWPREFCFG=\"mode_pref\",LTE":"AT+QNWPREFCFG=\"mode_pref\",LTE"},
+				{"锁5G > AT+QNWPREFCFG=\"mode_pref\",NR5G":"AT+QNWPREFCFG=\"mode_pref\",NR5G"},
+				{"锁5G NSA > AT+QNWPREFCFG=\"mode_pref\",NR5G-NSA":"AT+QNWPREFCFG=\"mode_pref\",NR5G-NSA"},
+				{"锁5G SA > AT+QNWPREFCFG=\"mode_pref\",NR5G-SA":"AT+QNWPREFCFG=\"mode_pref\",NR5G-SA"},
+				{"恢复自动搜索网络 > AT+QNWPREFCFG=\"mode_pref\",AUTO":"AT+QNWPREFCFG=\"mode_pref\",AUTO"},
+				{"查询模组IMEI > AT+EGMR=0,7":"AT+EGMR=0,7"},
+				{"更改模组IMEI > AT+EGMR=1,7,\"IMEI\"":"AT+EGMR=1,7,\"在此设置IMEI\""},
+				{"获取模组温度 > AT+QTEMP":"AT+QTEMP"},
+				{"切换为USB通信端口 > AT+QCFG=\"data_interface\",0,0":"AT+QCFG=\"data_interface\",0,0"},
+				{"切换为PCIE通信端口 > AT+QCFG=\"data_interface\",1,0":"AT+QCFG=\"data_interface\",1,0"},
+				{"查看当前USB速率 > AT+QCFG=\"usbspeed\"":"AT+QCFG=\"usbspeed\""},
+				{"切换为USB2.0 > AT+QCFG=\"usbspeed\",\"20\"":"AT+QCFG=\"usbspeed\",\"20\""},
+				{"切换为USB3.1 Gen1（5Gbps） > AT+QCFG=\"usbspeed\",\"311\"":"AT+QCFG=\"usbspeed\",\"311\""},
+				{"切换为USB3.1 Gen1（10Gbps） > AT+QCFG=\"usbspeed\",\"312\"":"AT+QCFG=\"usbspeed\",\"312\""},
+				{"重置模组 > AT+QCFG=\"ResetFactory\"":"AT+QCFG=\"ResetFactory\""}
 			]
+
 		},
 		"fibocom":{
 			"qualcomm":[

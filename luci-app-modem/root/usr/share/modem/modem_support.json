@@ -137,13 +137,21 @@
                 "define_connect":"1",
                 "modes":["ecm","rndis","ncm"]
             },
-            "quectel_generic":{
+            "ec20f":{
                 "manufacturer_id":"2c7c",
                 "manufacturer":"quectel",
-                "platform":"generic",
+                "platform":"lte",
                 "data_interface":"usb",
                 "define_connect":"1",
                 "modes":["qmi","gobinet","ecm","mbim","rndis","ncm"]
+            },
+            "ec200a":{
+                "manufacturer_id":"2c7c",
+                "manufacturer":"quectel",
+                "platform":"lte",
+                "data_interface":"usb",
+                "define_connect":"3",
+                "modes":["ecm","mbim","rndis","ncm"]
             },
             "srm825n":{
                 "manufacturer_id":"2dee",
