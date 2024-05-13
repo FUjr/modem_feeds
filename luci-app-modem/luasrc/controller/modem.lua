@@ -667,7 +667,6 @@ function setLockCell()
 	local result=shell(command)
 	response["response"]=result
 	response["time"]=os.date("%Y-%m-%d %H:%M:%S")
-	response["lock"]="pci"
 
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(response)
@@ -693,11 +692,12 @@ end
 function setLockBand()
 	local at_port = http.formvalue("port")
 	local lock_band_config = http.formvalue("lock_band_config")
+	local rat = http.formvalue("rat")
 
 	--获取制造商
 	local manufacturer = getManufacturer(at_port)
-	local command="source "..script_path..manufacturer..".sh && "..manufacturer.."_set_lockband "..at_port.." "..lock_band_config
-	local result=shell(command)
+	local command1="source "..script_path..manufacturer..".sh && "..manufacturer.."_set_lockband "..at_port.." "..lock_band_config.." "..rat
+	local result1=shell(command1)
 	--获取锁频配置
 	local lock_band_config={}
 	if at_port and manufacturer and manufacturer~="unknown" then
@@ -705,6 +705,8 @@ function setLockBand()
 		local result=shell(command)
 		lock_band_config=json.parse(result)
 	end
+	lock_band_config["command"]=command1
+	lock_band_config["result"]=result1
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(lock_band_config)
 end
