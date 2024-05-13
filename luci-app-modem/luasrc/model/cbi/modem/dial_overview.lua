@@ -18,25 +18,25 @@ o.description = translate("Enable dial configurations")
 -- 添加模块状态
 m:append(Template("modem/modem_status"))
 
-s = m:section(TypedSection, "dial-config", translate("Config List"))
+s = m:section(TypedSection, "modem-device", translate("Config List"))
 s.anonymous = true
-s.addremove = true
+s.addremove = ture
 s.template = "modem/tblsection"
 s.extedit = d.build_url("admin", "network", "modem", "dial_config", "%s")
 
-function s.create(uci, t)
-    local uuid = string.gsub(luci.sys.exec("echo -n $(cat /proc/sys/kernel/random/uuid)"), "-", "")
-    t = uuid
-    TypedSection.create(uci, t)
-    luci.http.redirect(uci.extedit:format(t))
-end
-function s.remove(uci, t)
-    uci.map.proceed = true
-    uci.map:del(t)
-    luci.http.redirect(d.build_url("admin", "network", "modem","dial_overview"))
-end
+-- function s.create(uci, t)
+--     local uuid = string.gsub(luci.sys.exec("echo -n $(cat /proc/sys/kernel/random/uuid)"), "-", "")
+--     t = uuid
+--     TypedSection.create(uci, t)
+--     luci.http.redirect(uci.extedit:format(t))
+-- end
+-- function s.remove(uci, t)
+--     uci.map.proceed = true
+--     uci.map:del(t)
+--     luci.http.redirect(d.build_url("admin", "network", "modem","dial_overview"))
+-- end
 
-o = s:option(Flag, "enable", translate("Enable"))
+o = s:option(Flag, "enable_dial", translate("enable_dial"))
 o.width = "5%"
 o.rmempty = false
 

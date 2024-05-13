@@ -68,6 +68,8 @@ end
 
 -- AT串口
 o = s:option(DummyValue, "at_port", translate("AT Port"))
+
+o = s:option(Flag,'enable_dial',translate('Enable Dial'))
 -- o = s:option(Value, "at_port", translate("AT Port"))
 -- o.placeholder = translate("Not null")
 -- o.rmempty = false

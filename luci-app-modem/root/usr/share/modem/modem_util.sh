@@ -431,6 +431,8 @@ retry_set_modem_config()
 			uci set modem.modem${modem_no}.manufacturer="${manufacturer}"
 			uci set modem.modem${modem_no}.platform="${platform}"
 			uci set modem.modem${modem_no}.define_connect="${define_connect}"
+			uci set modem.modem${modem_no}.enable_dial=1
+			uci set modem.modem${modem_no}.pdp_type="ipv4v6"
 			uci -q del modem.modem${modem_no}.modes #删除原来的拨号模式列表
 			for mode in $modes; do
 				uci add_list modem.modem${modem_no}.modes="${mode}"
@@ -438,7 +440,6 @@ retry_set_modem_config()
 
 			#设置模组预设
 			m_modem_presets "${at_port}" "${define_connect}"
-
 			#打印日志
 			m_log "info" "Successfully retrying to configure the Modem ${modem_name}"
 
@@ -529,11 +530,12 @@ m_set_modem_config()
 	uci set modem.modem${modem_no}.manufacturer="${manufacturer}"
 	uci set modem.modem${modem_no}.define_connect="${define_connect}"
 	uci set modem.modem${modem_no}.platform="${platform}"
+	uci set modem.modem${modem_no}.enable_dial=1
+	uci set modem.modem${modem_no}.pdp_type="ipv4v6"
 	uci -q del modem.modem${modem_no}.modes #删除原来的拨号模式列表
 	for mode in $modes; do
 		uci add_list modem.modem${modem_no}.modes="${mode}"
 	done
-
 	#设置模组预设
 	m_modem_presets "${at_port}" "${define_connect}"
 
@@ -716,22 +718,7 @@ m_set_network_config()
 # $1:网络设备
 enable_dial()
 {
-	local network="$1"
-	
-	local i=0
-	while true; do
-		#查看该网络设备的配置是否启用
-		local modem_network=$(uci -q get modem.@dial-config[${i}].network)
-		[ -z "$modem_network" ] && break
-		if [ "$network" = "$modem_network" ]; then
-			local enable=$(uci -q get modem.@dial-config[${i}].enable)
-			if [ "$enable" = "1" ]; then
-				service modem reload
-				break
-			fi
-		fi
-		i=$((i+1))
-	done
+	/etc/init.d/modem_network restart
 }
 
 #禁用拨号

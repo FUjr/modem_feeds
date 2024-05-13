@@ -156,4 +156,7 @@ at_port = s:option(Value, "at_port", translate("AT Port"))
 at_port.placeholder = translate("Not null")
 at_port.rmempty = false
 
+enable_dial = s:option(Flag, "enable_dial", translate("enable_dial"))
+enable_dial.default = 1
+enable_dial.rmempty = false
 return m

@@ -5,7 +5,7 @@ local http = require "luci.http"
 m = Map("modem", translate("Dial Config"))
 m.redirect = dispatcher.build_url("admin", "network", "modem","dial_overview")
 
-s = m:section(NamedSection, arg[1], "dial-config", "")
+s = m:section(NamedSection, arg[1], "modem-device", "")
 s.addremove = false
 s.dynamic = false
 s:tab("general", translate("General Settings"))

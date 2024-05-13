@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+START=90
+STOP=13
+USE_PROCD=1
+
+#运行目录
+MODEM_RUNDIR="/var/run/modem"
+MODEM_RUN_CONFIG="${MODEM_RUNDIR}/config.cache"
+
+
+
+start_service() {
+    mkdir -p $MODEM_RUNDIR
+    local scan=$(uci -q get modem.@global[0].manual_configuration)
+    echo "scan=$scan"
+	if [ "$scan" = "0" ]; then
+		procd_open_instance "modem_scan_service"
+        procd_set_param command  /usr/share/modem/usb_modem_scan.sh
+        procd_close_instance
+	fi
+}
