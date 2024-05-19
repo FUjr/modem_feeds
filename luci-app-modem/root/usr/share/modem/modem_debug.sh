@@ -64,14 +64,14 @@ get_quick_commands()
 }
 
 #拨号日志
-# $1:AT命令
+# $1:log mesg
 # $2:日志路径
 dial_log()
 {
-	local at_command="$1"
+	local logmsg="$1"
 	local path="$2"
 
 	#打印日志
     local update_time=$(date +"%Y-%m-%d %H:%M:%S")
-    echo "[${update_time}] Send AT command ${at_command} to modem" >> "${path}"
+    echo "[${update_time}]  ${logmsg} " >> "${path}"
 }

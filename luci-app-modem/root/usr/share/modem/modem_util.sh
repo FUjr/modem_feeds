@@ -725,24 +725,7 @@ enable_dial()
 # $1:网络设备
 disable_dial()
 {
-	local network="$1"
-
-	local i=0
-	while true; do
-		#查看该网络设备的配置是否启用
-		local modem_network=$(uci -q get modem.@dial-config[${i}].network)
-		[ -z "$modem_network" ] && break
-		if [ "$network" = "$modem_network" ]; then
-			local enable=$(uci -q get modem.@dial-config[${i}].enable)
-			if [ "$enable" = "1" ]; then
-				uci set modem.@dial-config[${i}].enable=0
-				uci commit modem
-				service modem reload
-				break
-			fi
-		fi
-		i=$((i+1))
-	done
+	/etc/init.d/modem_network restart
 }
 
 #设置模组串口

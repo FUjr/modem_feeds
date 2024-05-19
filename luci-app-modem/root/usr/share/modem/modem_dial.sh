@@ -60,6 +60,7 @@ config_get auth $modem_config auth
 config_get at_port $modem_config at_port
 config_get manufacturer $modem_config manufacturer
 config_get platform $modem_config platform
+config_get define_connect $modem_config define_connect
 modem_netcard=$(ls $(find $modem_path -name net |tail -1) | awk -F'/' '{print $NF}')
 interface_name=wwan_5g_$(echo $modem_config | grep -oE "[0-9]+")
 interface6_name=wwan6_5g_$(echo $modem_config | grep -oE "[0-9]+")
@@ -79,11 +80,13 @@ check_ip()
                         check_ip_command="AT+CGPADDR=1"
                         ;;
                     "lte")
-                        check_ip_command="AT+CGPADDR=1"
+                        if [ "$define_connect" = "3" ];then
+                            check_ip_command="AT+CGPADDR=3"
+                        else
+                            check_ip_command="AT+CGPADDR=1"
+                        fi
                         ;;
-                    "lte_mediatek")
-                        check_ip_command="AT+CGPADDR=3"
-                        ;;
+                    
                 esac
                 ;;
             "fibocom")
@@ -139,6 +142,8 @@ set_if()
         uci set network.${interface_name}.defaultroute='1'
         uci set network.${interface_name}.peerdns='0'
         uci set network.${interface_name}.metric='10'
+        uci add_list network.${interface_name}.dns='114.114.114.114'
+        uci add_list network.${interface_name}.dns='119.29.29.29'
         
 
         #添加或修改网络配置
@@ -147,8 +152,6 @@ set_if()
         uci set network.${interface6_name}.extendprefix='1'
         uci set network.${interface6_name}.ifname="@${interface_name}"
         uci set network.${interface6_name}.device="@${interface_name}"
-        uci commit network
-
 
         local num=$(uci show firewall | grep "name='wan'" | wc -l)
         local wwan_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface_name}" | wc -l)
@@ -161,6 +164,7 @@ set_if()
         fi
         uci commit network
         uci commit firewall
+        ifup ${interface_name}
         dial_log "create interface $interface_name" "$log_path"
 
     fi
@@ -182,7 +186,7 @@ set_if()
         uci set network.${interface_name}.device="${set_modem_netcard}"
         
         uci commit network
-        /etc/init.d/network restart
+        ifup ${interface_name}
         dial_log "set interface $interface_name to $modem_netcard" "$log_path"
     fi
 }
@@ -192,7 +196,6 @@ flush_if()
     uci delete network.${interface_name}
     uci delete network.${interface6_name}
     uci commit network
-    /etc/init.d/network restart
     dial_log "delete interface $interface_name" "$log_path"
 
 }
@@ -311,8 +314,13 @@ at_dial()
                     cgdcont_command="AT+CGDCONT=1,\"$pdp_type\",\"$apn\""
                     ;;
                 "lte")
-                    at_command="AT+QNETDEVCTL=1,3,1"
-                    cgdcont_command="AT+CGDCONT=1,\"$pdp_type\",\"$apn\""
+                    if [ "$define_connect" = "3" ];then
+                        at_command="AT+QNETDEVCTL=3,3,1"
+                        cgdcont_command="AT+CGDCONT=3,\"$pdp_type\",\"$apn\""
+                    else
+                        at_command="AT+QNETDEVCTL=1,3,1"
+                        cgdcont_command="AT+CGDCONT=1,\"$pdp_type\",\"$apn\""
+                    fi
                     ;;
                 *)
                     at_command="AT+QNETDEVCTL=1,3,1"
@@ -352,7 +360,7 @@ ip_change_fm350()
 {
     dial_log "ip_change_fm350" "$log_path"
     at_command="AT+CGPADDR=3"
-    local ipv4_config=$(at ${at_port} ${at_command} | grep "+CGPADDR: " | awk -F',' '{print $2}' | sed 's/"//g')
+    local ipv4_config=$(at ${at_port} ${at_command} | cut -d, -f2 | grep -oE '[0-9]+.[0-9]+.[0-9]+.[0-9]+')
     local public_dns1_ipv4="223.5.5.5"
     local public_dns2_ipv4="119.29.29.29"
     local public_dns1_ipv6="2400:3200::1"
@@ -388,7 +396,8 @@ ip_change_fm350()
     uci add_list network.${interface_name}.dns="${ipv4_dns1}"
     uci add_list network.${interface_name}.dns="${ipv4_dns2}"
     uci commit network
-    /etc/init.d/network restart
+    ifdown ${interface_name}
+    ifup ${interface_name}
     dial_log "set interface $interface_name to $ipv4_config" "$log_path"
 
 }

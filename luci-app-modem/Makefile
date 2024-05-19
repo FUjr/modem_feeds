@@ -3,7 +3,7 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=luci-app-modem
+PKG_NAME:=luci-app-5gmodem
 LUCI_TITLE:=LuCI support for Modem
 LUCI_PKGARCH:=all
 PKG_VERSION:=1.4.4
@@ -27,13 +27,11 @@ LUCI_DEPENDS:=+luci-compat +kmod-usb-net +kmod-usb-net-cdc-ether +kmod-usb-acm \
 		+kmod-pcie_mhi \
 		+pciutils \
 		+quectel-CM-5G \
-		+modemmanager \
-		+luci-proto-modemmanager \
 		+sms-tool \
 		+jq +grep +bc\
 
 
-define Package/luci-app-modem/conffiles
+define Package/luci-app-5gmodem/conffiles
 /etc/config/modem
 endef
 

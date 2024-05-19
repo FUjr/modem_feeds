@@ -3,6 +3,7 @@ config global 'global'
 	option enable_dial '1'
 	option modem_number '0'
 	option manual_configuration '0'
+	option ethernet "cpewan0"
 
 config custom-commands
 	option description '****************通用****************'
