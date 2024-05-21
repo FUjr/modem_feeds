@@ -505,7 +505,30 @@ fibocom_set_imei()
 {
     local at_port="$1"
     local imei="$2"
-    at_command="AT+GTSN=1,7,\"$imei\""
+    local platform
+    local modem_number=$(uci -q get modem.@global[0].modem_number)
+    for i in $(seq 0 $((modem_number-1))); do
+        local at_port_tmp=$(uci -q get modem.modem$i.at_port)
+        if [ "$at_port" = "$at_port_tmp" ]; then
+            platform=$(uci -q get modem.modem$i.platform)
+            break
+        fi
+    done
+    case "$platform" in
+        "qualcomm")
+            at_command="AT+GTSN=1,7,\"$imei\""
+            ;;
+        "unisoc")
+            at_command="AT+GTSN=1,7,\"$imei\""
+            ;;
+        "mediatek")
+            at_command="AT+EGMREXT=1,7,\"$imei\""
+            ;;
+        *)
+            at_command="AT+GTSN=1,7,\"$imei\""
+            ;;
+    esac
+    
     #重定向stderr
     res=$(sh ${SCRIPT_DIR}/modem_at.sh ${at_port} "${at_command}") 2>&1
 }
