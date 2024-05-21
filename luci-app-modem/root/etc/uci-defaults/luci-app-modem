@@ -16,6 +16,8 @@ uci -q batch <<-EOF >/dev/null
 	delete ucitrack.@modem[-1]
 	add ucitrack modem
 	set ucitrack.@modem[-1].init=modem
+	add ucitrack modem
+	set ucitrack.@modem_mwan[-1].init=modem_mwan
 	commit ucitrack
 EOF
 

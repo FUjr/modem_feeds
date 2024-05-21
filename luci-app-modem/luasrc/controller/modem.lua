@@ -13,7 +13,8 @@ function index()
     end
 
 	entry({"admin", "network", "modem"}, alias("admin", "network", "modem", "modem_info"), translate("Modem"), 100).dependent = true
-
+	--mwan配置
+	entry({"admin", "network", "modem", "mwan_config"}, cbi("modem/mwan_config"), translate("Mwan Config"), 1).leaf = true
 	--模块信息
 	entry({"admin", "network", "modem", "modem_info"}, template("modem/modem_info"), translate("Modem Information"),10).leaf = true
 	entry({"admin", "network", "modem", "get_at_port"}, call("getATPort"), nil).leaf = true
