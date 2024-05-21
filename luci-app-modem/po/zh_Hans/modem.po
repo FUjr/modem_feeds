@@ -645,3 +645,111 @@ msgstr "通用"
 
 msgid "Private"
 msgstr "私有"
+
+msgid "Switch SIM"
+msgstr "切换SIM卡"
+
+msgid "Set IMEI"
+msgstr "设置IMEI"
+
+msgid "Lock Cell/Arfcn Settings"
+msgstr "锁定小区/信道设置"
+
+msgid "LockBand Settings"
+msgstr "锁定频段设置"
+
+msgid "Current Settings"
+msgstr "当前设置"
+
+msgid "Available Neighbor"
+msgstr "可用邻区"
+
+msgid "Select Rat"
+msgstr "选择制式"
+
+msgid "Enter Arfcn"
+msgstr "输入信道"
+
+msgid "Enter PCI"
+msgstr "输入PCI"
+
+msgid "Enter SCS"
+msgstr "输入SCS"
+
+msgid "Enter NRBAND"
+msgstr "输入NR频段"
+
+msgid "SIM Slot|Now"
+msgstr "SIM卡卡槽|当前"
+
+msgid "SIM Slot|Next Boot"
+msgstr "SIM卡卡槽|下次启动"
+
+msgid "SIM Slot|Setting'
+msgstr "SIM卡卡槽|设置"
+
+msgid "SIM1 (Close to power)"
+msgstr "SIM1 (靠近电源)"
+
+msgid "SIM2 (Away from power)"
+msgstr "SIM2 (远离电源)"
+
+msgid "Enable Dial"
+msgstr "启用拨号"
+
+msgid "MWAN Policy"
+msgstr "多WAN策略"
+
+msgid "WAN Interface"
+msgstr "WAN接口"
+
+msgid "WWAN Interface"
+msgstr "WWAN接口"
+
+msgid "track_ip"
+msgstr "网络检测IP"
+
+msgid "Not Use"
+msgstr "不使用"
+
+msgid "Use(WWAN As Backup)"
+msgstr "使用(WWAN作为备份)"
+
+msgid "Use(WWAN As Main)"
+msgstr "使用(WWAN作为主要)"
+
+msgid "Use(WWAN For Load Balance)"
+msgstr "使用(WWAN进行负载均衡)"
+
+msgid "Please enter the WWAN interface name"
+msgstr "请输入WWAN接口名称"
+
+msgid "Please enter the WAN interface name"
+msgstr "请输入WAN接口名称"
+
+msgid "IPV6 Config"
+msgstr "IPV6配置"
+
+msgid "IPV4 Config"
+msgstr "IPV4配置"
+
+msgid "gloal Config"
+msgstr "全局配置"
+
+msgid "Enable MWAN"
+msgstr "启用多WAN"
+
+msgid "Mwan Config"
+msgstr "多WAN设置"
+
+msgid "sticky mode"
+msgstr "粘滞模式"
+
+msgid "same source ip address will always use the same wan interface"
+msgstr "相同源IP会使用同一个WAN出口"
+
+msgid "sticky timeout"
+msgstr "粘滞超时"
+
+msgid "Check and modify the mwan configuration"
+msgstr "检查并修改mwan配置"

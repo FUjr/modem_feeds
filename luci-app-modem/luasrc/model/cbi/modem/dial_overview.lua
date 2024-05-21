@@ -11,7 +11,7 @@ s = m:section(NamedSection, "global", "global", translate("Global Config"))
 s.anonymous = true
 s.addremove = false
 
-o = s:option(Flag, "enable_dial", translate("Enable"))
+o = s:option(Flag, "enable_dial", translate("Enable Dial"))
 o.rmempty = false
 o.description = translate("Enable dial configurations")
 
