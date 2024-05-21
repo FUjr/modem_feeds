@@ -102,6 +102,7 @@ check_ip()
                         ;;
                     "mediatek")
                         check_ip_command="AT+CGPADDR=3"
+                        stric=1
                         ;;
                 esac
                 ;;
@@ -144,24 +145,32 @@ set_if()
         uci set network.${interface_name}.metric='10'
         uci add_list network.${interface_name}.dns='114.114.114.114'
         uci add_list network.${interface_name}.dns='119.29.29.29'
-        
-
-        #添加或修改网络配置
-        uci set network.${interface6_name}='interface'
-        uci set network.${interface6_name}.proto='dhcpv6'
-        uci set network.${interface6_name}.extendprefix='1'
-        uci set network.${interface6_name}.ifname="@${interface_name}"
-        uci set network.${interface6_name}.device="@${interface_name}"
-
         local num=$(uci show firewall | grep "name='wan'" | wc -l)
         local wwan_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface_name}" | wc -l)
         if [ "$wwan_num" = "0" ]; then
             uci add_list firewall.@zone[$num].network="${interface_name}"
         fi
-        local wwan6_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface6_name}" | wc -l)
-        if [ "$wwan6_num" = "0" ]; then
-            uci add_list firewall.@zone[$num].network="${interface6_name}"
+
+        #set ipv6
+        #if pdptype contain 6
+        if [ -n "$(echo $pdp_type | grep "6")" ];then
+            uci set network.lan.ipv6='1'
+            uci set network.lan.ip6assign='64'
+            uci set network.lan.ip6class="${interface6_name}"
+            uci set network.${interface6_name}='interface'
+            uci set network.${interface6_name}.proto='dhcpv6'
+            uci set network.${interface6_name}.extendprefix='1'
+            uci set network.${interface6_name}.ifname="@${interface_name}"
+            uci set network.${interface6_name}.device="@${interface_name}"
+            uci set network.${interface6_name}.metric='10'
+            local wwan6_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface6_name}" | wc -l)
+            if [ "$wwan6_num" = "0" ]; then
+                uci add_list firewall.@zone[$num].network="${interface6_name}"
+            fi
         fi
+
+
+        
         uci commit network
         uci commit firewall
         ifup ${interface_name}
@@ -452,7 +461,16 @@ handle_ip_change()
     esac
 }
 
+check_logfile_line()
+{
+    local line=$(wc -l $log_path | awk '{print $1}')
+    if [ $line -gt 300 ];then
+        echo "" > $log_path
+        dial_log "log file line is over 300,clear it" "$log_path"
+    fi
+}
 
+unexpected_response_count=0
 at_dial_monitor()
 {
     check_ip
@@ -462,15 +480,24 @@ at_dial_monitor()
         check_ip
         if [ $connection_status -eq 0 ];then
             at_dial
+            sleep 5
+        elif [ $connection_status -eq -1 ];then
+            unexpected_response_count=$((unexpected_response_count+1))
+            if [ $unexpected_response_count -gt 3 ];then
+                at_dial
+                unexpected_response_count=0
+            fi
+            sleep 5
         else
         #检测ipv4是否变化
+            sleep 15
             if [ "$ipv4" != "$ipv4_cache" ];then
                 handle_ip_change
                 ipv6_cache=$ipv6
                 ipv4_cache=$ipv4
             fi
         fi
-    sleep 5
+        check_logfile_line
     done
     
 }
