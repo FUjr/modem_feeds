@@ -1,0 +1,70 @@
+diff --git a/sms_main.c b/sms_main.c
+index 5945f02..168b424 100644
+--- a/sms_main.c
++++ b/sms_main.c
+@@ -193,7 +193,13 @@ int main(int argc, char* argv[])
+ 			usage();
+ 		if(strlen(argv[2]) > 160)
+ 			fprintf(stderr,"sms message too long: '%s'\n", argv[2]);
+-	}else if (!strcmp("delete",argv[0]))
++	}
++	else if (!strcmp("send_raw_pdu", argv[0]))
++	{
++		if(argc < 2)
++			usage();
++	}
++	else if (!strcmp("delete",argv[0]))
+ 	{
+ 		if(argc < 2)
+ 			usage();
+@@ -285,6 +291,50 @@ int main(int argc, char* argv[])
+ 		fprintf(stderr,"reading port\n");
+ 	}
+ 
++	if (!strcmp("send_raw_pdu", argv[0]))
++	{
++		int pdu_len = strlen(argv[1]);
++		//append ctrl-z to pdustr
++		char* pdu_str;
++		pdu_str = malloc(pdu_len + 4);
++		memcpy(pdu_str, argv[1], pdu_len);
++		sprintf(pdu_str + pdu_len, "%c\r\n", 0x1A);
++		const int pdu_len_except_smsc = 18;
++		snprintf(cmdstr, sizeof(cmdstr), "AT+CMGS=%d\r\n", pdu_len_except_smsc);
++		fputs("AT+CMGF=0\r\n", pf);
++		while(fgets(buf, sizeof(buf), pfi)) {
++			if(starts_with("OK", buf))
++				break;
++		}
++		fputs(cmdstr, pf);
++		printf("cmdstr: %s\n", cmdstr);
++		sleep(1);
++		fputs(pdu_str, pf);
++		printf("pdu_str: %s\n", pdu_str);
++		free(pdu_str);
++		alarm(5);
++		errno = 0;
++
++		while(fgets(buf, sizeof(buf), pfi))
++		{
++			if(starts_with("+CMGS:", buf))
++			{
++				printf("sms sent sucessfully: %s", buf + 7);
++				return 0;
++			} else if(starts_with("+CMS ERROR:", buf))
++			{
++				fprintf(stderr,"sms not sent, code: %s\n", buf + 11);
++			} else if(starts_with("ERROR", buf))
++			{
++				fprintf(stderr,"sms not sent, command error\n");
++			} else if(starts_with("OK", buf))
++			{
++				return 0;
++			}
++		}
++		fprintf(stderr,"reading port\n");
++	}
++
+ 	if (!strcmp("recv", argv[0]))
+ 	{
+ 		alarm(10);
