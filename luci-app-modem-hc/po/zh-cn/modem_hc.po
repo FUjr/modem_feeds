@@ -1,0 +1,21 @@
+#view/modem_sim.htm
+msgid "SIM Slot"
+msgstr "SIM卡卡槽"
+
+msgid "Now"
+msgstr "当前"
+
+msgid "Next Boot"
+msgstr "下次启动"
+
+msgid "Setting'
+msgstr "设置"
+
+msgid "SIM1 (Close to power)"
+msgstr "SIM1 (靠近电源)"
+
+msgid "SIM2 (Away from power)"
+msgstr "SIM2 (远离电源)"
+
+msgid "Set SIM"
+msgstr "设置SIM卡"

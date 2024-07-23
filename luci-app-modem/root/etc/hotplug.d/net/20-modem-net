@@ -1,29 +1,25 @@
 #!/bin/sh
-# Copyright (C) 2023 Siriling <siriling@qq.com>
-
-#导入组件工具
-source "/usr/share/modem/modem_util.sh"
-
+# Copyright (C) 2024 Tom <fjrcn@outlook.com>
+manual=$(uci get -q modem.global.manual_configuration)
+[ "${manual}" -eq 1 ] && exit
+logger -t modem_hotplug "net slot: ${DEVPATH} action: ${ACTION}"
 #网络设备名称不存在，退出
 [ -z "${INTERFACE}" ] && exit
 #网络设备路径不存在，退出
 [ -z "${DEVPATH}" ] && exit
 
-#始终确保存在运行目录
-mkdir -m 0755 -p "${MODEM_RUNDIR}"
+slot_path=$(readlink -f "/sys/${DEVPATH}/device")
+[ -z "${slot_path}" ] && exit
+slot_dir=$(dirname "${slot_path}")
+slot=$(basename "${slot_dir}")
+#设备路径不存在，退出
 
-#初始化模组配置
-# [[ "${INTERFACE}" = *"ip6tnl0"* ]] && {
-#     sh "${SCRIPT_DIR}/modem_init.sh"
-# }
-
-if [[ "${INTERFACE}" = *"usb"* ]] || [[ "${INTERFACE}" = *"wwan"* ]] || [[ "${INTERFACE}" = *"eth"* ]]; then
-    #配置网络设备
-    m_set_network_device "${ACTION}" "${INTERFACE}" "/sys${DEVPATH}" "usb"
-
-elif [[ "${INTERFACE}" = *"mhi_hwip"* ]] || [[ "${INTERFACE}" = *"rmnet_mhi"* ]]; then
-    #配置网络设备
-	m_set_network_device "${ACTION}" "${INTERFACE}" "/sys${DEVPATH}" "pcie"
-else
-    exit
-fi
+[ -d "/sys/bus/usb/devices/${slot}" ] && slot_type="usb"
+[ -d "/sys/bus/pci/devices/${slot}" ] && slot_type="pcie"
+[ -z "${slot_type}" ] && exit
+logger -t modem_hotplug "net slot: ${slot} action: ${ACTION} slot_type: ${slot_type}"
+case "${ACTION}" in
+    add)
+        /usr/share/modem/modem_scan.sh add "${slot}" "${slot_type}"
+        ;;
+esac

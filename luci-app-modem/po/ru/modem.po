@@ -1,0 +1,263 @@
+msgid "Modem Information"
+msgstr "Информация о модеме"
+
+msgid "Dial Overview"
+msgstr "Обзор набора"
+
+msgid "Modem Debug"
+msgstr "Отладка модема"
+
+
+msgid "Mwan Config"
+msgstr "Настройка Mwan"
+
+msgid "TTL Config"
+msgstr "Настройка TTL"
+
+msgid "Plugin Config"
+msgstr "Настройка плагина"
+
+msgid "Modem Name"
+msgstr "Название модема"
+
+
+msgid "Base Information"
+msgstr "Основная информация"
+
+msgid "Производитель"
+msgstr "Производитель"
+
+
+msgid "Ревизия"
+msgstr "Ревизия"
+
+
+msgid "AT Port"
+msgstr "AT Порт"
+
+msgid "Temperature"
+msgstr "Температура"
+
+
+msgid "Voltage"
+msgstr "Напряжение"
+
+
+msgid "Connect Status"
+msgstr "Статус подключения"
+
+msgid "Yes"
+msgstr "Да"
+
+msgid "SIM Information"
+msgstr "Информация о SIM"
+
+msgid "SIM Status"
+msgstr "Статус SIM"
+
+msgid "ready"
+msgstr "готово"
+
+msgid "Internet Service Provider"
+msgstr "Интернет-провайдер"
+
+msgid "SIM Slot"
+msgstr "Слот SIM"
+
+msgid "International Mobile Equipment Identity"
+msgstr "Международный идентификатор мобильного оборудования"
+
+msgid "Международный идентификатор абонента мобильной связи"
+msgstr "Международный идентификатор абонента мобильной связи"
+
+
+msgid "Integrate Circuit Card Identity"
+msgstr "Идентификатор интегральной схемы карты"
+
+
+msgid "Network Information"
+msgstr "Информация о сети"
+
+msgid "Network Type"
+msgstr "Тип сети"
+
+msgid "TDD NR5G"
+msgstr "TDD NR5G"
+
+msgid "Channel Quality Indicator for Uplink"
+msgstr "Индикатор качества канала для передачи"
+
+msgid "Channel Quality Indicator for Downlink"
+msgstr "Индикатор качества канала для приема"
+
+msgid "Access Maximum Bit Rate for Uplink"
+msgstr "Максимальная скорость передачи данных для передачи"
+
+msgid "Access Maximum Bit Rate for Downlink"
+msgstr "Максимальная скорость передачи данных для приема"
+
+msgid "Transmit Rate"
+msgstr "Скорость передачи"
+
+
+msgid "Receive Rate"
+msgstr "Скорость приема"
+
+
+msgid "Cell Information"
+msgstr "Информация о ячейке"
+
+msgid "Режим сети"
+msgstr "Режим сети"
+
+
+msgid "Мобильный код страны"
+msgstr "Мобильный код страны"
+
+
+msgid "Мобильный код сети"
+msgstr "Мобильный код сети"
+
+
+msgid "Duplex Mode"
+msgstr "Режим дуплекса"
+
+msgid "TDD"
+msgstr "TDD"
+
+msgid "ID ячейки"
+msgstr "ID ячейки"
+
+msgid "Physical Cell ID"
+msgstr "Физический ID ячейки"
+
+msgid "Tracking area code of cell servedby neighbor Enb"
+msgstr "Код зоны отслеживания ячейки, обслуживаемой соседним Enb"
+
+
+msgid "Absolute Radio-Frequency Channel Number"
+msgstr "Абсолютный номер радиочастотного канала"
+
+
+msgid "Диапазон"
+msgstr "Диапазон"
+
+msgid "DL Bandwidth"
+msgstr "Ширина полосы пропускания DL"
+
+
+msgid "Reference Signal Received Power"
+msgstr "Мощность принятого опорного сигнала"
+
+msgid "Reference Signal Received Quality"
+msgstr "Качество принятого опорного сигнала"
+
+msgid "Signal to Interference plus Noise Ratio Bandwidth"
+msgstr "Отношение сигнал/шум плюс полоса пропускания помех"
+
+msgid "Serving Cell Receive Level"
+msgstr "Уровень приема обслуживающей ячейки"
+
+msgid "Check and add modem dialing configurations"
+msgstr "Проверьте и добавьте конфигурации набора модема"
+
+msgid "Global Config"
+msgstr "Глобальная конфигурация"
+
+msgid "Enable Dial"
+msgstr "Включить набор"
+
+msgid "Enable dial configurations"
+msgstr "Включить конфигурации набора"
+
+msgid "Reload Dial Configurations"
+msgstr "Перезагрузить конфигурации набора"
+
+msgid "Manually Reload dial configurations When the dial configuration fails to take effect"
+msgstr "Вручную перезагрузите конфигурации набора, когда конфигурация набора не вступает в силу"
+
+msgid "Config List"
+msgstr "Список конфигураций"
+
+msgid "enable_dial"
+msgstr "включить_набор"
+
+msgid "Remarks"
+msgstr "Замечания"
+
+msgid "Mobile Network"
+msgstr "Мобильная сеть"
+
+msgid "Dial Tool"
+msgstr "Инструмент набора"
+
+msgid "Тип PDP"
+msgstr "Тип PDP"
+
+msgid "Network Bridge"
+msgstr "Сетевой мост"
+
+
+msgid "Auto Choose"
+msgstr "Автовыбор"
+
+
+msgid "Modem Name"
+msgstr "Название модема"
+
+msgid "Dial Mode"
+msgstr "Режим набора"
+
+msgid "Rat Prefer"
+msgstr "Предпочтительный Rat"
+
+msgid "Set IMEI"
+msgstr "Установить IMEI"
+
+msgid "Neighbor Cell"
+msgstr "Соседняя ячейка"
+
+msgid "Lock Band"
+msgstr "Заблокировать диапазон"
+
+msgid "Dial Mode"
+msgstr "Режим набора"
+
+msgid "Current Mode"
+msgstr "Текущий режим"
+
+msgid "Plugin Config"
+msgstr "Настройка плагина"
+
+msgid "Check and modify the plugin configuration"
+msgstr "Проверьте и измените конфигурацию плагина"
+
+msgid "Global Config"
+msgstr "Глобальная конфигурация"
+
+msgid "Modem Scan"
+msgstr "Сканирование модема"
+
+msgid "The automatic configuration modem is triggered only at modem startup, otherwise, manual scanning is necessary"
+msgstr "Автоматическая конфигурация модема запускается только при запуске модема, в противном случае необходимо ручное сканирование"
+
+msgid "Manual Configuration"
+msgstr "Ручная конфигурация"
+
+msgid "Enable the manual configuration of modem information (After enable, the automatic scanning and configuration function for modem information will be disabled)"
+msgstr "Включите ручную конфигурацию информации о модеме (после включения функция автоматического сканирования и конфигурации информации о модеме будет отключена)"
+
+msgid "Modem Config"
+msgstr "Конфигурация модема"
+
+msgid "Удалить"
+msgstr "Удалить"
+
+msgid "Сеть"
+msgstr "Сеть"
+
+msgid "Modem Name"
+msgstr "Название модема"
+
+msgid "AT Port"
+msgstr "AT Порт"

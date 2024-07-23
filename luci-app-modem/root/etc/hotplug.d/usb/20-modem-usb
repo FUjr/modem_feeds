@@ -1,19 +1,19 @@
 #!/bin/sh
-# Copyright (C) 2023 Siriling <siriling@qq.com>
-
-#导入组件工具
-source "/usr/share/modem/modem_util.sh"
-
-#只在添加和移除的时候执行
-# [ "$ACTION" != "add" ] && [ "$ACTION" != "remove" ] && exit
-#设备号不存在，退出（去掉多余的tty设备）
+# Copyright (C) 2024 Tom <fjrcn@outlook.com>
+manual=$(uci get -q modem.global.manual_configuration)
+[ "${manual}" -eq 1 ] && exit
+logger -t modem_hotplug "usb_event slot: ${DEVPATH} action: ${ACTION}"
 [ -z "${DEVNUM}" ] && exit
 
-#测试
-# test_usb_hotplug
 
-#始终确保存在运行目录
-mkdir -m 0755 -p "${MODEM_RUNDIR}"
-
-#设置USB设备
-m_check_usb_device "${ACTION}" "${DEVNUM}" "${PRODUCT}" "/sys${DEVPATH}"
+slot=$(basename "${DEVPATH}")
+logger -t modem_hotplug "usb_event run slot: ${slot} action: ${ACTION}"
+case "${ACTION}" in
+    bind|\
+    add)
+        /usr/share/modem/modem_scan.sh add "${slot}" usb
+        ;;
+    remove)
+        /usr/share/modem/modem_scan.sh disable "${slot}" usb
+        ;;
+esac

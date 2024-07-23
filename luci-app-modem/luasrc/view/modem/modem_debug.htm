@@ -1,1740 +1,992 @@
 <%+header%>
-<script type="text/javascript" src="<%=resource%>/xhr.js"></script>
-<script type="text/javascript">//<![CDATA[
-
-	
-	window.onload=function()
-	{
-		//获取模组选择框元素
-		var modem_select = document.getElementById('modem_select');
-		//更换模组（AT串口）时触发
-		modem_select.addEventListener('change', function() {
-			//获取快捷命令
-			get_quick_commands();
-			//获取模组调试信息
-			document.getElementById("first_cache").checked=true;
-			get_modem_debug_info();
-		});
-
-		//获取标签菜单
-		var tab_menu = document.getElementById("tab_menu");
-		set_tab_event(tab_menu);
-
-		//获取快捷选项父元素
-		var quick_option_element = document.getElementById('quick_option_td');
-		//更换快捷选项时触发
-		quick_option_element.addEventListener('change', function(event) {
-			var target = event.target;
-			if (target.matches('input[type="radio"]')) {
-				//获取快捷命令
-				get_quick_commands();
-			}
-		});
-		
-		//获取快捷AT命令选择框元素
-		var command_select = document.getElementById('command_select');
-		//更换快捷AT命令时触发
-		command_select.addEventListener("change", function() {
-			//自动填写到命令输入框
-			copy_to_input();
-		});
-
-		//获取快捷AT命令选择框元素
-		command_select = document.getElementById('command_select');
-		//点击快捷AT命令时触发（解决情况再选的问题）
-		command_select.addEventListener("click", function() {
-				//自动填写到命令输入框
-				copy_to_input();
-		});
-
-		//获取网络偏好选项元素
-		var prefer_option_auto = document.getElementById('prefer_option_auto');
-		var prefer_option_custom = document.getElementById('prefer_option_custom');
-		//网络偏好选项为自动时触发
-		prefer_option_auto.addEventListener('change', function() {
-			if (prefer_option_auto.checked)
-			{
-				//禁用偏好复选框
-				disabled_prefer_custom_config(true);
-				//全选偏好复选框
-				all_choose_prefer_custom_config(true);
-			}
-		});
-		//网络偏好选项为自定义时触发
-		prefer_option_custom.addEventListener('change', function() {
-			if (prefer_option_custom.checked)
-			{
-				//禁用偏好复选框
-				disabled_prefer_custom_config(false);
-			}
-		});
-	}
-
-	//设置标签菜单事件
-	function set_tab_event(parent_element)
-	{
-		//获取子元素
-		var childElements = parent_element.children;
-		//获取需要禁用的元素
-		for (var i = 0; i < childElements.length; i++)
-		{
-			childElements[i].addEventListener('click', function(event) {
-				tab_event(this);
-				document.getElementById("first_cache").checked=true;
-				get_modem_debug_info();
-			});
+<script>
+	class ModemConfig {
+		constructor(cfg_id,title){
+			this.cfg_id = cfg_id;
+			this.init_view = false;
+			this.cbi_map = document.querySelector('.cbi-map');
+			this.fieldset = this.create_fieldset(title);
+			this.cbi_map.appendChild(this.fieldset);
 		}
-	}
 
-	// 自动填写到快捷AT命令到输入框
-	function copy_to_input()
-	{
-		var command_select = document.getElementById("command_select").value;
-		document.getElementById("at_command").value = command_select;
-	}
+		update(){
+			console.log("update");
+		}
 
-	// 发送AT命令
-	function send(at_port,at_command)
-	{
-		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "send_at_command")%>', {"port":at_port,"command":at_command},
-			function(x, data)
-			{
-				responseElement=document.getElementById("response");
-				if ("response" in data)
-				{
-					//显示当前时间
-					responseElement.value+=data["time"]+" ";
-					//显示返回值
-					responseElement.value+=data["response"];
-					//滚动到底部
-					responseElement.scrollTop = responseElement.scrollHeight;
+		pause(){
+			console.log("pause");
+		}
+
+		get_config(){
+			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "modem_ctrl")%>', 
+			{ 
+				"cfg": this.cfg_id,
+				"action": this.get_action
+			},
+				(x, data) => {
+					this.config = data[this.config_name];
+					if (this.cb_get) {
+						this.cb_get(data);
+					}
 				}
-			}
-		);
-	}
-
-	// 发送AT命令前处理
-	function send_at_command(event)
-	{
-		//获取选中的模组（选中的AT串口）
-		var at_port = document.getElementById("modem_select").value;
-		if ( at_port.length == 0 )
-		{
-			alert("<%:Please choose a Modem%>");
-			return false;
+			);
 		}
 
-		//获取AT命令
-		var at_command = document.getElementById("at_command").value;
-		if ( at_command.length == 0 )
-		{
-			alert("<%:Please enter a AT Command%>");
-			return false;
+		set_config(config){
+			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "modem_ctrl")%>', 
+			{ 
+				"cfg": this.cfg_id,
+				"action": this.set_action,
+				"params": JSON.stringify(config)
+			},
+				(x, data) => {
+					this.config = data[this.config_name];
+					if (this.cb_set) {
+						this.cb_set(data);
+					}
+				}
+			);
 		}
 
-		//对双引号进行特殊处理
-		at_command=at_command.replaceAll("\"","\\\"");
+		create_fieldset(title){
+			var fieldset = document.createElement('fieldset');
+			fieldset.className = "cbi-section";
+			var legend = document.createElement('legend');
+			legend.innerHTML = title;
+			fieldset.appendChild(legend);
+			return fieldset;
+		}
 
-		//发送AT命令
-		send(at_port,at_command);
-		return true;
-	}
+		createInput(name,value){
+			var input = document.createElement('input');
+			input.type = "text";
+			input.name = name;
+			input.value = value;
+			return input;
+		}
 
-	// 清除AT命令
-	function clean_at_command(event)
-	{
-		document.getElementById("at_command").value='';
-	}
+		createBTN(name,cb){
+			var btn = document.createElement('input');
+			btn.type = "button";
+			btn.value = name;
+			btn.addEventListener('click',cb);
+			return btn;
+		}
 
-	// 清除AT响应
-	function clean_response(event)
-	{
-		document.getElementById("response").value='';
-	}
+		createRadio(name,value){
+			var radio = document.createElement('input');
+			radio.type = "radio";
+			radio.name = name;
+			radio.value = value;
+			return radio;
+		}
 
-	// 设置AT串口选项
-	function set_at_port(at_ports,translation)
-	{
-		// 获取模组选择框元素
-		var modem_select = document.getElementById('modem_select');
-		// 记录所选
-		var selected=modem_select.value;
-		// 删除原来的选项
-		modem_select.options.length=0;
-		//遍历每一个AT串口
-		for (var port of at_ports)
-		{
-			//更新（key：AT串口，value：模块名称）
-			for (var key in port)
-			{
+		createCheckbox(value){
+			var checkbox = document.createElement('input');
+			checkbox.type = "checkbox";
+			checkbox.value = value;
+			return checkbox;
+		}
+
+		createTable(){
+			let table,tbody;
+			table = document.createElement('table');
+			table.classList.add("cbi-section-table");
+			table.classList.add("table");
+			tbody = document.createElement('tbody');
+			table.appendChild(tbody);
+			return table;
+		}
+
+		createDroplist(dict){
+			var select = document.createElement('select');
+			for (let key in dict) {
 				var option = document.createElement('option');
 				option.value = key;
-				var language=navigator.language;
-				if (port[key].includes("unknown"))
-				{
-					option.text = port[key].replace("unknown", key);
-				}
-				else
-				{
-					option.text = port[key];
-				}
-				modem_select.appendChild(option);
+				option.innerHTML = dict[key];
+				select.appendChild(option);
 			}
+			return select;
 		}
-		// 恢复原来的选择
-		for (let i = 0; i < modem_select.options.length; i++)
-		{
-			if(modem_select.options[i].value == selected)
-			{
-				modem_select.selectedIndex=i;
-				break;
+
+		createTD(innerHTML){
+			var td = document.createElement('td');
+			td.classList.add("cbi-section-table-cell");
+			td.classList.add("td");
+			td.classList.add("left");
+			if (innerHTML) {
+				td.innerHTML = innerHTML;
 			}
+			return td;
 		}
-	}
 
-	//获取当前启用的元素
-	function get_tab_enable_element(parent_element)
-	{
-		var disenable_element;
-		//获取子元素
-		var childElements = parent_element.children;
-		//获取需要禁用的元素
-		for (var i = 0; i < childElements.length; i++)
-		{
-			// 检查当前子元素的class属性是否为cbi-tab
-			if (childElements[i].classList.contains('cbi-tab'))
-			{
-				disenable_element=childElements[i];
-				break;
+		createTH(innerHTML){
+			var th = document.createElement('th');
+			th.classList.add("cbi-section-table-cell");
+			th.classList.add("th");
+			if (innerHTML) {
+				th.innerHTML = innerHTML;
 			}
-		}
-		return disenable_element;
-	}
-
-	//获取需要禁用的元素
-	function get_enable_element(parent_element)
-	{
-		var enable_element;
-		//获取子元素
-		var childElements = parent_element.children;
-		//获取已启用的元素
-		for (var i = 0; i < childElements.length; i++)
-		{
-			// 检查当前子元素的class属性是否为cbi-tab
-			if (childElements[i].classList.contains('cbi-tab'))
-			{
-				enable_element=childElements[i];
-				break;
-			}
-		}
-		return enable_element;
-	}
-
-	// 设置标签显示
-	function set_tab_view(disenable_element,enable_element)
-	{
-		//获取tab内容父元素
-		var tab_context = document.getElementById('tab_context');
-
-		//禁用tab
-		disenable_element.classList.remove('cbi-tab');
-		disenable_element.classList.add('cbi-tab-disabled');
-		//禁用tab内容
-		var data_tab_disenable = disenable_element.getAttribute('data-tab');
-		var tab_context_disenable_element = tab_context.querySelector('div[data-tab="'+data_tab_disenable+'"]');
-		tab_context_disenable_element.setAttribute('data-tab-active','false');
-		tab_context_disenable_element.style.display="none";
-
-		//启用tab
-		enable_element.classList.remove('cbi-tab-disabled');
-		enable_element.classList.add('cbi-tab');
-		//启用tab内容
-		var data_tab_enable = enable_element.getAttribute('data-tab');
-		var tab_context_enable_element = tab_context.querySelector('div[data-tab="'+data_tab_enable+'"]');
-		tab_context_enable_element.setAttribute('data-tab-active','true');
-		tab_context_enable_element.style.display="block";
-	}
-
-	// 标签事件（更新选中的标签及标签内容）
-	function tab_event(tab_element)
-	{
-		//获取需要禁用的tab元素
-		// var tab_menu = document.getElementsByClassName("cbi-tabmenu")[0];
-		var tab_menu = document.getElementById("tab_menu");
-		var disenable_element=get_tab_enable_element(tab_menu);
-		if (tab_element != disenable_element) {
-			set_tab_view(disenable_element,tab_element);
-		}
-	}
-
-	// 无模组界面
-	function no_modems_view()
-	{
-		//更新提示信息
-		document.getElementById("info_message").innerHTML='<strong><%:No modems found%></strong>';
-		//显示提示信息
-		document.getElementById("cbi-info").style.display="block";
-		//隐藏模组选择界面
-		document.getElementById("cbi-modem").style.display="none";
-		//隐藏tab菜单界面
-		document.getElementById("tab_menu").style.display="none";
-		//隐藏tab内容界面
-		document.getElementById("tab_context").style.display="none";
-	}
-	
-	// 未适配模组界面
-	function not_adapted_modems_view()
-	{
-		//更新提示信息
-		document.getElementById("info_message").innerHTML='<strong><%:Not adapted to this modem%></strong>';
-		//显示提示信息
-		document.getElementById("cbi-info").style.display="block";
-		//显示模组选择界面
-		document.getElementById("cbi-modem").style.display="block";
-		//显示标签内容界面
-		document.getElementById("tab_context").style.display="block";
-		//显示AT命令标题
-		document.getElementById("at_command_title").style.display="block";
-		//隐藏标签菜单界面
-		document.getElementById("tab_menu").style.display="none";
-		//在标签菜单选中AT命令
-		var data_tab="at_command_tab"
-		var at_command_tab_element = document.querySelector('li[data-tab="'+data_tab+'"]');
-		tab_event(at_command_tab_element);
-	}
-
-	// 全功能界面
-	function all_function_view()
-	{
-		//更新提示信息
-		document.getElementById("info_message").innerHTML='<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>"/><%:Loading modem%>...';
-		//显示模组选择界面
-		document.getElementById("cbi-modem").style.display="block";
-		//显示标签菜单界面
-		document.getElementById("tab_menu").style.display="flex";
-		//显示标签内容界面
-		document.getElementById("tab_context").style.display="block";
-		//隐藏AT命令标题
-		document.getElementById("at_command_title").style.display="none";
-		//隐藏提示信息
-		document.getElementById("cbi-info").style.display="none";
-	}
-
-	// 更新选项
-	function update_option(select_element,data,order)
-	{
-		//记录所选
-		var selected=select_element.value;
-		//删除原来的选项
-		select_element.options.length=0;
-
-		//是否有顺序
-		if (order)
-		{
-			//遍历每一条信息
-			for (var info of data)
-			{
-				//遍历每一条信息里的键
-				for (var key in info)
-				{
-					var option = document.createElement('option');
-					option.text = key;
-					option.value = info[key];
-					select_element.appendChild(option);
-				}
-			}
-		}
-		else
-		{
-			//遍历每一条信息里的键
-			for (var key of data)
-			{
-				var option = document.createElement('option');
-				option.text = key;
-				option.value = info[key];
-				select_element.appendChild(option);
-			}
+			return th;
 		}
 
-		//恢复原来的选择
-		for (let i = 0; i < select_element.options.length; i++)
-		{
-			if(select_element.options[i].value == selected)
-			{
-				select_element.selectedIndex=i;
-				break;
-			}
-		}
-	}
-
-	// 获取快捷命令
-	function get_quick_commands()
-	{
-		//获取快捷选项
-		var quick_option = document.querySelector('input[name="quick_option"]:checked').value;
-		//获取选中的模组
-		var at_port = document.getElementById("modem_select").value;
-
-		//获取AT命令
-		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_quick_commands")%>', {"option":quick_option,"port":at_port},
-			function(x, data)
-			{
-				//获取模组选择框元素
-				var command_select = document.getElementById('command_select');
-				//更新选项
-				update_option(command_select,data["quick_commands"],true);
-			}
-		);
-	}
-
-	// 全选网络偏好复选框
-	function all_choose_prefer_custom_config(status)
-	{
-		var checkboxes=document.getElementById('prefer_custom_config').querySelectorAll('input[type="checkbox"]');
-		for(checkbox of checkboxes)
-		{
-			//设置网络偏好复选框状态
-			checkbox.checked=status;
-		}
-	}
-
-	// 禁用网络偏好复选框
-	function disabled_prefer_custom_config(status)
-	{
-		var checkboxes=document.getElementById('prefer_custom_config').querySelectorAll('input[type="checkbox"]');
-		for(checkbox of checkboxes)
-		{
-			//禁用
-			checkbox.disabled=status;
-		}
-	}
-
-	// 禁用功能
-	function disabled_function(function_name,status)
-	{
-		//拨号模式
-		if (function_name=="mode")
-		{
-			modes=["qmi","ecm","mbim","rndis","ncm"]
-			for(mode of modes)
-			{
-				mode_element=document.getElementById('mode_option_'+mode)
-				if (mode_element!=null) {
-					mode_element.disabled=status;
-				}
-			}
-
-			//模式按钮
-			document.getElementById('mode_button').disabled=status;
-		}
-		//网络偏好
-		else if (function_name=="network_prefer")
-		{
-			//偏好选项
-			document.getElementById('prefer_option_auto').disabled=status;
-			document.getElementById('prefer_option_custom').disabled=status;
-			
-			//网络偏好为自动则不启用
-			var prefer_option_auto = document.getElementById('prefer_option_auto');
-			if (!prefer_option_auto.checked)
-			{
-				//偏好复选框
-				disabled_prefer_custom_config(status);
-			}
-
-			//偏好按钮
-			document.getElementById('network_prefer_button').disabled=status;
-		}
-	}
-
-	// 设置拨号模式信息
-	function set_mode_info(mode_info)
-	{
-		//获取当前拨号模式
-		var current_mode=mode_info["mode"];
-		if (current_mode=="unknown")
-		{
-			return
+		createTR(){
+			var tr = document.createElement('tr');
+			tr.classList.add("cbi-section-table-row");
+			tr.classList.add("tr");
+			return tr;
 		}
 
-		//获取支持的拨号模式
-		var modes=mode_info["modes"];
-
-		//获取模式视图
-		var current_mode_view=current_mode.toUpperCase();
-
-		//设置当前拨号模式
-		document.getElementById('current_mode').innerHTML=current_mode_view;
-
-		//设置支持的拨号模式
-		var first_cache=document.getElementById("first_cache");
-		if (first_cache.checked)
-		{
-			var mode_option_view='';
-			for(mode of modes)
-			{
-				if (mode=="gobinet")
-				{
-					mode_option_view=mode_option_view.replace("QMI","QMI/GobiNet");
-				}
-				else
-				{
-					mode_option_view+='<span class="cbi-radio"><input type="radio" name="mode_option" id="mode_option_'+mode+'" value="'+mode+'"><span>'+mode.toUpperCase()+'</span></span>&nbsp;&nbsp;';
-				}
-			}
-			document.getElementById('mode_option').innerHTML=mode_option_view;
-
-			//设置拨号模式选项
-			element=document.getElementById('mode_option_'+current_mode).checked=true;
-
-			//设置第一次获取数据标志
-			first_cache.checked=false;
+		createTRHeader(){
+			var tr = document.createElement('div');
+			tr.classList.add("tr");
+			tr.classList.add("cbi-section-table-titles");
+			tr.classList.add("anonymous");
+			return tr;
 		}
-	}
 
-	// 设置拨号模式
-	function set_mode()
-	{
-		//禁用功能
-		disabled_function("mode",true);
-
-		//获取模式选项
-		var mode_config = document.querySelector('input[name="mode_option"]:checked').value;
-		//获取选中的模组
-		var at_port = document.getElementById("modem_select").value;
-
-		//设置偏好
-		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_mode")%>', {"port":at_port,"mode_config":mode_config},
-			function(x, data)
-			{
-				//获取模组拨号模式
-				var current_mode=data;
-
-				//获取模式视图
-				var current_mode_view=current_mode.toUpperCase();
-
-				//设置当前拨号模式
-				document.getElementById('current_mode').innerHTML=current_mode_view;
-
-				//启用功能
-				disabled_function("mode",false);
-			}
-		);
-	}
-
-	// 获取当前网络视图
-	function get_current_prefer_view(network_prefer)
-	{
-		var current_prefer_view="";
-
-		//自动状态判断（全部选中为自动）
-		if (network_prefer["3G"]&&network_prefer["4G"]&&network_prefer["5G"])
-		{
-			//更新当前偏好
-			current_prefer_view="AUTO";
+		init_table(){
+			var table = this.createTable();
+			this.fieldset.appendChild(table);
+			this.tbody = table.querySelector('tbody');
 		}
-		else
-		{
-			//更新当前偏好
-			for(key in network_prefer)
-			{
-				if (network_prefer[key]) {
-					current_prefer_view+=key+" ";
-				}
-			}
+
+		hide(){
+			this.fieldset.style.display = "none";
+			this.pause();
 		}
 		
-		return current_prefer_view;
-	}
-
-	// 设置网络偏好信息
-	function set_network_prefer_info(network_prefer_info)
-	{
-		//获取模组网络偏好
-		var network_prefer=network_prefer_info["network_prefer"];
-
-		//获取偏好视图
-		var current_prefer_view=get_current_prefer_view(network_prefer);
-
-		//设置当前网络偏好
-		document.getElementById('current_prefer').innerHTML=current_prefer_view;
-
-		//设置偏好选项和复选框
-		var first_cache=document.getElementById("first_cache");
-		if (first_cache.checked)
-		{
-			if (network_prefer["3G"]&&network_prefer["4G"]&&network_prefer["5G"])
-			{
-				//设置偏好选项
-				document.getElementById('prefer_option_auto').checked=true;
-				//更新偏好配置
-				all_choose_prefer_custom_config(true);
-				//禁用用偏好复选框
-				disabled_prefer_custom_config(true);
-			}
-			else
-			{
-				//设置偏好选项
-				document.getElementById('prefer_option_custom').checked=true;
-				//更新偏好配置
-				for (key in network_prefer)
-				{
-					//设置偏好配置
-					var prefer_config_element=document.getElementById('prefer_config_'+key.toLowerCase());
-					if (prefer_config_element!=null) {
-						prefer_config_element.checked=network_prefer[key];
-					}
-				}
-				//启用偏好复选框
-				disabled_prefer_custom_config(false);
-			}
-
-			//设置第一次获取数据标志
-			first_cache.checked=false;
+		show(){
+			this.fieldset.style.display = "block";
+			this.update();
 		}
 	}
 
-	// 设置模组自检信息
-	function set_modem_self_test_info(self_test_info)
-	{
-		//获取电压
-		var voltage=self_test_info["voltage"];
-		//获取温度
-		var temperature=self_test_info["temperature"];
-
-		//设置当前电压
-		document.getElementById('current_voltage').innerHTML=voltage/1000+" V";
-		//设置当前温度
-		document.getElementById('current_temperature').innerHTML=temperature*1+" °C";
-		
-		//设置电压状态
-		var state = '';
-		var css = '';
-		if (voltage<3135)
-		{
-			state = "<%:Abnormal%>";
-			color = "red";
-		}
-		else if (voltage>=3135 && voltage<3700)
-		{
-			state = "<%:Low%>";
-			color = "goldenrod";
-		}
-		else if (voltage>=3700 && voltage<4400) {
-			state = "<%:Normal%>";
-			color = "green";
-		}
-		else if (voltage>=4400) {
-			state = "<%:Abnormal%>";
-			color = "red";
-		}
-		else
-		{
-			state = "<%:Unknown%>";
-			color = "goldenrod";
-		}
-		var voltage_status=document.getElementById('voltage_status');
-		voltage_status.innerHTML=state;
-		voltage_status.style.color=color
-		
-		//设置温度状态
-		state = '';
-		css = '';
-		if (temperature<45)
-		{
-			state = "<%:Normal%>";
-			color = "green";
-		}
-		else if (temperature>=45 && temperature<75)
-		{
-			state = "<%:Somewhat High%>";
-			color = "goldenrod";
-		}
-		else if (temperature>=75 && temperature<105) {
-			state = "<%:Excessively High%>";
-			color = "red";
-		}
-		else if (temperature>=105) {
-			state = "<%:Abnormal%>";
-			color = "red";
-		}
-		else
-		{
-			state = "<%:Unknown%>";
-			color = "goldenrod";
-		}
-		var temperature_status=document.getElementById('temperature_status');
-		temperature_status.innerHTML=state;
-		temperature_status.style.color=color
-	}
-
-	// 设置网络偏好
-	function set_network_prefer()
-	{
-		//禁用功能
-		disabled_function("network_prefer",true);
-
-		//获取偏好选项
-		var prefer_option = document.querySelector('input[name="prefer_option"]:checked').value;
-		//获取选中的模组
-		var at_port = document.getElementById("modem_select").value;
-
-		//获取偏好配置
-		var network_prefer_config={};
-		if (prefer_option=="auto")
-		{
-			network_prefer_config["3G"]=1;
-			network_prefer_config["4G"]=1;
-			network_prefer_config["5G"]=1;
-		}
-		else
-		{
-			var checkboxes=document.getElementById('prefer_custom_config').querySelectorAll('input[type="checkbox"]');
-			for(checkbox of checkboxes)
-			{
-				network_prefer_config[checkbox.value.toUpperCase()]=Number(checkbox.checked);
-			}
-		}
-
-		//设置偏好
-		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_network_prefer")%>', {"port":at_port,"prefer_config":network_prefer_config},
-			function(x, data)
-			{
-				//获取模组网络偏好
-				var network_prefer=data["network_prefer"];
-
-				//获取当前偏好视图
-				var current_prefer_view=get_current_prefer_view(network_prefer);
-				
-				//设置模组当前网络偏好
-				document.getElementById('current_prefer').innerHTML=current_prefer_view;
-
-				//启用功能
-				disabled_function("network_prefer",false);
-			}
-		);
-	}
-
-	// 获取模组调试信息
-	function get_modem_debug_info()
-	{
-		//获取选中的模组
-		var at_port = document.getElementById("modem_select").value;
-
-		//获取当前启用的tab元素
-		var tab_menu = document.getElementById("tab_menu");
-		var tab_enable_element=get_tab_enable_element(tab_menu);
-		
-		//获取当前选中的tab元素
-		var data_tab=tab_enable_element.getAttribute("data-tab").replace("_tab","");
-
-		if (data_tab=="mode") {
-			//获取拨号模式信息
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_mode_info")%>', {"port":at_port},
-				function(x, data)
-				{
-					var mode_info=data["mode_info"];
-					if (Object.keys(mode_info).length==0)
-					{
-						return false
-					}
-
-					//设置模式信息
-					set_mode_info(mode_info);
+	//锁频功能
+	class Lockband extends ModemConfig{
+			constructor(cfg_id){
+				super(cfg_id,"<%:Lock Band%>");
+				this.config_name = "lockband";
+				this.get_action = "get_lockband";
+				this.set_action = "set_lockband";
+				this.lockband_config = {};
+				this.checkboxes = {};
+				this.available_bandid = {};
+				this.band_class_map = {};
+				this.init_table();
+				this.cb_get = (data) => {
+					this.render();
 				}
-			);
-		}
-		else if (data_tab=="network_prefer") {
-			//获取网络偏好信息
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_network_prefer_info")%>', {"port":at_port},
-				function(x, data)
-				{
-					var network_prefer_info=data["network_prefer_info"];
-					if (Object.keys(network_prefer_info).length==0)
-					{
-						return false
-					}
-
-					//设置网络偏好信息
-					set_network_prefer_info(network_prefer_info);
+				this.cb_set = (data) => {
+					this.get_config();
 				}
-			);
-		}
-		else if (data_tab=="self_test") {
-			//获取自检信息
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_self_test_info")%>', {"port":at_port},
-				function(x, data)
-				{
-					var self_test_info=data["self_test_info"];
-					if (Object.keys(self_test_info).length==0)
-					{
-						return false
-					}
-
-					//设置模组自检信息
-					set_modem_self_test_info(self_test_info);
-				}
-			);
-		}
-		//tom增加的功能
-		else if (data_tab == "lockband") {
-				//获取网络偏好信息
-				XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_lockband")%>', { "port": at_port },
-					function (x, data) {
-						set_lockband_tab(data);
-					}
-				);
-			}
-		else if (data_tab == "lockcell") {
-				update_cell_config();
-		}
-		else if (data_tab == "set_imei") {
-				get_imei_info();
-			}
-		else if (data_tab == "set_sim" ){
-				XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_sim")%>', { "port": at_port },
-					function (x, data) {
-						set_sim_view(data);
-					}
-				);
-		}
-		
-	}
-
-
-	// 定时触发更新AT串口
-	XHR.poll(5,'<%=luci.dispatcher.build_url("admin", "network", "modem", "get_at_port")%>', null,
-		(function() 
-		{
-			//缓存当前选择的模组
-			var modem_select_cache="";
-			var debug_params={view:0};
-			return function(x, data)
-			{
-				var at_ports=data["at_ports"];
-				var translation=data["translation"];
-
-				//设置AT串口选项
-				set_at_port(at_ports,translation);
-
-				//获取快捷命令
-				if (Object.keys(at_ports).length==0)
-				{
-					debug_params.view=0;
-				}
-				else
-				{
-					//获取当前的选择的模组名称
-					var modem_select_element = document.getElementById('modem_select');
-					var select_modem_name = modem_select_element.options[modem_select_element.selectedIndex].text;
-					
-					if (select_modem_name.includes("ttyUSB")||select_modem_name.includes("at")||select_modem_name.includes("DUN"))
-					{
-						debug_params.view=2;
-					}
-					else
-					{
-						debug_params.view=1;
-					}
-
-					if (select_modem_name != modem_select_cache)
-					{
-						//获取快捷选项
-						var quick_option = document.querySelector('input[name="quick_option"]:checked').value;
-						if (quick_option=="auto") {
-							get_quick_commands();
-						}
-						//缓存当前选中的模组
-						modem_select_cache=select_modem_name;
-
-						//设置第一次获取数据标志
-						document.getElementById("first_cache").checked=true;
-					}
-
-					//获取模组调试信息
-					get_modem_debug_info();
-				}
-
-				//设置界面
-				if (debug_params.view==0) {
-					//显示无模组界面
-					no_modems_view();
-				}
-				else if (debug_params.view==1) {
-					//显示全功能界面
-					all_function_view();
-				}
-				else if (debug_params.view==2) {
-					//显示未适配模组界面
-					not_adapted_modems_view();
-				}
-			};
-		})()
-	);
-
-//]]>
-
-
-	// tom增加的功能
-		// 更新neighbor cell信息
-		function update_cell_config() {
-			function onclick_copy_fun_gen(cellinfo) {
-				var arfcn = cellinfo["arfcn"];
-				var pci = cellinfo["pci"];
-				var rat = cellinfo["rat"];
-				return function () {
-					arfcn_input = document.getElementById('arfcn_input');
-					arfcn_input.value = arfcn;
-					pci_input = document.getElementById('pci_input');
-					pci_input.value = pci;
-					rat_select = document.getElementById('rat_select');
-					rat_select.value = rat;
-				};
-			}
-			var at_port = document.getElementById("modem_select").value;
-			neighbor_cell_info = document.getElementById('neighbor_cell_info');
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_neighbor_cellinfo")%>', { "port": at_port },
-				function (x, data) {
-					//remove all child nodes
-					while (neighbor_cell_info.firstChild) {
-						neighbor_cell_info.removeChild(neighbor_cell_info.firstChild);
-					}
-					//add new child nodes
-					lockcell_feature = data["Feature"];
-					//render feature button
-					lockcell_feature_div = document.getElementById('lockcell_feature');
-					for (key in lockcell_feature) {
-						v = lockcell_feature[key];
-						feature_button_id = "lockcell_feature_" + v;
-						if (document.getElementById(feature_button_id) != null) {
-							continue;
-						}
-						feature_button = document.createElement('input');
-						feature_button.type = "button";
-						feature_button.id = feature_button_id;
-						feature_button.value = key;
-						feature_button.className = "cbi-button-apply";
-						console.log("key:" + key + " feature:" + v)
-						feature_button.onclick = function () {
-							var at_port = document.getElementById("modem_select").value;
-							var pci = document.getElementById("pci_input").value;
-							var arfcn = document.getElementById("arfcn_input").value;
-							var rat = document.getElementById("rat_select").value;
-							var scs = document.getElementById("scs_select").value;
-							var nrband = document.getElementById("nrband_input").value;
-							XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lock_cell")%>', { "port": at_port, "func": this.id.replace("lockcell_feature_", ""), "pci": pci, "arfcn": arfcn, "celltype": rat, "scs": scs, "nrband": nrband },
-								function (x, data) {
-									console.log(data["response"]);
-									update_cell_config();
-								}
-							);
-						};
-						lockcell_feature_div.appendChild(feature_button);
-					}
-
-					lockcell_status = data["lockcell_status"];
-					neighbor_cells = {
-						"LTE": data["LTE"],
-						"NR": data["NR"]
-					}
-					try{
-						for (type in neighbor_cells) {
-							for (cell_info of neighbor_cells[type]) {
-
-								rat = type == "LTE" ? 0 : 1;
-								cell_info["rat"] = rat;
-								innerHTML = `RAT:${type} `
-								console.log(innerHTML)
-								for (cell_info_key in cell_info) {
-									if (cell_info[cell_info_key] == "") {
-										continue
-									}
-									innerHTML += `${cell_info_key}:${cell_info[cell_info_key]} `
-								}
-								cell_tr = document.createElement('tr');
-								cell_tr.className = "tr";
-								cell_td_left = document.createElement('td');
-								cell_td_left.className = "td";
-								cell_td_left.innerHTML = innerHTML;
-								cell_td_right = document.createElement('td');
-								cell_td_right.className = "td";
-								copy_botton = document.createElement('input');
-								copy_botton.type = "button";
-								copy_botton.innerHTML = "Copy";
-								copy_botton.className = "cbi-button";
-								copy_botton.value = "Copy";
-
-								copy_botton.onclick = onclick_copy_fun_gen(cell_info);
-								cell_td_right.appendChild(copy_botton);
-								cell_tr.appendChild(cell_td_left);
-								cell_tr.appendChild(cell_td_right);
-								neighbor_cell_info.appendChild(cell_tr);
-							}
-						}
-					}
-					catch (e) {
-						console.log(e);
-					}
-					
-
-					lockcell_status_div = document.getElementById('current_cell_status');
-					childElements = lockcell_status_div.childNodes;
-					keys = Object.keys(lockcell_status);
-					eleids = [];
-					for (childElement of childElements) {
-						eleid = childElement.id;
-						if (eleid != undefined) {
-							eleids.push(eleid.replace("lockcell_", ""));
-						}
-
-					}
-
-					for (key of keys) {
-						if (lockcell_status[key] == "") {
-							if (eleids.includes(key)) {
-								lockcell_status_div.removeChild(document.getElementById("lockcell_" + key));
-							}
-							continue
-						}
-						id = "lockcell_" + key;
-						tr = document.getElementById(id);
-						td_left = document.getElementById(id + "_left");
-						td_right = document.getElementById(id + "_right");
-						if (tr == null) {
-							tr = document.createElement('tr');
-							tr.className = "tr";
-							tr.id = id;
-							td_left = document.createElement('td');
-							td_left.className = "td";
-							td_left.id = id + "_left";
-							td_right = document.createElement('td');
-							td_right.className = "td";
-							td_right.id = id + "_right";
-							lockcell_status_div.appendChild(tr);
-							tr.appendChild(td_left);
-							tr.appendChild(td_right);
-
-						}
-						td_left.innerHTML = key.toUpperCase();
-						td_right.innerHTML = lockcell_status[key].toUpperCase();
-					}
-				}
-			);
-		}
-
-		function lockcell_rat_onchange() {
-			if (document.getElementById("rat_select").value == "1") {
-				document.getElementById("nr_input_tr").style.display = "table-row";
-				document.getElementById("scs_input_tr").style.display = "table-row";
-			}
-			else {
-				document.getElementById("scs_input_tr").style.display = "none";
-				document.getElementById("nr_input_tr").style.display = "none";
-			}
-		}
-
-		//修改imei
-		function set_imei() {
-			var at_port = document.getElementById("modem_select").value;
-			var imei = document.getElementById("imei1_input").value;
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_imei")%>', { "port": at_port, "imei": imei },
-				function (x, data) {
-					set_imei_view(data);
-				}
-			);
-		}
-
-		function set_imei_view(imei_info) {
-			var imei = imei_info["imei"];
-			document.getElementById("imei1_input").value = imei;
-		}
-
-		function get_imei_info() {
-			var at_port = document.getElementById("modem_select").value;
-			var first_cache=document.getElementById("first_cache");
-			if (first_cache.checked)
-			{	
-				document.getElementById("tab_menu").setAttribute("dont_edit", "true");
-				XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_imei")%>', { "port": at_port },
-					function (x, data) {
-						set_imei_view(data);
-					}
-				);
-				first_cache.checked = false;
+				this.get_config();
 			}
 
+			set lock(config){
+				var band_class = config.band_class;
+				var band_id = config.band_id;
+				if (!this.lockband_config[band_class].includes(band_id)){
+					this.lockband_config[band_class].push(band_id)
 
-		}
-
-		//锁频功能
-		class Lockband {
-			#lockband_config
-			#available_band
-			avalibale_bandid
-			#checkboxs = {}
-
-
-			set lock(band){
-				if (!this.#lockband_config.includes(band)){
-					this.#lockband_config.push(band)
-					//set checkbox
-					
 				}
-				this.#checkboxs[band].checked = true;
+				this.checkboxes[band_class][band_id].checked = true;
 			}
-			set unlock(band){
-				this.#lockband_config = this.#lockband_config.filter(x => x != band)
+
+			set unlock(config){
+				var band_class = config.band_class;
+				var band_id = config.band_id;
+				this.lockband_config[band_class] = this.lockband_config[band_class].filter(x => x != band_id);
 				//set checkbox
-				this.#checkboxs[band].checked = false;
+				this.checkboxes[band_class][band_id].checked = false;
 			}
 
-			createCheckbox(value,band){
+			createCheckbox(band_class,band_name,band_id){
 				let checkbox = document.createElement('input');
 				checkbox.type = "checkbox";
 				checkbox.className = "cbi-input-checkbox";
-				checkbox.value = band;
-				checkbox.setAttribute("display-band",value);
-				if (this.#lockband_config.includes(value)) {
-					this.lock(band);
-				}
-				let self = this;
-				checkbox.addEventListener("change",function(){
+				checkbox.value = band_id;
+				checkbox.setAttribute("display-band",band_name);
+				checkbox.addEventListener("change",() => {
 					if (checkbox.checked){
-						self.lock = band;
+						this.lock = { "band_class": band_class, "band_id": band_id };
 					}
 					else{
-						self.unlock = band;
+						this.unlock = { "band_class": band_class, "band_id": band_id };
 					}
 				});
-				this.#checkboxs[band] = checkbox;
+				
+				this.checkboxes[band_class][band_id] = checkbox;
+				if (this.lockband_config[band_class].includes(band_id)) {
+					this.lock = { "band_class": band_class, "band_id": band_id };
+				}
 			}
 		
-			createCheckboxs(){
-				for (let key in this.#available_band) {
-					let display_value = this.#available_band[key]
-					this.createCheckbox(display_value,key);
+			createcheckboxes(band_class){
+				var band = this.config[band_class];
+				var available_band = band.available_band;
+				var lock_band = band.lock_band;
+				this.lockband_config[band_class] = lock_band;
+				if ( available_band.length == 0) {
+					return;
+				}
+				if (this.checkboxes[band_class] == undefined) {
+					this.checkboxes[band_class] = {};
+				}
+				if (this.available_bandid[band_class] == undefined) {
+					this.available_bandid[band_class] = [];
+				}
+				
+				for (let band_cfg of available_band) {
+					let band_name = band_cfg.band_name;
+					let band_id = band_cfg.band_id;
+					if (this.available_bandid[band_class].includes(band_id) == false) {
+						this.available_bandid[band_class].push(band_id);
+					}
+					this.createCheckbox(band_class,band_name,band_id);
 				}
 			}
 
-			update(lockband_config){
-				for (let band in this.#available_band) {
-					if (lockband_config.includes(band)) {
-						this.lock = band;
+			submit(band_class)
+			{
+				var sorted = this.lockband_config[band_class].sort();
+				var config = '';
+				for (let band_id of sorted) {
+					config += band_id + ",";
+				}
+				var lockband_cfg = {
+					"band_class": band_class,
+					"lock_band": config.slice(0,-1)
+				}
+				var cfg_string = JSON.stringify(lockband_cfg);
+				this.set_config(cfg_string);
+			}
+
+			select_all(band_class){
+				//if all selected, then unselect all
+				let lockall = this.lockband_config[band_class].length != this.available_bandid[band_class].length;
+				for (let band_id of this.available_bandid[band_class]) {
+					if (lockall) {
+						this.lock = { "band_class": band_class, "band_id": band_id };
 					}
 					else{
-						this.#checkboxs[band].checked = false;
-						this.unlock = band;
+						this.unlock = { "band_class": band_class, "band_id": band_id };
 					}
 				}
 			}
 
-			submit()
-			{
-				return this.#lockband_config;
-			}
-
-			render(){
-				let tr = document.createElement('tr');
-				tr.className = "tr cbi-section-table-row";
-				let td = document.createElement('td');
-				td.className = "td";
-				for (let checkbox in this.#checkboxs) {
-					let display_value = this.#checkboxs[checkbox].getAttribute("display-band");
-					let span = document.createElement('span');
-					span.innerHTML = display_value;
-					td.appendChild(this.#checkboxs[checkbox]);
-					td.appendChild(span);
+			render() {
+				for (let band_class in this.band_class_map){
+					if (this.config[band_class] == undefined) {
+						this.band_class_map[band_class].header.style.display = "none";
+						this.band_class_map[band_class].tr.style.display = "none";
+						this.band_class_map[band_class].select_all_btn.style.display = "none";
+						this.band_class_map[band_class].submit_btn.style.display = "none";
+					}
+					else{
+						this.band_class_map[band_class].header.style.display = "";
+						this.band_class_map[band_class].tr.style.display = "";
+						this.band_class_map[band_class].select_all_btn.style.display = "";
+						this.band_class_map[band_class].submit_btn
+					}
 				}
-				tr.appendChild(td);
-				return tr;
+				for (let band_class in this.config) {
+					let header, tr, td, select_all_btn, submit_btn;
+					this.createcheckboxes(band_class);
+					if (this.band_class_map[band_class] == undefined)
+					{
+						this.createBandTable(band_class);
+					}
+					header = this.band_class_map[band_class].header;
+					tr = this.band_class_map[band_class].tr;
+					select_all_btn = this.band_class_map[band_class].select_all_btn;
+					submit_btn = this.band_class_map[band_class].submit_btn
+					td = document.createElement('td');
+					td.classList.add("cbi-section-table-cell");
+					td.classList.add("td")
+					td.style.display = "flex";
+					td.style.flexWrap = "wrap";
+					//clear tr
+					while (tr.firstChild) {
+						tr.removeChild(tr.firstChild);
+					}
+					tr.appendChild(td);
+					for (let checkbox in this.checkboxes[band_class]) {
+						let display_value = this.checkboxes[band_class][checkbox].getAttribute("display-band");
+						let span = document.createElement('span');
+						span.innerHTML = display_value;
+						td.appendChild(this.checkboxes[band_class][checkbox]);
+						td.appendChild(span);
+					}
+				}
+
 			}
 
-			constructor(lockband_info){
-				this.#lockband_config = lockband_info["lock_band"];
-				this.#available_band = lockband_info["available_band"];
-				this.avalibale_bandid = Object.keys(this.#available_band);
-				this.#checkboxs = [];
-				this.createCheckboxs();
-				this.update(this.#lockband_config);
+			createBandTable(band_class){
+				let tr_header, th, tr, td, select_all_btn, submit_btn;
+				tr_header = document.createElement('div');
+				tr_header.className = "tr cbi-section-table-titles anonymous";
+				th = document.createElement('div');
+				th.className = "th cbi-section-table-cell";
+				th.innerHTML = band_class;
+				tr_header.appendChild(th);
+				tr = document.createElement('tr');
+				tr.className = "tr cbi-section-table-row";
+				select_all_btn = this.createBTN("<%:Select All%>", () => {
+						this.select_all(band_class);
+					});
+				submit_btn = this.createBTN("<%:Submit%>", () => {
+						this.submit(band_class);
+					});
+				this.band_class_map[band_class] = {
+						"header": tr_header,
+						"tr": tr,
+						"select_all_btn": select_all_btn,
+						"submit_btn": submit_btn
+					}
+				this.tbody.appendChild(tr_header);
+				this.tbody.appendChild(tr);
+				this.tbody.appendChild(select_all_btn);
+				this.tbody.appendChild(submit_btn);
+
+			}
+
+			update() {
+				console.log(JSON.stringify(this.lockband_config));
+				console.log(JSON.stringify(this.available_bandid));
+				console.log(JSON.stringify(this.band_class_map));
+				console.log(JSON.stringify(this.config));
+				this.get_config();
+			}
+
+	}
+
+	class RatPrefer extends ModemConfig {
+		constructor(cfg_id){
+			super(cfg_id,"<%:Rat Prefer%>");
+			this.config_name = "network_prefer";
+			this.get_action = "get_network_prefer";
+			this.set_action = "set_network_prefer";
+			this.selected_rat = [];
+			this.available_rat = [];
+			this.init_table();
+			this.create_submit_btn();
+			}
+
+		cb_get(data){
+				//clear selected_rat
+				this.selected_rat = [];
+				//clear available_rat
+				this.available_rat = [];
+				for (let key in this.config){
+					
+					if (this.config[key] == 1) {
+						this.selected_rat.push(key);
+					}
+					this.available_rat.push(key);
+
+				}
+				
+				this.render_checkbox();
+				this.render_current_mode();
+			}
+		cb_set(data){
+				this.get_config();
+			}
+
+		render_current_mode(){
+			let selected_mode = []
+			for (let rat in this.config) {
+				if (this.config[rat] == 1) {
+					selected_mode.push(rat);
+				}
+			}
+			this.current_mode = selected_mode.join(',');
+			this.current_mode_td.innerHTML = this.current_mode;
+		}
+
+		render_checkbox(){
+			if (this.init_view == false) {
+				this.init_ele();
+				this.init_view = true;
+			}
+			this.createCheckboxes();
+		}
+
+		create_submit_btn(){
+			var submit_btn = this.createBTN("<%:Submit%>",() => {
+				this.submit();
+			});
+			this.fieldset.appendChild(submit_btn);
+		}
+
+		createCheckbox(rat){
+			var checkbox = document.createElement('input');
+			checkbox.type = "checkbox";
+			checkbox.value = rat;
+			checkbox.addEventListener('change',() => {
+				if (checkbox.checked) {
+					this.selected_rat.push(rat);
+				}
+				else{
+					this.selected_rat = this.selected_rat.filter(x => x != rat);
+				}
+			});
+			return checkbox;
+		}
+
+		createCheckboxes(){
+			//clear select_td
+			while (this.select_td.firstChild) {
+				this.select_td.removeChild(this.select_td.firstChild);
+			}
+			var network_prefer = this.config;
+			for (let rat of this.available_rat) {
+				var checkbox = this.createCheckbox(rat);
+				if (this.selected_rat.includes(rat)) {
+					checkbox.checked = true;
+				}
+				var span = document.createElement('span');
+				span.innerHTML = rat;
+				this.select_td.appendChild(checkbox);
+				this.select_td.appendChild(span);
 			}
 		}
-		
-		function set_lockband_tab(lockband_info) {
-			if (typeof lb == "undefined") {
-				lb = {}
-				for (let RAT of Object.keys(lockband_info)) {
-					tr_header = document.createElement('div');
-					tr_header.className = "tr cbi-section-table-titles anonymous";
-					th = document.createElement('div');
-					th.className = "th cbi-section-table-cell";
-					th.innerHTML = RAT;
-					tr_header.appendChild(th);
-					document.getElementById('lockband_custom_config').appendChild(tr_header);
 
-					lb[RAT] = new Lockband(lockband_info[RAT]);
-					submit_btn = document.createElement('input');
-					submit_btn.type = "button";
-					submit_btn.value = "Submit";
-					submit_btn.addEventListener('click',
-						function () {
-							var at_port = document.getElementById("modem_select").value;
-							var config = lb[RAT].submit()
-							submit_config = ''
-							for (key of config) {
-								submit_config = key + "," + submit_config
-							}
-							submit_config = submit_config.substring(0, submit_config.length - 1)
-							XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_lockband")%>', { "port": at_port, "lock_band_config": submit_config, "rat": RAT },
-								function (x, data) {
-									lb[RAT].update(data[RAT]["lock_band"])
-								}
-							);
-						})
-					select_all_btn = document.createElement('input');
-					select_all_btn.type = "button";
-					select_all_btn.value = "Select All";
-					select_all_btn.addEventListener('click', function () {
-						if (lb[RAT].submit().length == lb[RAT].avalibale_bandid.length) {
-							lb[RAT].update([])
-						}
-						else {
-							lb[RAT].update(lb[RAT].avalibale_bandid)
-						}
-					}
-					)
-					lockband_custom_config = document.getElementById('lockband_custom_config');
-					lockband_custom_config.appendChild(lb[RAT].render())
-					lockband_custom_config.appendChild(submit_btn);
-					lockband_custom_config.appendChild(select_all_btn);
-					
-				}
+		update(){
+			this.get_config();
+		}
+
+		submit(){
+			this.set_config(JSON.stringify(this.selected_rat));
+		}
+
+		init_ele(){
+			var header_tr,current_mode_th,select_th,setting_tr,current_mode_td,select_td;
+			header_tr = this.createTRHeader();
+			current_mode_th = this.createTH("<%:Current Mode%>");
+			select_th = this.createTH("<%:Setting%>");
+			setting_tr = this.createTR();
+			current_mode_td = this.createTD();
+			select_td = this.createTD();
+			header_tr.appendChild(current_mode_th);
+			header_tr.appendChild(select_th);
+			setting_tr.appendChild(current_mode_td);
+			setting_tr.appendChild(select_td);
+			this.tbody.appendChild(header_tr);
+			this.tbody.appendChild(setting_tr);
+			this.current_mode_td = current_mode_td;
+			this.select_td = select_td;
+
+		}
+	}
+	
+	class DialMode extends ModemConfig {
+		constructor(cfg_id){
+			super(cfg_id,"<%:Dial Mode%>");
+			this.config_name = "mode";
+			this.get_action = "get_mode";
+			this.set_action = "set_mode";
+			this.avalibale_mode = [];
+			this.selected_mode = null;
+			this.init_table();
+			this.td_map = {
+				"current_mode": null,
+				"radio_div": null,
 			}
-			var first_cache = document.getElementById("first_cache");
-			if (first_cache.checked) {
-				for (let RAT of Object.keys(lockband_info)) {
-					lb[RAT].update(lockband_info[RAT])
-				}
-				first_cache.checked = false;
+			this.cb_get = (data) => {
+				this.render();
 			}
+			this.cb_set = (data) => {
+				this.get_config();
+			}
+			this.get_config();
 			
 		}
 
-		function set_sim_view(slot){
-			let sim_current_slot = slot["current_slot"];
-			let sim_nextboot_slot = slot["nextboot_slot"];
-			sim_current_view = document.getElementById("sim_slot_current");
-			sim_nextboot_view = document.getElementById("sim_slot_nextboot");
-			sim_current_view.innerHTML = sim_current_slot;
-			sim_nextboot_view.innerHTML = sim_nextboot_slot;
+		render(){
+			if (this.td_map["current_mode"] == null) {
+				this.init_ele();
+			}
+
+			for (let key in this.config){
+				if (this.avalibale_mode.includes(key) == false)
+				{
+					this.avalibale_mode.push(key);
+				}
+				if (this.config[key] == 1) {
+					this.selected_mode = key;
+					this.td_map.current_mode.innerHTML = key;
+				}
+			}
+			this.create_mode_radio();
+			
 		}
 
-		function set_sim(){
-			select = document.getElementById("sim_slot_select");
-			slot = select.value;
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_sim")%>', {"slot": slot },
-				function (x, data) {
-					set_sim_view(data);
-				}
-			);
+		init_ele(){
+			var radio_div_th, current_mode_th, radio_div, current_mode, header_tr, setting_tr;
+			header_tr = document.createElement('div');
+			header_tr.className = "tr cbi-section-table-titles anonymous";
+			radio_div_th = document.createElement('div');
+			radio_div_th.className = "th cbi-section-table-cell";
+			radio_div_th.innerHTML = "<%:Dial Mode%>";
+			current_mode_th = document.createElement('div');
+			current_mode_th.className = "th cbi-section-table-cell";
+			current_mode_th.innerHTML = "<%:Current Mode%>";
+			setting_tr = document.createElement('div');
+			setting_tr.className = "tr cbi-section-table-row";
+			radio_div = document.createElement('div');
+			radio_div.className = "td cbi-section-table-cell left";
+			current_mode = document.createElement('div');
+			current_mode.className = "td cbi-section-table-cell left";
+			header_tr.appendChild(current_mode_th);
+			header_tr.appendChild(radio_div_th);
+			
+			setting_tr.appendChild(current_mode);
+			setting_tr.appendChild(radio_div);
+			
+			this.tbody.appendChild(header_tr);
+			this.tbody.appendChild(setting_tr);
+			this.td_map["radio_div"] = radio_div;
+			this.td_map["current_mode"] = current_mode;
+			this.mode_btn = this.createBTN("<%:Submit%>",() => {
+				this.set_config(this.selected_mode);
+			});
+			this.tbody.appendChild(this.mode_btn);
 		}
+
+		create_mode_radio(){
+			while (this.td_map.radio_div.firstChild) {
+					this.td_map.radio_div.removeChild(this.td_map.radio_div.firstChild);
+				}
+			for (let mode of this.avalibale_mode) {
+				let radio = this.createRadio("mode",mode);
+				if (mode == this.selected_mode) {
+					radio.checked = true;
+				}
+				radio.addEventListener('change',() => {
+					this.selected_mode = mode;
+				});
+				
+				let span = document.createElement('span');
+				span.innerHTML = mode;
+				//clear radio_div
+				
+				this.td_map.radio_div.appendChild(radio);
+				this.td_map.radio_div.appendChild(span);
+			}
+			
+		}
+	
+		update(){
+			this.get_config();
+		}
+	}
+
+	class NeighborCell extends ModemConfig {
+		constructor(cfg_id){
+			super(cfg_id,"<%:Neighbor Cell%>");
+			this.config_name = "neighborcell";
+			this.get_action = "get_neighborcell";
+			this.set_action = "set_neighborcell";
+			this.task = null;
+			this.init_nc_table();
+			this.get_config();
+			
+		}
+		
+		pause(){
+			if (this.task != null) {
+				clearInterval(this.task);
+			}
+		}
+
+		update(){
+			this.task = setInterval(() => {
+				this.get_config();
+			},10000);
+		}
+
+		nr_options(){
+				if (this.rat_input.selectedIndex == 0) {
+					this.band_tr.style.display = "none";
+					this.scs_tr.style.display = "none";
+				}
+				else{
+					this.band_tr.style.display = "";
+					this.scs_tr.style.display = "";
+				}
+			}
+
+		init_nc_table(){
+			var neighborcell_table,setting_table,status_table ;
+			neighborcell_table = this.createTable();
+			status_table = this.createTable();
+			setting_table = this.createTable();
+			
+			this.fieldset.appendChild(neighborcell_table);
+			this.fieldset.appendChild(status_table);
+			this.fieldset.appendChild(setting_table);
+
+			this.neighborcell_table = neighborcell_table.querySelector('tbody');
+			this.status_table = status_table.querySelector('tbody');
+			this.setting_table = setting_table.querySelector('tbody');
+
+			var pci_tr,arfcn_tr,band_tr,scs_tr,header,td,td1,th,pci_input,arfcn_input,band_input,scs_input,rat_input,rat_tr;
+			var status_th,status_trh;
+			header = this.createTRHeader();
+			th = this.createTH("<%:Lock Cell Setting%>");
+			header.appendChild(th);
+
+			rat_input = this.createDroplist({0:"LTE",1:"NR"});
+			rat_tr = this.createTR();
+			td = this.createTD("<%:RAT%>");
+			td1 = this.createTD();
+			td1.appendChild(rat_input);
+			rat_tr.appendChild(td);
+			rat_tr.appendChild(td1);
+
+
+			pci_tr = this.createTR();
+			td = this.createTD("<%:PCI%>");
+			pci_input = this.createInput("pci","");
+			td1 = this.createTD();
+			td1.appendChild(pci_input);
+			pci_tr.appendChild(td);
+			pci_tr.appendChild(td1);
+
+			arfcn_tr = this.createTR();
+			td = this.createTD("<%:ARFCN%>");
+			arfcn_input = this.createInput("arfcn","");
+			td1 = this.createTD();
+			td1.appendChild(arfcn_input);
+			arfcn_tr.appendChild(td);
+			arfcn_tr.appendChild(td1);
+			
+			band_tr = this.createTR();
+			td = this.createTD("<%:Band%>");
+			band_input = this.createInput("band","");
+			td1 = this.createTD();
+			td1.appendChild(band_input);
+			band_tr.appendChild(td);
+			band_tr.appendChild(td1);
+
+			scs_tr = this.createTR();
+			td = this.createTD("<%:SCS%>");
+			scs_input = this.createDroplist({0:"15KHZ",1:"30KHZ"});
+			td1 = this.createTD();
+			td1.appendChild(scs_input);
+			scs_tr.appendChild(td);
+			scs_tr.appendChild(td1);
+
+			
+			status_th = this.createTH("<%:Status%>");
+			status_trh = this.createTRHeader();
+			status_trh.appendChild(status_th);
+			this.status_table.appendChild(status_trh);
+
+			this.pci_input = pci_input;
+			this.arfcn_input = arfcn_input;
+			this.band_input = band_input;
+			this.scs_input = scs_input;
+			this.rat_input = rat_input;
+			this.band_tr = band_tr;
+			this.scs_tr = scs_tr;
+			this.band_tr.style.display = "none";
+			this.scs_tr.style.display = "none";
+			this.rat_input.addEventListener('change',()=>{
+				this.nr_options();
+			});
+
+			var submit_btn = this.createBTN("<%:Submit%>",() => {
+				var config = {
+					"rat": this.rat_input.selectedIndex,
+					"pci": this.pci_input.value,
+					"arfcn": this.arfcn_input.value,
+					"band": this.band_input.value,
+					"scs": this.scs_input.selectedIndex
+				}
+				this.set_config(JSON.stringify(config));
+			});
+
+			this.setting_table.appendChild(header);
+			this.setting_table.appendChild(rat_tr);
+			this.setting_table.appendChild(pci_tr);
+			this.setting_table.appendChild(arfcn_tr);
+			this.setting_table.appendChild(band_tr);
+			this.setting_table.appendChild(scs_tr);
+			this.setting_table.appendChild(submit_btn);
+		}
+
+		render_neighborcell(){
+			//clear neighborcell_table
+			while (this.neighborcell_table.querySelector("tr")) {
+				let remove = this.neighborcell_table.querySelector("tr")
+				this.neighborcell_table.removeChild(remove);
+			}
+			var nr,lte,tr_left
+			nr = this.config.NR;
+			lte = this.config.LTE;
+			for (let cell_info of nr) {
+					this.create_nc_tr(1,cell_info);
+				}
+			for (let cell_info of lte) {
+				this.create_nc_tr(0,cell_info);
+			}
+
+		}
+
+		render_status(){
+			//clear status_table
+			while (this.status_table.querySelector("tr")) {
+				this.status_table.removeChild(this.status_table.querySelector("tr"));
+			}
+			var status = this.config.lockcell_status;
+			for (let key in status) {
+				if (status[key] != ""){
+					this.create_status_tr(key + ":" + status[key].toUpperCase());
+				}
+			}
+		}
+
+		create_status_tr(status){
+			var tr = this.createTR();
+			var td = this.createTD(status);
+			tr.appendChild(td);
+			this.status_table.appendChild(tr);
+		}
+
+		create_nc_tr(rat,cell_info){
+			if (rat == 0) {
+				var text = "LTE:";
+			}
+			else{
+				var text = "NR:";
+			}
+			for (let key in cell_info) {
+				if (cell_info[key] != ""){
+					text += key + ":" + cell_info[key] + " ";
+				}	
+			}
+			let tr_left = this.createTD(text);
+			let tr_right = this.create_copy_btn_td(rat,cell_info.pci,cell_info.arfcn);
+			let tr = this.createTR();
+			tr.appendChild(tr_left);
+			tr.appendChild(tr_right);
+			this.neighborcell_table.appendChild(tr);
+		}
+
+		create_copy_btn_td(rat,pci,arfcn){
+			var copy_btn = this.createBTN("<%:Copy%>",() => {
+				this.pci_input.value = pci;
+				this.arfcn_input.value = arfcn;
+				this.rat_input.selectedIndex = rat;
+				this.nr_options()
+			});
+			var td = document.createElement('td');
+			td.className = "td cbi-section-table-cell left";
+			td.setAttribute("width","10%");
+			td.appendChild(copy_btn);
+			
+			return td;
+		}
+
+		cb_get(){
+			this.render_neighborcell();
+			this.render_status();
+		}
+
+		
+	}
+
+	class IMEI extends ModemConfig {
+		constructor(cfg_id){
+			super(cfg_id,"<%:Set IMEI%>");
+			this.config_name = "imei";
+			this.get_action = "get_imei";
+			this.set_action = "set_imei";
+			this.get_config();
+			this.render();
+		}
+
+		render(){
+			this.imei_input = this.createInput("imei",this.config);
+			this.imei_btn = this.createBTN("<%:Submit%>",() => {
+				this.set_config(this.imei_input.value);
+			});
+			this.fieldset.appendChild(this.imei_input);
+			this.fieldset.appendChild(this.imei_btn);
+		}
+
+		cb_get(){
+			this.imei_input.value = this.config;
+		}
+
+		cb_set(){
+			this.imei_input.value = this.config;
+		}
+
+		update(){
+			this.get_config();
+		}
+		
+	}
+
+	class Select_Modem {
+		constructor(){
+			this.modem_selector = document.getElementById('modem_selector');
+			this.cfg_id = null;
+			this.modem_cfg_list = [];
+			this.create_modem_cfg_selector();
+			this.update_modem_cfg_list();
+		}
+		
+		create_modem_cfg_selector() {
+			var selector = document.createElement('select');
+			selector.addEventListener('change', (event) => {
+				this.cfg_id = event.target.value;
+				this.update_cfg_id(this.cfg_id);
+			});
+			this.modem_selector.appendChild(selector);
+			this.selector = selector;
+		}
+
+		update_modem_cfg_list() {
+			XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "network", "modem", "get_modem_cfg")%>', {}, (x, data) => {
+				var new_cfg_list = [];
+				var cfgs = data.cfgs;
+				for (let i = 0; i < cfgs.length; i++) {
+					var cfg = cfgs[i];
+					var name = cfg.name;
+					var value = cfg.cfg;
+					new_cfg_list.push({ "value": value, "name": name });
+				}
+				if (JSON.stringify(new_cfg_list) != JSON.stringify(this.modem_cfg_list)) {
+					console.log(this.modem_cfg_list)
+					console.log(new_cfg_list)
+					this.cfg_options = new_cfg_list;
+					console.log("update_cfg_list")
+				}
+			});
+		}
+
+		set cfg_options(value) {
+			var longger = this.modem_cfg_list.length > value.length ? this.modem_cfg_list : value;
+			if (longger.length == 0) {
+				return;
+			}
+			for (let i = 0; i < longger.length; i++) {
+				var option = this.selector.options[i];
+				if (i < value.length) {
+					if (i >= this.selector.options.length) {
+						option = document.createElement('option');
+						this.selector.appendChild(option);
+					}
+					option.value = value[i].value;
+					option.innerHTML = value[i].name;
+
+				}
+				else {
+					this.selector.removeChild(option);
+				}
+			}
+			this.cfg_id = this.selector.value;
+			this.modem_cfg_list = value;
+			this.update_cfg_id(this.cfg_id);
+		}
+	}
+
+	class TabMenu extends Select_Modem {
+		functions = {
+				"DialMode": {"class": DialMode, "name":"<%:Dial Mode%>"},
+				"RatPrefer": {"class": RatPrefer, "name":"<%:Rat Prefer%>"},
+				"IMEI": {"class": IMEI, "name": "<%:Set IMEI%>"},
+				"NeighborCell": {"class": NeighborCell, "name": "<%:Neighbor Cell%>"},
+				"LockBand": {"class": Lockband, "name":"<%:Lock Band%>"}
+			}
+		constructor(){
+			super();
+			this.cbi_map = document.querySelector('.cbi-map');
+			this.class_map = {};
+			this.datatabs = [];
+			this.create_tabmenu();
+			
+		}
+
+		update_cfg_id(cfg_id){
+			for (let key in this.class_map) {
+				this.class_map[key].cfg_id = cfg_id;
+			}
+			//check if all datatab not selected
+			for (let tab of this.datatabs) {
+				if (tab.className == "cbi-tab") {
+					this.switch_tab(tab);
+					return;
+				}
+			}
+			this.switch_tab(this.datatabs[0]);
+		}
+
+		create_tabmenu(){
+			//add support function to tabmenu
+			var tabmenu = document.createElement('ul');
+			tabmenu.className = "cbi-tabmenu";
+			for (let key in this.functions) {
+				var li = document.createElement('li');
+				li.className = "cbi-tab-disabled";
+				li.innerHTML = this.functions[key].name;
+				li.setAttribute("data-tab", key);
+				li.addEventListener('click', (event) => {
+					this.switch_tab(event.target)
+				});
+				tabmenu.appendChild(li);
+				this.datatabs.push(li);
+			}
+			this.cbi_map.appendChild(tabmenu);
+			this.tabmenu = tabmenu;
+		}
+
+		switch_tab(target){
+			
+			target.className = "cbi-tab";
+			target.style.display = "";
+			var datatab = target.getAttribute("data-tab");
+			for (let i = 0; i < this.datatabs.length; i++) {
+				if (this.datatabs[i] != target) {
+					this.datatabs[i].className = "cbi-tab-disabled";
+				}
+			}
+
+			if (this.class_map[datatab] == undefined) {
+				this.class_map[datatab] = new this.functions[datatab].class(this.cfg_id);
+			}
+			for (let key in this.class_map) {
+				this.class_map[key].hide();
+			}
+			this.class_map[datatab].show();
+		}
+
+	
+	}
+
+	
+	window.onload = function(){
+		var tabmenu = new TabMenu();
+	}
+
 </script>
-
-<div class="cbi-map" id="cbi-modem-debug">
-	<h2 id="content" name="content"><%:Modem Debug%></h2>
-	<div class="cbi-map-descr"><%:Debug Your Module%></div>
-	<head>
-		<style type="text/css">
-
-		/* 消息样式 */
-		#info_message {
-			text-align: left;
-			font-size: 1.8em;
-		}
-
-		#info_message img {
-			vertical-align: middle;
-		}
-
-		#info_message a {
-			color: rgb(61, 143, 173);
-			font-size: 50%;
-		}
-		
-		/* table {
-			width: 100%;
-			border-spacing: 10px;
-			border: 0px;
-		} */
-		
-		tr td:first-child {
-			width: 33%;
-		}
-
-		/* AT命令响应 */
-		/* #response_label {
-			font-size: 15px;
-		} */
-
-		/* 隐藏tab菜单 */
-		.cbi-tabmenu {
-			display: none;
-		}
-		/* 隐藏tab内容 */
-		#tab_context {
-			display: none;
-		}
-		/* 隐藏AT命令标题 */
-		#at_command_title {
-			display: none;
-		}
-
-		/* AT命令响应 */
-		textarea {
-			background:#373737;
-			border:none;
-			color:#FFF;
-			width: 100%;
-		}
-
-		#popup {
-			width:560px;
-			height:190px;
-			padding:20px;
-			background-color:gainsboro; 
-			border-style : solid;
-			position:fixed;
-			top : 40%;
-			margin-left: auto;
-			margin-right: auto;
-			left: 0;
-			right: 0;
-			text-align: center;
-			display:none;
-		}
-
-		/*tom增加的功能 锁小区支持的feature button的按钮们*/
-		#lockcell_feature {
-					display: flex;
-					justify-content: space-between;
-					flex-wrap: wrap;
-				}
-		</style>
-	</head>
-
-	<fieldset class="cbi-section" id="cbi-info" style="display: block;">
-		<div class="cbi-section fade-in">
-			<h3><%:Message%></h3>
-			<table class="table" id="message">
+<div class="cbi-map">
+	<fieldset class="cbi-section">
+		<table class="table">
+			<tbody>
 				<tr class="tr">
-					<td colspan="2" class="td left">
-						<div id="info_message">
-							<img src="<%=resource%>/icons/loading.gif" alt="<%:Loading%>"/>
-							<%:Loading modem%>...
-						</div>
+					<td class="td" width="33%"><%:Modem Name%></td>
+					<td class="td" id="modem_selector">
+
 					</td>
 				</tr>
-			</table>
-		</div>
+			</tbody>
+		</table>
 	</fieldset>
-
-	<fieldset class="cbi-section" id="cbi-modem" style="display: none;">
-		<div class="cbi-section fade-in">
-			<!-- <legend><%:Modem Select%></legend> -->
-			<h3><%:Modem Select%></h3>
-			<div class="cbi-section-node">
-				<div class="cbi-value">
-					<label class="cbi-value-title"><%:Modem Name%></label>
-					<div class="cbi-value-field">
-						<div class="cbi-checkbox">
-							<select name="modem_select" id="modem_select" class="cbi-input-select"></select>
-						</div>
-						<div class="cbi-value-description">
-							<%:Select a modem for debugging%>
-						</div>
-					</div>
-				</div>
-				<div class="cbi-value cbi-value-last" style="display: none;">
-					<label class="cbi-value-title"><%:First Cache%></label>
-					<div class="cbi-value-field">
-						<div class="cbi-checkbox">
-							<input id="first_cache" type="checkbox" checked>
-						</div>
-						<div class="cbi-value-description">
-							<%:First view tab context%>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</fieldset>
-	
-	<ul class="cbi-tabmenu" id="tab_menu">
-		<li class="cbi-tab" data-tab="mode_tab"><a href="#"><%:Mode%></a></li>
-		<li class="cbi-tab-disabled" data-tab="network_prefer_tab"><a href="#"><%:Network Preferences%></a></li>
-		<li class="cbi-tab-disabled" data-tab="self_test_tab"><a href="#"><%:Self Test%></a></li>
-		<li class="cbi-tab-disabled" data-tab="at_command_tab"><a href="#"><%:AT Command%></a></li>
-		<li class="cbi-tab-disabled" data-tab="lockband_tab"><a href="#"><%:LockBand Settings%></a></li>
-		<li class="cbi-tab-disabled" data-tab="lockcell_tab"><a href="#"><%:Lock Cell/Arfcn Settings%></a></li>
-		<li class="cbi-tab-disabled" data-tab="set_imei_tab"><a href="#"><%:Set IMEI%></a></li>
-		<li class="cbi-tab-disabled" data-tab="set_sim_tab"><a href="#"><%:Switch SIM%></a></li>
-	</ul>
-
-	<div class="cbi-section-node cbi-section-node-tabbed" id="tab_context">
-	<!-- <div class="cbi-section cbi-tblsection" data-tab-active="true"> -->
-		<div class="cbi-section" data-tab="mode_tab" data-tab-title="<%:Mode%>" data-tab-active="true" style="display: block;">
-			<!-- <legend><%:Mode%></legend> -->
-			<!-- <h3><%:Mode%></h3> -->
-			<table class="table cbi-section-table">
-				<tbody>
-					<tr class="tr cbi-section-table-titles anonymous">
-						<th class="th cbi-section-table-cell"><%:Current%></th>
-						<th class="th cbi-section-table-cell"><%:Config%></th>
-						<th class="th cbi-section-table-cell cbi-section-actions"></th>
-					</tr>
-					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
-						<td class="td cbi-value-field" data-title="<%:Current%>" id="current_mode"></td>
-						<td class="td cbi-value-field" data-title="<%:Config%>" id="mode_option">
-							<!-- <div>
-								<span class="cbi-radio">
-									<input type="radio" name="mode_option" id="mode_option_qmi" value="qmi" checked="true">
-									<span>QMI</span>
-								</span>&nbsp;
-								<span class="cbi-radio">
-									<input type="radio" name="mode_option" id="mode_option_ecm" value="ecm">
-									<span>ECM</span>
-								</span>&nbsp;
-								<span class="cbi-radio">
-									<input type="radio" name="mode_option" id="mode_option_mbim" value="mbim">
-									<span>MBIM</span>
-								</span>&nbsp;
-								<span class="cbi-radio">
-									<input type="radio" name="mode_option" id="mode_option_rndis" value="rndis">
-									<span>RNDIS</span>
-								</span>&nbsp;
-								<span class="cbi-radio">
-									<input type="radio" name="mode_option" id="mode_option_ncm" value="ncm">
-									<span>NCM</span>
-								</span>
-							</div> -->
-						</td>
-						<td class="td">
-							<div>
-								<button class="btn cbi-button cbi-button-apply" id="mode_button" onclick="set_mode()" alt="<%:Apply%>" title="<%:Apply%>"><%:Apply%></button>
-							</div>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-		<!-- <div class="cbi-section cbi-tblsection"> -->
-		<div class="cbi-section" data-tab="network_prefer_tab" data-tab-title="<%:Network Preferences%>" data-tab-active="false" style="display: none;">
-			<!-- <legend><%:Network Preferences%></legend> -->
-			<!-- <h3><%:Network Preferences%></h3> -->
-			<table class="table cbi-section-table">
-				<tbody>
-					<tr class="tr cbi-section-table-titles anonymous">
-						<th class="th cbi-section-table-cell"><%:Current%></th>
-						<th class="th cbi-section-table-cell"><%:Option%></th>
-						<th class="th cbi-section-table-cell"><%:Config%></th>
-						<th class="th cbi-section-table-cell cbi-section-actions"></th>
-					</tr>
-					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
-						<td class="td cbi-value-field" data-title="<%:Current%>" id="current_prefer"></td>
-						<td class="td cbi-value-field" data-title="<%:Option%>" id="prefer_option">
-							<div>
-								<span class="cbi-radio">
-									<input type="radio" name="prefer_option" id="prefer_option_auto" value="auto" checked="true">
-									<span><%:Auto%></span>
-								</span>&nbsp;
-								<span class="cbi-radio">
-									<input type="radio" name="prefer_option" id="prefer_option_custom" value="custom">
-									<span><%:Custom%></span>
-								</span>
-							</div>
-						</td>
-						<td class="td cbi-value-field" data-title="<%:Config%>" id="prefer_custom_config">
-							<div>
-								<span class="cbi-checkbox">
-									<input id="prefer_config_3g" type="checkbox" class="cbi-input-checkbox" value="3g">
-									<span><%:3G%></span>
-								</span> &nbsp;
-								<span class="cbi-checkbox">
-									<input id="prefer_config_4g" type="checkbox" class="cbi-input-checkbox" value="4g">
-									<span><%:4G%></span>
-								</span> &nbsp;
-								<span class="cbi-checkbox">
-									<input id="prefer_config_5g" type="checkbox" class="cbi-input-checkbox" value="5g">
-									<span><%:5G%></span>
-								</span>
-							</div>
-						</td>
-						<td class="td">
-							<div>
-								<button class="btn cbi-button cbi-button-apply" id="network_prefer_button" onclick="set_network_prefer()" alt="<%:Apply%>" title="<%:Apply%>"><%:Apply%></button>
-							</div>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-		<!-- <div class="cbi-section fade-in"> -->
-		<div class="cbi-section" data-tab="self_test_tab" data-tab-title="<%:Self Test%>" data-tab-active="false" style="display: none;">
-			<!-- <legend><%:Self Test%></legend> -->
-			<!-- <h3><%:Self Test%></h3> -->
-			<table class="table cbi-section-table">
-				<tbody>
-					<tr class="tr cbi-section-table-titles anonymous">
-						<th class="th cbi-section-table-cell"><%:Item%></th>
-						<th class="th cbi-section-table-cell"><%:Current%></th>
-						<th class="th cbi-section-table-cell"><%:Status%></th>
-					</tr>
-					<tr class="tr cbi-section-table-row cbi-rowstyle-1">
-						<td class="td cbi-value-field" data-title="<%:Item%>" id="voltage_label"><%:Voltage%></td>
-						<td class="td cbi-value-field" data-title="<%:Current%>" id="current_voltage"></td>
-						<td class="td cbi-value-field" data-title="<%:Status%>" id="voltage_status">-</td>
-					</tr>
-					<tr class="tr cbi-section-table-row cbi-rowstyle-2">
-						<td class="td cbi-value-field" data-title="<%:Item%>" id="temperature_label"><%:Temperature%></td>
-						<td class="td cbi-value-field" data-title="<%:Current%>" id="current_temperature"></td>
-						<td class="td cbi-value-field" data-title="<%:Status%>" id="temperature_status">-</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-		<!-- <div class="cbi-section fade-in"> -->
-		<div class="cbi-section" data-tab="at_command_tab" data-tab-title="<%:AT Command%>" data-tab-active="false" style="display: none;">
-			<!-- <legend><%:AT Command%></legend> -->
-			<h3 id="at_command_title"><%:AT Command%></h3>
-			<table class="table" id="at_command_info">
-				<tbody>
-					<!-- <tr class="tr">
-						<td class="td left"><%:Modem Select%></td>
-						<td class="td left"><select name="modem_select" id="modem_select" class="cbi-input-select"></select></td>
-					</tr> -->
-					<tr class="tr">
-						<td class="td left"><%:Quick Option%></td>
-						<td class="td left" id="quick_option_td">
-							<div>
-								<span class="cbi-radio">
-									<input type="radio" name="quick_option" value="auto" checked="true">
-									<span><%:Auto%></span>
-								</span>&nbsp;
-								<span class="cbi-radio">
-									<input type="radio" name="quick_option" value="custom">
-									<span><%:Custom%></span>
-								</span>
-							</div>
-						</td>
-					</tr>
-					<tr class="tr">
-						<td class="td left"><%:Quick Commands%></td>
-						<td class="td left"><select name="command_select" id="command_select" class="cbi-input-select"></select></td>
-					</tr>
-					<tr class="tr">
-						<td class="td left"><%:Enter Command%></td>
-						<td class="td left">
-							<div>
-								<input type="text" id="at_command" class="cbi-input-text"></input>
-							</div>
-							<div>
-								<input class="cbi-button cbi-button-apply" type="button" value="<%:Send%>" onclick="send_at_command()" alt="<%:Send%>" title="<%:Send%>">
-								<input class="cbi-button cbi-button-reset" type="button" value="<%:Clean%>" onclick="clean_at_command()" alt="<%:Clean%>" title="<%:Clean%>">
-							</div>
-						</td>
-					</tr>
-					<tr class="tr">
-						<td colspan="2" class="td left">
-							<div id="response_label"><%:Response%></div><br/>
-							<div><textarea readonly="readonly" id="response" rows="20" maxlength="160"></textarea></div>
-							<div class="cbi-page-actions">
-								<input class="btn cbi-button cbi-button-link" type="button" value="<%:Return to old page%>" onclick="location.href='/cgi-bin/luci/admin/network/modem/at_command_old'" alt="<%:Return to old page%>" title="<%:Return to old page%>">
-								<input class="btn cbi-button cbi-button-link" type="button" value="<%:Custom quick commands%>" onclick="location.href='/cgi-bin/luci/admin/network/modem/quick_commands_config'" alt="<%:Custom quick commands%>" title="<%:Custom quick commands%>">
-								<input class="cbi-button cbi-button-reset" type="button" value="<%:Clean%>" onclick="clean_response()" alt="<%:Clean%>" title="<%:Clean%>">
-							</div>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-
-		<!-- tom 添加的功能 -->
-		<!-- 锁频 -->
-		<div class="cbi-section" data-tab="lockband_tab" data-tab-title="<%:LockBand Settings%>" data-tab-active="false"
-			style="display: none;">
-			<!-- <legend><%:Network Preferences%></legend> -->
-			<!-- <h3><%:Network Preferences%></h3> -->
-			<table class="table cbi-section-table" >
-				<tbody id="lockband_custom_config">
-					<tr class="tr cbi-section-table-titles anonymous">
-						<th class="th cbi-section-table-cell">
-							<%:Config%>
-						</th>
-					</tr>
-		
-				</tbody>
-			</table>
-		</div>
-		
-		<!-- 锁小区、频点 -->
-		<div class="cbi-section" data-tab="lockcell_tab" data-tab-title="<%:Lock Cell/Arfcn Settings%>" data-tab-active="false"
-			style="display: none;">
-			<h3 id="Lock Cell/Arfcn_title">
-				<%:Current Settings%>
-			</h3>
-			<table class="table" id="CurrentStatus">
-				<tbody id="current_cell_status">
-				</tbody>
-			</table>
-			<h3 id="Lock Cell/Arfcn_title">
-				<%:Available Neighbor%>
-			</h3>
-			<table class="table" id="AvailableNeighbor">
-				<tbody id="neighbor_cell_info">
-				</tbody>
-			</table>
-			<!-- <legend><%:AT Command%></legend> -->
-			<h3 id="Lock Cell/Arfcn_title">
-				<%:Lock Cell/Arfcn Settings%>
-			</h3>
-			<table class="table" id="lockcell_info">
-				<tbody>
-					<tr class="tr">
-						<td class="td left">
-							<%:Select Rat%>
-						</td>
-						<td class="td left">
-							<select name="rat_select" id="rat_select" class="cbi-input-select"
-								onchange="lockcell_rat_onchange()">
-								<option value="0">4G</option>
-								<option value="1">5G</option>
-							</select>
-						</td>
-					</tr>
-					<tr class="tr">
-						<td class="td left">
-							<%:Enter Arfcn%>
-						</td>
-						<td class="td left">
-							<div>
-								<input type="text" id="arfcn_input" class="cbi-input-text"></input>
-		
-							</div>
-						</td>
-					</tr>
-					<tr class="tr">
-						<td class="td left">
-							<%:Enter PCI%>
-						</td>
-						<td class="td left">
-							<div>
-								<input type="text" id="pci_input" class="cbi-input-text"></input>
-							</div>
-						</td>
-					</tr>
-					<tr class="tr" id="scs_input_tr" style="display:none;">
-						<td class="td left">
-							<%:Enter SCS%>
-						</td>
-						<td class="td left">
-							<select name="rat_select" id="scs_select" class="cbi-input-select">
-								<option value="0">15KHZ</option>
-								<option value="1">30KHZ</option>
-								<option value="2">60KHZ</option>
-							</select>
-						</td>
-					</tr>
-					<tr class="tr" id="nr_input_tr" style="display:none;">
-						<td class="td left">
-							<%:Enter NRBAND%>
-						</td>
-						<td class="td left">
-							<div>
-								<input type="text" id="nrband_input" class="cbi-input-text"></input>
-							</div>
-						</td>
-					</tr>
-					<tr class="tr">
-						<td class="td left">
-							<%:Submit%>
-						</td>
-						<td class="td left">
-							<div id="lockcell_feature">
-							</div>
-						</td>
-					</tr>
-					<span></span>
-				</tbody>
-			</table>
-		
-		
-		
-		</div>
-
-		<!-- 设置IMEI -->
-		<div class="cbi-section" data-tab="set_imei_tab" data-tab-title="<%:Set IMEI%>" data-tab-active="false"
-			style="display: none;">
-			<table class="table cbi-section-table">
-				<tbody id="imei_setting">
-					<tr class="tr cbi-section-table-titles anonymous">
-						<th>
-							<%:IMEI%>
-						</th>
-						<th>
-							<%:Set IMEI%>
-						</th>
-					</tr>
-					<tr class="tr">
-						<td class="td" style="width: auto;">
-							<%:IMEI%>
-						</td>
-						<td class="td cbi-value-field">
-							<input type="text" id="imei1_input" class="cbi-input-text"></input>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-			<input type="button" class="cbi-button-apply" onclick="set_imei()" value="<%:Apply%>">
-
-		</div>
-
-		<!-- 设置SIM卡槽 -->
-		<div class="cbi-section" data-tab="set_sim_tab" data-tab-title="<%:Switch SIM%>" data-tab-active="false"
-			style="display: none;">
-			<table class="table cbi-section-table">
-				<tbody id="sim_slot_setting">
-					<tr class="tr cbi-section-table-titles anonymous">
-						<th>
-							<%:SIM Slot|Now%>
-						</th>
-						<th>
-							<%:SIM Slot|Next Boot%>
-						</th>
-						<th>
-							<%:SIM Slot|Setting%>
-						</th>
-					</tr>
-					<tr class="tr">
-						<td class="td" style="width: auto;">
-							<span id="sim_slot_current"></span>
-						</td>
-						<td class="td cbi-value-field">
-							<span id="sim_slot_nextboot"></span>
-						</td>
-						<td class="td cbi-value-field">
-							<select name="sim_slot_select" id="sim_slot_select" class="cbi-input-select">
-								<option value="SIM1"><%:SIM1 (Close to power)%></option>
-								<option value="SIM2"><%:SIM2 (Away from power)%></option>
-
-							</select>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-			<input type="button" class="cbi-button-apply" onclick="set_sim()" value="<%:Apply%>">
-
-		</div>
-	</div>
-
 </div>
-
 <%+footer%>

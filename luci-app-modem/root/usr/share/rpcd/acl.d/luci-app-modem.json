@@ -7,5 +7,13 @@
 		"write": {
 			"uci": [ "modem" ]
 		}
+	},
+	"luci-mod-status-index": {
+		"description": "Grant access to main status display",
+		"read": {
+			"ubus": {
+				"modem_ctrl": [ "info","base_info" ]
+			}
+		}
 	}
 }

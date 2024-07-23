@@ -2,10 +2,47 @@
 source /lib/functions.sh
 #运行目录
 MODEM_RUNDIR="/var/run/modem"
-#脚本目录
 SCRIPT_DIR="/usr/share/modem"
-#导入组件工具
-source "${SCRIPT_DIR}/modem_debug.sh"
+
+modem_config=$1
+mkdir -p "${MODEM_RUNDIR}/${modem_config}_dir"
+log_file="${MODEM_RUNDIR}/${modem_config}_dir/dial_log"
+debug_subject="modem_dial"
+source "${SCRIPT_DIR}/generic.sh"
+touch $log_file
+
+set_led()
+{
+    local type=$1
+    local modem_config=$2
+    local value=$3
+    case $data_interface in
+        usb)
+            config_get sim_led u$modem_config sim_led
+            config_get net_led u$modem_config net_led
+        ;;
+        pcie)
+            config_get sim_led p$modem_config sim_led
+            config_get net_led p$modem_config net_led
+        ;;
+        *)
+            #usb
+            config_get sim_led u$modem_config sim_led
+            config_get net_led u$modem_config net_led
+        ;;
+    esac
+    case $type in
+        sim)
+            echo $value > /sys/class/leds/$sim_led/brightness
+            ;;
+        net)
+            uci set system.led_${net_led}.dev=$value
+            uci commit system
+            /etc/init.d/led restart
+            ;;
+    esac
+}
+
 get_driver()
 {
 	for i in $(find $modem_path -name driver);do
@@ -44,29 +81,125 @@ get_driver()
 	done
     echo $mode
 }
-config_load modem
-modem_config=$1
-log_path="${MODEM_RUNDIR}/${modem_config}_dial.cache"
-config_get apn $modem_config apn
-config_get modem_path $modem_config path
-config_get modem_dial $modem_config enable_dial
-config_get dial_tool $modem_config dial_tool
-config_get pdp_type $modem_config pdp_type
-config_get network_bridge $modem_config network_bridge
-config_get apn $modem_config apn
-config_get username $modem_config username
-config_get password $modem_config password
-config_get auth $modem_config auth
-config_get at_port $modem_config at_port
-config_get manufacturer $modem_config manufacturer
-config_get platform $modem_config platform
-config_get define_connect $modem_config define_connect
-modem_netcard=$(ls $(find $modem_path -name net |tail -1) | awk -F'/' '{print $NF}')
-interface_name=wwan_5g_$(echo $modem_config | grep -oE "[0-9]+")
-interface6_name=wwan6_5g_$(echo $modem_config | grep -oE "[0-9]+")
-ethernet_5g=$(uci -q get modem.global.ethernet)
-driver=$(get_driver)
-dial_log "modem_path=$modem_path,driver=$driver,interface=$interface_name,at_port=$at_port" "$log_path"
+
+unlock_sim()
+{
+    pin=$1
+    sim_lock_file="/var/run/modem/${modem_config}_dir/pincode"
+    lock ${sim_lock_file}.lock
+    if [ -f $sim_lock_file ] && [ "$pin" == "$(cat $sim_lock_file)"];then
+        m_debug "pin code is already try"
+    else
+        
+        res=$(at "$at_port" "AT+CPIN=\"$pin\"")
+        case "$?" in
+            0)
+                m_debug "unlock sim card with pin code $pin success"
+                ;;
+            *)
+                echo $pin > $sim_lock_file
+                m_debug "info" "unlock sim card with pin code $pin failed,block try until nextboot"
+                ;;
+        esac
+    fi
+    lock -u ${sim_lock_file}.lock
+
+}
+
+update_config()
+{
+    config_load modem
+    config_get state $modem_config state
+    config_get enable_dial $modem_config enable_dial
+    config_get modem_path $modem_config path
+    config_get dial_tool $modem_config dial_tool
+    config_get pdp_type $modem_config pdp_type
+    config_get network_bridge $modem_config network_bridge
+    config_get metric $modem_config metric
+    config_get at_port $modem_config at_port
+    config_get manufacturer $modem_config manufacturer
+    config_get platform $modem_config platform
+    config_get define_connect $modem_config define_connect
+    config_get ra_master $modem_config ra_master
+    config_get global_dial global enable_dial
+    config_get ethernet_5g u$modem_config ethernet
+    driver=$(get_driver)
+    update_sim_slot
+    case $sim_slot in
+        1)
+        config_get apn $modem_config apn
+        config_get username $modem_config username
+        config_get password $modem_config password
+        config_get auth $modem_config auth
+        config_get pincode $modem_config pincode
+        ;;
+        2)
+        config_get apn $modem_config apn2
+        config_get username $modem_config username2
+        config_get password $modem_config password2
+        config_get auth $modem_config auth2
+        config_get pincode $modem_config pincode2
+        [ -z "$apn" ] && config_get apn $modem_config apn
+        [ -z "$username" ] && config_get username $modem_config username
+        [ -z "$password" ] && config_get password $modem_config password
+        [ -z "$auth" ] && config_get auth $modem_config auth
+        [ -z "$pin" ] && config_get pincode $modem_config pincode
+        ;;
+        *)
+            config_get apn $modem_config apn
+            config_get username $modem_config username
+            config_get password $modem_config password
+            config_get auth $modem_config auth
+            config_get pincode $modem_config pincode
+            ;;
+    esac
+    modem_net=$(find $modem_path -name net |tail -1)
+    modem_netcard=$(ls $modem_net)
+    interface_name=$modem_config
+    interface6_name=${modem_config}v6
+}
+
+check_dial_prepare()
+{
+    cpin=$(at "$at_port" "AT+CPIN?")
+    get_sim_status "$cpin"
+    case $sim_state_code in
+        "0")
+            m_debug "info sim card is miss"
+            ;;
+        "1")
+            m_debug "info sim card is ready"
+            sim_fullfill=1
+            ;;
+        "2")
+            m_debug "pin code required"
+            [ -n "$pincode" ] && unlock_sim $pincode
+            ;;
+        *)
+            m_debug "info sim card state is $sim_state_code"
+            ;;
+    esac
+    
+    if [ "$sim_fullfill" = "1" ];then
+        set_led "sim" $modem_config 255
+    else
+        set_led "sim" $modem_config 0
+    fi
+    if [ -n "$modem_netcard" ] && [ -d "/sys/class/net/$modem_netcard" ];then
+        netdev_fullfill=1
+    else
+        netdev_fullfill=0
+    fi
+
+    if [ "$enable_dial" = "1" ] && [ "$sim_fullfill" = "1" ] && [ "$state" != "disabled" ] ;then
+        config_fullfill=1
+    fi
+    if [ "$config_fullfill" = "1" ] && [ "$sim_fullfill" = "1" ] && [ "$netdev_fullfill" = "1" ] ;then
+        return 1
+    else
+        return 0
+    fi
+}
 
 check_ip()
 {
@@ -126,10 +259,9 @@ check_ip()
             if [ -n "$ipv4" ] && [ -n "$ipv6" ];then
                 connection_status=3
             fi
-            dial_log "current ip [$ipv6],[$ipv4],connection_status=$connection_status" "$log_path"
         else
             connection_status="-1"
-            dial_log "at port response unexpected $ipaddr" "$log_path"
+            m_debug "at port response unexpected $ipaddr"
         fi
 }
 
@@ -142,7 +274,7 @@ set_if()
         uci set network.${interface_name}.proto='dhcp'
         uci set network.${interface_name}.defaultroute='1'
         uci set network.${interface_name}.peerdns='0'
-        uci set network.${interface_name}.metric='10'
+        uci set network.${interface_name}.metric="${metric}"
         uci add_list network.${interface_name}.dns='114.114.114.114'
         uci add_list network.${interface_name}.dns='119.29.29.29'
         local num=$(uci show firewall | grep "name='wan'" | wc -l)
@@ -150,7 +282,6 @@ set_if()
         if [ "$wwan_num" = "0" ]; then
             uci add_list firewall.@zone[$num].network="${interface_name}"
         fi
-
         #set ipv6
         #if pdptype contain 6
         if [ -n "$(echo $pdp_type | grep "6")" ];then
@@ -159,44 +290,53 @@ set_if()
             uci set network.lan.ip6class="${interface6_name}"
             uci set network.${interface6_name}='interface'
             uci set network.${interface6_name}.proto='dhcpv6'
-            uci set network.${interface6_name}.extendprefix='1'
             uci set network.${interface6_name}.ifname="@${interface_name}"
             uci set network.${interface6_name}.device="@${interface_name}"
-            uci set network.${interface6_name}.metric='10'
+            uci set network.${interface6_name}.metric="${metric}"
+            if [ "$ra_master" = "1" ];then
+                uci set dhcp.${interface6_name}='dhcp'
+                uci set dhcp.${interface6_name}.interface="${interface6_name}"
+                uci set dhcp.${interface6_name}.ra='relay'
+                uci set dhcp.${interface6_name}.ndp='relay'
+                uci set dhcp.${interface6_name}.master='1'
+                uci set dhcp.${interface6_name}.ignore='1'
+                uci set dhcp.lan.ra='relay'
+                uci set dhcp.lan.ndp='relay'
+                uci set dhcp.lan.dhcpv6='relay'
+                uci commit dhcp
+            fi
             local wwan6_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface6_name}" | wc -l)
             if [ "$wwan6_num" = "0" ]; then
                 uci add_list firewall.@zone[$num].network="${interface6_name}"
             fi
         fi
-
-
-        
         uci commit network
         uci commit firewall
         ifup ${interface_name}
-        dial_log "create interface $interface_name" "$log_path"
+        m_debug "create interface $interface_name"
 
     fi
-
+    
     set_modem_netcard=$modem_netcard
     if [ -z "$set_modem_netcard" ];then
-        dial_log "no netcard found" "$log_path"
+        m_debug "no netcard found"
     fi
     ethernet_check=$(handle_5gethernet)
-    if [ -n "$ethernet_check" ];then
+    if [ -n "$ethernet_check" ] && [ -n "/sys/class/net/$ethernet_5g" ] && [ -n "$ethernet_5g" ];then
         set_modem_netcard=$ethernet_5g
     fi
+    #set led
+    set_led "net" $modem_config $set_modem_netcard
     origin_netcard=$(uci -q get network.$interface_name.ifname)
     origin_device=$(uci -q get network.$interface_name.device)
     if [ "$origin_netcard" == "$set_modem_netcard" ] && [ "$origin_device" == "$set_modem_netcard" ];then
-        dial_log "interface $interface_name already set to $set_modem_netcard" "$log_path"
+        m_debug "interface $interface_name already set to $set_modem_netcard"
     else
         uci set network.${interface_name}.ifname="${set_modem_netcard}"
         uci set network.${interface_name}.device="${set_modem_netcard}"
-        
         uci commit network
         ifup ${interface_name}
-        dial_log "set interface $interface_name to $modem_netcard" "$log_path"
+        m_debug "set interface $interface_name to $set_modem_netcard"
     fi
 }
 
@@ -204,14 +344,26 @@ flush_if()
 {
     uci delete network.${interface_name}
     uci delete network.${interface6_name}
+    uci delete dhcp.${interface6_name}
     uci commit network
-    dial_log "delete interface $interface_name" "$log_path"
+    uci commit dhcp
+    set_led "net" $modem_config
+    set_led "sim" $modem_config 0
+    m_debug "delete interface $interface_name"
 
 }
 
 dial(){
+    update_config
+    m_debug "modem_path=$modem_path,driver=$driver,interface=$interface_name,at_port=$at_port,using_sim_slot:$sim_slot"
+    while [ "$dial_prepare" != 1 ] ; do
+        sleep 5
+        update_config
+        check_dial_prepare
+        dial_prepare=$?
+    done
     set_if
-    dial_log "dialing $modem_path driver $driver" "$log_path"
+    m_debug "dialing $modem_path driver $driver"
     case $driver in
         "qmi")
             qmi_dial
@@ -234,7 +386,14 @@ dial(){
     esac
 }
 
-hang()
+wwan_hang()
+{
+    #kill quectel-CM
+    killall quectel-CM
+}
+
+
+ecm_hang()
 {
     if [ "$manufacturer" = "quectel" ]; then
 		at_command="AT+QNETDEVCTL=1,2,1"
@@ -252,6 +411,29 @@ hang()
 	fi
 
 	tmp=$(at "${at_port}" "${at_command}")
+}
+
+
+hang()
+{
+    m_debug "hang up $modem_path driver $driver"
+    case $driver in
+        "ncm")
+            ecm_hang
+            ;;
+        "ecm")
+            ecm_hang
+            ;;
+        "rndis")
+            ecm_hang
+            ;;
+        "qmi")
+            wwan_hang
+            ;;
+        "mbim")
+            wwan_hang
+            ;;
+    esac
     flush_if
 }
 
@@ -269,7 +451,7 @@ qmi_dial()
     cmd_line="quectel-CM"
 
 	case $pdp_type in
-		"ipv4") cmd_line="$cmd_line -4" ;;
+		"ip") cmd_line="$cmd_line -4" ;;
 		"ipv6") cmd_line="$cmd_line -6" ;;
 		"ipv4v6") cmd_line="$cmd_line -4 -6" ;;
 		*) cmd_line="$cmd_line -4 -6" ;;
@@ -293,8 +475,8 @@ qmi_dial()
 	if [ -n "$modem_netcard" ]; then
 		cmd_line="$cmd_line -i $modem_netcard"
 	fi
-    dial_log "dialing $cmd_line" "$log_path"
-    cmd_line="$cmd_line -f $log_path"
+    
+    cmd_line="$cmd_line -f $log_file"
     $cmd_line
     
     
@@ -306,7 +488,7 @@ at_dial()
         apn="auto"
     fi
     if [ -z "$pdp_type" ];then
-        pdp_type="IPV4V6"
+        pdp_type="IP"
     fi
     local at_command='AT+COPS=0,0'
 	tmp=$(at "${at_port}" "${at_command}")
@@ -359,15 +541,14 @@ at_dial()
             ;;
             
     esac
-    dial_log "dialing vendor:$manufacturer;platform:$platform; $cgdcont_command" "$log_path"
-    dial_log "dialing vendor:$manufacturer;platform:$platform; $at_command" "$log_path"
+    m_debug "dialing vendor:$manufacturer;platform:$platform; $cgdcont_command ; $at_command"
     at "${at_port}" "${cgdcont_command}"
     at "$at_port" "$at_command"
 }
 
 ip_change_fm350()
 {
-    dial_log "ip_change_fm350" "$log_path"
+    m_debug "ip_change_fm350"
     at_command="AT+CGPADDR=3"
     local ipv4_config=$(at ${at_port} ${at_command} | cut -d, -f2 | grep -oE '[0-9]+.[0-9]+.[0-9]+.[0-9]+')
     local public_dns1_ipv4="223.5.5.5"
@@ -407,49 +588,93 @@ ip_change_fm350()
     uci commit network
     ifdown ${interface_name}
     ifup ${interface_name}
-    dial_log "set interface $interface_name to $ipv4_config" "$log_path"
+    m_debug "set interface $interface_name to $ipv4_config"
 
 }
 
 handle_5gethernet()
 {
+    case $manufacturer in
+        "quectel")
+            case $platform in
+                "qualcomm")
+                    quectel_qualcomm_ethernet
+                    ;;
+                "unisoc")
+                    quectel_unisoc_ethernet
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+quectel_unisoc_ethernet()
+{
     case "$driver" in
         "ncm"|\
         "ecm"|\
         "rndis")
-            case "$manufacturer" in
-                "quectel")
-                    case "$platform" in
-                        "unisoc")
-                            check_ethernet_cmd="AT+QCFG=\"ethernet\""
-                            time=0
-                            while [ $time -lt 5 ]; do
-                                result=$(sh ${SCRIPT_DIR}/modem_at.sh $at_port $check_ethernet_cmd | grep "+QCFG:")
-                                if [ -n "$result" ]; then
-                                    if [ -n "$(echo $result | grep "ethernet\",1")" ]; then
-                                        echo "1"
-                                        dial_log "5G Ethernet mode is enabled" "$log_path"
-                                        break
-                                    fi
-                                fi
-                                sleep 5
-                                time=$((time+1))
-                            done
-                        ;;
-                    esac
-                    ;;
-            esac
+            check_ethernet_cmd="AT+QCFG=\"ethernet\""
+            time=0
+            while [ $time -lt 5 ]; do
+                result=$(at $at_port $check_ethernet_cmd | grep "+QCFG:")
+                if [ -n "$result" ]; then
+                    if [ -n "$(echo $result | grep "ethernet\",1")" ]; then
+                        echo "1"
+                        m_debug "5G Ethernet mode is enabled"
+                        break
+                    fi
+                fi
+                sleep 5
+                time=$((time+1))
+            done
         ;;
     esac
 }
 
+quectel_qualcomm_ethernet()
+{
+     case "$driver" in
+        "mbim")
+            eth_driver_at="AT+QETH=\"eth_driver\""
+            data_interface_at="AT+QCFG=\"data_interface\""
+            ehter_driver_expect="\"r8125\",1"
+            data_interface_expect="\"data_interface\",1"
+
+            time=0
+            while [ $time -lt 5 ]; do
+                eth_driver_result=$(at $at_port $eth_driver_at | grep "+QETH:")
+                time=$(($time+1))
+                sleep 1
+                if [ -n "$eth_driver_result" ];then
+                    break
+                fi
+            done
+            time=0
+            while [ $time -lt 5 ]; do
+                data_interface_result=$(at $at_port $data_interface_at | grep "+QCFG:")
+                time=$(($time+1))
+                sleep 1
+                if [ -n "$data_interface_result" ];then
+                    break
+                fi
+            done
+            eth_driver_pass=$(echo $eth_driver_result | grep "$ehter_driver_expect")
+            data_interface_pass=$(echo $data_interface_result | grep "$data_interface_expect")
+            if  [ -n "$eth_driver_pass" ] && [ -n "$data_interface_pass" ];then
+                echo "1"
+                m_debug "5G Ethernet mode is enabled"
+            fi
+            ;;
+    esac
+}
 
 handle_ip_change()
 {
     export ipv4
     export ipv6
     export connection_status
-    dial_log "ip changed from $ipv6_cache,$ipv4_cache to $ipv6,$ipv4" "$log_path"
+    m_debug  "ip changed from $ipv6_cache,$ipv4_cache to $ipv6,$ipv4"
     case $manufacturer in
         "fibocom")
             case $platform in
@@ -463,10 +688,10 @@ handle_ip_change()
 
 check_logfile_line()
 {
-    local line=$(wc -l $log_path | awk '{print $1}')
+    local line=$(wc -l $log_file | awk '{print $1}')
     if [ $line -gt 300 ];then
-        echo "" > $log_path
-        dial_log "log file line is over 300,clear it" "$log_path"
+        echo "" > $log_file
+        m_debug  "log file line is over 300,clear it"
     fi
 }
 
@@ -487,7 +712,7 @@ at_dial_monitor()
                 at_dial
                 unexpected_response_count=0
             fi
-            sleep 5
+            sleep 10
         else
         #检测ipv4是否变化
             sleep 15
@@ -499,12 +724,19 @@ at_dial_monitor()
         fi
         check_logfile_line
     done
-    
 }
 
-case $2 in
+case "$2" in
     "hang")
+        debug_subject="modem_hang"
+        update_config
         hang;;
     "dial")
-        dial;;
+        case "$state" in
+            "disabled")
+                debug_subject="modem_hang"
+                hang;;
+            *)
+                dial;;
+        esac
 esac

@@ -1,4 +1,5 @@
 # Copyright (C) 2023 Siriling <siriling@qq.com>
+# Copyright (C) 2024 Tom <fjrcn@outlook.com>
 # This is free software, licensed under the GNU General Public License v3.
 
 include $(TOPDIR)/rules.mk
@@ -6,10 +7,10 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=luci-app-5gmodem
 LUCI_TITLE:=LuCI support for Modem
 LUCI_PKGARCH:=all
-PKG_VERSION:=1.4.4
+PKG_VERSION:=2.0
 PKG_LICENSE:=GPLv3
 PKG_LINCESE_FILES:=LICENSE
-PKF_MAINTAINER:=Siriling <siriling@qq.com>
+PKF_MAINTAINER:=Tom <fjrcn@outlook.com>
 LUCI_DEPENDS:=+luci-compat +kmod-usb-net +kmod-usb-net-cdc-ether +kmod-usb-acm \
 		 +kmod-usb-net-rndis \
 		+kmod-usb-net-sierrawireless +kmod-usb-ohci\
@@ -29,7 +30,8 @@ LUCI_DEPENDS:=+luci-compat +kmod-usb-net +kmod-usb-net-cdc-ether +kmod-usb-acm \
 		+quectel-CM-5G \
 		+sms-tool \
 		+jq +grep +bc\
-
+		+coreutils +coreutils-stat
+		
 
 define Package/luci-app-5gmodem/conffiles
 /etc/config/modem

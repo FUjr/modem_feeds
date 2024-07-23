@@ -14,7 +14,7 @@ s:tab("advanced", translate("Advanced Settings"))
 --------general--------
 
 -- 是否启用
-enable = s:taboption("general", Flag, "enable", translate("Enable"))
+enable = s:taboption("general", Flag, "enable_dial", translate("enable_dial"))
 enable.default = "0"
 enable.rmempty = false
 
@@ -22,82 +22,23 @@ enable.rmempty = false
 remarks = s:taboption("general", Value, "remarks", translate("Remarks"))
 remarks.rmempty = true
 
--- 移动网络
--- network = s:taboption("general", Value, "network", translate("Mobile Network"))
-network = s:taboption("general", ListValue, "network", translate("Mobile Network"))
--- network.default = ""
-network.rmempty = false
+-- AT串口
+at_port = s:taboption("general",Value, "at_port", translate("AT Port"))
+at_port.placeholder = translate("Not null")
+at_port.rmempty = false
 
--- 获取移动网络，并显示设备名
-function getMobileNetwork()
-	local modem_number=uci:get('modem','global','modem_number')
-	if modem_number == "0" then
-		network:value("",translate("Mobile network not found"))
-	end
-
-	return
-	-- for i=0,modem_number-1 do
-	-- 	--获取模块名
-	-- 	local modem_name = uci:get('modem','modem'..i,'name')
-	-- 	if modem_name == nil then
-	-- 		modem_name = "unknown"
-	-- 	end
-	-- 	--设置网络
-	-- 	modem_network = uci:get('modem','modem'..i,'network')
-	-- 	if modem_network ~= nil then
-	-- 		network:value(modem_network,modem_network.." ("..translate(modem_name:upper())..")")
-	-- 	end
-	-- end
-
-	uci:foreach("modem", "modem-device", function (modem_device)
-
-		--获取模块名
-		local modem_name=modem_device["name"]
-		--获取网络
-		local modem_network=modem_device["network"]
-
-		--设置网络值
-		network:value(modem_network,modem_network.." ("..translate(modem_name:upper())..")")
-	end)
-end
-
-getMobileNetwork()
-
--- 拨号模式
--- mode = s:taboption("general", ListValue, "mode", translate("Mode"))
--- mode.rmempty = false
--- mode.description = translate("Only display the modes available for the adaptation modem")
--- local modes = {"qmi","gobinet","ecm","mbim","rndis","ncm"}
--- for i in ipairs(modes) do
--- 	mode:value(modes[i],string.upper(modes[i]))
--- end
-
--- 添加获取拨号模式信息
--- m:append(Template("modem/mode_info"))
-
---------advanced--------
-
--- 拨号工具
-dial_tool = s:taboption("advanced", ListValue, "dial_tool", translate("Dial Tool"))
-dial_tool.description = translate("After switching the dialing tool, it may be necessary to restart the module or restart the router to recognize the module.")
-dial_tool.rmempty = true
-dial_tool:value("", translate("Auto Choose"))
-dial_tool:value("quectel-CM", translate("quectel-CM"))
-dial_tool:value("mmcli", translate("mmcli"))
+ra_master = s:taboption("advanced", Flag, "ra_master", translate("RA Master"))
+ra_master.description = translate("After checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master.")
+ra_master.default = "0"
 
 -- 网络类型
 pdp_type= s:taboption("advanced", ListValue, "pdp_type", translate("PDP Type"))
 pdp_type.default = "ipv4v6"
 pdp_type.rmempty = false
-pdp_type:value("ipv4", translate("IPv4"))
+pdp_type:value("ip", translate("IPv4"))
 pdp_type:value("ipv6", translate("IPv6"))
 pdp_type:value("ipv4v6", translate("IPv4/IPv6"))
 
--- 网络桥接
-network_bridge = s:taboption("advanced", Flag, "network_bridge", translate("Network Bridge"))
-network_bridge.description = translate("After checking, enable network interface bridge.")
-network_bridge.default = "0"
-network_bridge.rmempty = false
 
 -- 接入点
 apn = s:taboption("advanced", Value, "apn", translate("APN"))
@@ -131,13 +72,54 @@ password:depends("auth", "both")
 password:depends("auth", "pap")
 password:depends("auth", "chap")
 
+pincode = s:taboption("advanced", Value, "pincode", translate("PIN Code"))
+pincode.description = translate("If the PIN code is not set, leave it blank.")
+
+--卡2
+apn = s:taboption("advanced", Value, "apn2", translate("APN").." 2")
+apn.description = translate("If solt 2 config is not set,will use slot 1 config.")
+apn.default = ""
+apn.rmempty = true
+apn:value("", translate("Auto Choose"))
+apn:value("cmnet", translate("China Mobile"))
+apn:value("3gnet", translate("China Unicom"))
+apn:value("ctnet", translate("China Telecom"))
+apn:value("cbnet", translate("China Broadcast"))
+apn:value("5gscuiot", translate("Skytone"))
+
+auth = s:taboption("advanced", ListValue, "auth2", translate("Authentication Type").. " 2")
+auth.default = "none"
+auth.rmempty = false
+auth:value("none", translate("NONE"))
+auth:value("both", translate("PAP/CHAP (both)"))
+auth:value("pap", "PAP")
+auth:value("chap", "CHAP")
+
+username = s:taboption("advanced", Value, "username2", translate("PAP/CHAP Username").. " 2")
+username.rmempty = true
+username:depends("auth2", "both")
+username:depends("auth2", "pap")
+username:depends("auth2", "chap")
+
+password = s:taboption("advanced", Value, "password2", translate("PAP/CHAP Password").. " 2")
+password.rmempty = true
+password.password = true
+password:depends("auth2", "both")
+password:depends("auth2", "pap")
+password:depends("auth2", "chap")
+
+pincode = s:taboption("advanced", Value, "pincode2", translate("PIN Code").. " 2")
+pincode.description = translate("If the PIN code is not set, leave it blank.")
+
+metric = s:taboption("advanced", Value, "metric", translate("Metric"))
+metric.description = translate("The metric value is used to determine the priority of the route. The smaller the value, the higher the priority. Cannot duplicate.")
+metric.default = "10"
+
 -- 配置ID
 id = s:taboption("advanced", ListValue, "id", translate("Config ID"))
 id.rmempty = false
 id:value(arg[1])
 -- uci:set('modem',arg[1],'id',arg[1])
 
--- 隐藏配置ID
-m:append(Template("modem/hide_dial_config_id"))
 
 return m

@@ -8,9 +8,6 @@ SCRIPT_DIR="/usr/share/modem"
 
 #运行目录
 MODEM_RUNDIR="/var/run/modem"
-MODEM_RUN_CONFIG="${MODEM_RUNDIR}/config.cache"
-#导入组件工具
-source "${SCRIPT_DIR}/modem_scan.sh"
 
 service_triggers()
 {
@@ -20,44 +17,46 @@ service_triggers()
 
 start_service() {
     mkdir -p $MODEM_RUNDIR
-    local enable_dial=$(uci -q get modem.@global[0].enable_dial)
-	if [ "$enable_dial" = "0" ]; then
-		stop_service
-	else
+    
 	#加载模组配置
 	config_load modem
-    config_foreach dial_modem modem-device
-    fi
+    config_get enabled global enable_dial
+    [ "$enabled" = "0" ] && config_foreach hang_modem modem-device && stop
+    config_foreach run_modem modem-device
 }
 
 reload_service()
 {
-    stop_service
-    start_service
+    stop
+	start
 }
 
 stop_service()
 {
     #清理运行目录
-    rm -rf $MODEM_RUNDIR
     config_load modem
     config_foreach hang_modem modem-device
 }
 
-dial_modem()
+
+
+run_modem()
 {
-    config_get enable_dial $1 enable_dial
-    if [ "$enable_dial" == "1" ];then
-        procd_open_instance "modem_$1"
-        procd_set_param command "/usr/share/modem/modem_dial.sh" "$1" "dial"
-        procd_set_param respawn
-        procd_close_instance
-    else
+    config_get enabled $1 enable_dial
+    if [ "$enabled" = "0" ] ;then
         hang_modem $1
+        return
     fi
+    procd_open_instance "modem_$1"
+    procd_set_param command "/usr/share/modem/modem_dial.sh" "$1" dial
+    procd_set_param respawn
+    procd_close_instance
+    logger -t modem_network "dial modem $1"
 }
 
 hang_modem()
 {
-    /usr/share/modem/modem_dial.sh $1 hang
+    service_stop "modem_$1"
+    "/usr/share/modem/modem_dial.sh" "$1" hang
+    logger -t modem_network "hang modem $1"
 }

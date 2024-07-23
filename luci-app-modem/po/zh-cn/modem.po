@@ -680,14 +680,6 @@ msgstr "输入SCS"
 msgid "Enter NRBAND"
 msgstr "输入NR频段"
 
-msgid "SIM Slot|Now"
-msgstr "SIM卡卡槽|当前"
-
-msgid "SIM Slot|Next Boot"
-msgstr "SIM卡卡槽|下次启动"
-
-msgid "SIM Slot|Setting'
-msgstr "SIM卡卡槽|设置"
 
 msgid "SIM1 (Close to power)"
 msgstr "SIM1 (靠近电源)"
@@ -742,3 +734,123 @@ msgstr "启用多WAN"
 
 msgid "Mwan Config"
 msgstr "多WAN设置"
+
+msgid "Network Down Judge Times"
+msgstr "网络下线判断次数"
+
+msgid "Network Detect Interval"
+msgstr "网络检测间隔"
+
+msgid "SIM Auto Switch"
+msgstr "SIM卡自动切换"
+
+msgid "Ping Destination"
+msgstr "Ping目标"
+
+msgid "SIM Settings"
+msgstr "SIM卡设置"
+
+msgid "SIM Config"
+msgstr "SIM卡配置"
+
+msgid "TTL Config"
+msgstr "TTL配置"
+
+msgid "enable_dial"
+msgstr "启用拨号"
+
+#modem_info.htm
+msgid "Reference Signal Received Power"
+msgstr "参考信号接收功率(RSRP)"
+
+msgid "Reference Signal Received Quality"
+msgstr "参考信号接收质量(RSRQ)"
+
+msgid "Absolute Radio-Frequency Channel Number"
+msgstr "绝对射频信道号(ARFCN)"
+
+msgid "Tracking area code of cell servedby neighbor Enb"
+msgstr "邻区Enb服务的跟踪区编码(TAC)"
+
+msgid "Received Signal Level"
+msgstr "接收信号级别(RxLev)"
+
+msgid "Signal to Interference plus Noise Ratio Bandwidth"
+msgstr "信噪比带宽(SINR)"
+
+msgid "International Mobile Equipment Identity"
+msgstr "国际移动设备识别码(IMEI)"
+
+msgid "Integrate Circuit Card Identity"
+msgstr "集成电路卡识别码(ICCID)"
+
+#dial_overview.htm
+msgid "Manually Reload dial configurations When the dial configuration fails to take effect"
+msgstr "当拨号配置无法生效时，手动重新加载拨号配置"
+
+msgid "Reload Dial Configurations"
+msgstr "重新加载拨号配置"
+
+#modem_debug.htm
+msgid "Dial Mode"
+msgstr "拨号模式"
+
+msgid "Current Mode"
+msgstr "当前模式"
+
+msgid "Rat Prefer"
+msgstr "制式偏好"
+
+msgid "Setting"
+msgstr "设置"
+
+msgid "Neighbor Cell"
+msgstr "邻区"
+
+msgid "Lock Cell Setting"
+msgstr "锁定小区设置"
+
+msgid "Lock Band"
+msgstr "锁定频段"
+
+msgid "Select All"
+msgstr "全选"
+
+msgid "Disconnected"
+msgstr "未连接"
+
+msgid "Serving Cell Receive Level"
+msgstr "服务小区接收信号级别(Srxlev)"
+
+msgid "Internet Service Provider"
+msgstr "互联网服务提供商(ISP)"
+
+msgid "SIM Error,Error code:"
+msgstr "SIM卡错误,错误码:"
+
+msgid "Warning!"
+msgstr "警告!"
+
+msgid "PIN Code"
+msgstr "PIN码"
+
+msgid "If the PIN code is not set, leave it blank."
+msgstr "如果未设置PIN码，请留空。"
+
+msgid "RA Master"
+msgstr "IPV6中继 主"
+
+msgid "After checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master."
+msgstr "勾选后，此接口将启用IPV6中继主。只能设置一个接口为RA主。"
+
+msgid "The metric value is used to determine the priority of the route. The smaller the value, the higher the priority. Cannot duplicate."
+msgstr "度量值用于确定路由的优先级。值越小，优先级越高。不能重复。"
+
+msgid "Modem Log"
+msgstr "模组日志"
+
+msgid "enabled"
+msgstr "已启用"
+
+msgid "disabled"
+msgstr "已禁用"

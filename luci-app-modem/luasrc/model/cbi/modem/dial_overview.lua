@@ -11,63 +11,53 @@ s = m:section(NamedSection, "global", "global", translate("Global Config"))
 s.anonymous = true
 s.addremove = false
 
+-- 模组扫描
+o = s:option(Button, "modem_scan", translate("Modem Scan"))
+o.template = "modem/modem_scan"
+
+-- 启用手动配置
+o = s:option(Flag, "manual_configuration", translate("Manual Configuration"))
+o.rmempty = false
+o.description = translate("Enable the manual configuration of modem information").." " translate("(After enable, the automatic scanning and configuration function for modem information will be disabled)")
+
+
 o = s:option(Flag, "enable_dial", translate("Enable Dial"))
 o.rmempty = false
 o.description = translate("Enable dial configurations")
 
--- 添加模块状态
-m:append(Template("modem/modem_status"))
+o = s:option(Button, "reload_dial", translate("Reload Dial Configurations"))
+o.inputstyle = "apply"
+o.description = translate("Manually Reload dial configurations When the dial configuration fails to take effect")
+o.write = function()
+    sys.call("/etc/init.d/modem_network reload")
+    luci.http.redirect(d.build_url("admin", "network", "modem", "dial_overview"))
+end
 
 s = m:section(TypedSection, "modem-device", translate("Config List"))
-s.anonymous = true
 s.addremove = ture
-s.template = "modem/tblsection"
+s.template = "cbi/tblsection"
 s.extedit = d.build_url("admin", "network", "modem", "dial_config", "%s")
-
--- function s.create(uci, t)
---     local uuid = string.gsub(luci.sys.exec("echo -n $(cat /proc/sys/kernel/random/uuid)"), "-", "")
---     t = uuid
---     TypedSection.create(uci, t)
---     luci.http.redirect(uci.extedit:format(t))
--- end
--- function s.remove(uci, t)
---     uci.map.proceed = true
---     uci.map:del(t)
---     luci.http.redirect(d.build_url("admin", "network", "modem","dial_overview"))
--- end
 
 o = s:option(Flag, "enable_dial", translate("enable_dial"))
 o.width = "5%"
 o.rmempty = false
 
--- o = s:option(DummyValue, "status", translate("Status"))
--- o.template = "modem/status"
--- o.value = translate("Collecting data...")
+o = s:option(DummyValue, "name", translate("Modem Name"))
+o.cfgvalue = function(t, n)
+    local name = (Value.cfgvalue(t, n) or "")
+    return name:upper()
+end
 
 o = s:option(DummyValue, "remarks", translate("Remarks"))
 
-o = s:option(DummyValue, "network", translate("Mobile Network"))
+o = s:option(DummyValue, "state", translate("Modem Status"))
 o.cfgvalue = function(t, n)
-    -- 检测移动网络是否存在
-    local network = (Value.cfgvalue(t, n) or "")
-    local odpall = io.popen("ls /sys/class/net/ | grep -w "..network.." | wc -l")
-    local odp = odpall:read("*a"):gsub("\n","")
-    odpall:close()
-    if odp ~= "0" then
-        return network
-    else
-        return translate("The network device was not found")
-    end
+    local name = translate(Value.cfgvalue(t, n) or "")
+    return name:upper()
 end
 
-o = s:option(DummyValue, "dial_tool", translate("Dial Tool"))
-o.cfgvalue = function(t, n)
-    local dial_tool = (Value.cfgvalue(t, n) or "")
-    if dial_tool == "" then
-        dial_tool = translate("Auto Choose")
-    end
-    return translate(dial_tool)
-end
+
+
 
 
 o = s:option(DummyValue, "pdp_type", translate("PDP Type"))
@@ -81,9 +71,6 @@ o.cfgvalue = function(t, n)
     return pdp_type
 end
 
-o = s:option(Flag, "network_bridge", translate("Network Bridge"))
-o.width = "5%"
-o.rmempty = false
 
 o = s:option(DummyValue, "apn", translate("APN"))
 o.cfgvalue = function(t, n)
@@ -94,9 +81,17 @@ o.cfgvalue = function(t, n)
     return apn
 end
 
+remove_btn = s:option(Button, "_remove", translate("Remove"))
+remove_btn.inputstyle = "remove"
+function remove_btn.write(self, section)
+    local shell
+    shell="/usr/share/modem/modem_scan.sh remove "..section
+    luci.sys.call(shell)
+    --refresh the page
+    luci.http.redirect(d.build_url("admin", "network", "modem", "dial_overview"))
+end
 -- 添加模块拨号日志
-m:append(Template("modem/modem_dial_log"))
+m:append(Template("modem/dial_overview"))
 
--- m:append(Template("modem/list_status"))
 
 return m

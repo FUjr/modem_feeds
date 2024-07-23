@@ -1,6 +1,22 @@
 {
     "modem_support":{
         "usb":{
+            "em05":{
+                "manufacturer_id":"2c7c",
+                "manufacturer":"quectel",
+                "platform":"lte",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["qmi","ecm","mbim","rndis","ncm"]
+            },
+            "em120k":{
+                "manufacturer_id":"2c7c",
+                "manufacturer":"quectel",
+                "platform":"lte12",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["qmi","ecm","mbim","rndis","ncm"]
+            },
             "rg200u-cn":{
                 "manufacturer_id":"2c7c",
                 "manufacturer":"quectel",
@@ -10,6 +26,14 @@
                 "modes":["ecm","mbim","rndis","ncm"]
             },
             "rm500u-cn":{
+                "manufacturer_id":"2c7c",
+                "manufacturer":"quectel",
+                "platform":"unisoc",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["ecm","mbim","rndis","ncm"]
+            },
+            "rm500u-ea":{
                 "manufacturer_id":"2c7c",
                 "manufacturer":"quectel",
                 "platform":"unisoc",
@@ -120,6 +144,14 @@
                 "data_interface":"usb",
                 "define_connect":"1",
                 "modes":["qmi","gobinet","ecm","mbim","rndis","ncm"]
+            },
+            "nl678":{
+                "manufacturer_id":"2cb7",
+                "manufacturer":"fibocom",
+                "platform":"lte",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["qmi","ecm","rndis","ncm"]
             },
             "srm815":{
                 "manufacturer_id":"2dee",

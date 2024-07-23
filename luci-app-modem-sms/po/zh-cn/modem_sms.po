@@ -1,0 +1,27 @@
+#modem_sms.htm
+msgid "Sender"
+msgstr "发信人"
+
+msgid "Timestamp"
+msgstr "时间戳"
+
+msgid "Content"
+msgstr "内容"
+
+msgid "Send SMS"
+msgstr "发送短信"
+
+msgid "Send"
+msgstr "发送"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "SMS"
+msgstr "短信"
+
+msgid "Message Content"
+msgstr "短信内容"
+
+msgid "Phone Number"
+msgstr "电话号码"
