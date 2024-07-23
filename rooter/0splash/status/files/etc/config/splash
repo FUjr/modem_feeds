@@ -1,4 +1,0 @@
-config settings 'settings'
-	option enabled '1'
-	option full '1'
-	
