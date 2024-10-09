@@ -1,0 +1,82 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/uci-defaults.sh
+. /lib/functions/system.sh
+
+modem_settings()
+{
+	local board="$1"
+
+	case $board in
+	HC,HC-G80)
+		
+		#mini pci slot
+		uci set qmodem.u1_1_4="modem-slot"
+		uci set qmodem.u1_1_4.slot="1-1.4"
+		uci set qmodem.u1_1_4.type="usb"
+		uci set qmodem.u1_1_4.net_led="wwan"
+		#m.2 slot (usb2.0)
+		uci set qmodem.u1_1_1="modem-slot"
+		uci set qmodem.u1_1_1.slot="1-1.1"
+		uci set qmodem.u1_1_1.type="usb"
+		uci set qmodem.u1_1_1.net_led="wwan"
+		uci set qmodem.u1_1_1.ethernet="cpewan0"
+		#m.2 slot (usb3.0)
+		uci set qmodem.u2_1="modem-slot"
+		uci set qmodem.u2_1.slot="2-1"
+		uci set qmodem.u2_1.type="usb"
+		uci set qmodem.u2_1.net_led="wwan"
+		uci set qmodem.u2_1.ethernet="cpewan0"
+		uci commit qmodem
+		;;
+	huasifei,ws3006)
+	#m2 usb3.0 
+	#(slot 2)
+		uci set qmodem.u2_1_2="modem-slot"
+		uci set qmodem.u2_1_2.slot="2-1.2"
+		uci set qmodem.u2_1_2.type="usb"
+		uci set qmodem.u2_1_2.net_led="wwan2"
+		uci set qmodem.u2_1_2.sim_led="green:sim2"
+	#(slot 1)
+		uci set qmodem.u2_1_4="modem-slot"
+		uci set qmodem.u2_1_4.slot="2-1.4"
+		uci set qmodem.u2_1_4.type="usb"
+		uci set qmodem.u2_1_4.net_led="wwan1"
+		uci set qmodem.u2_1_4.sim_led="green:sim1"
+	#m2 usb2.0 
+	#(slot 2)
+		uci set qmodem.u1_1_2="modem-slot"
+		uci set qmodem.u1_1_2.slot="1-1.1"
+		uci set qmodem.u1_1_2.type="usb"
+		uci set qmodem.u1_1_2.net_led="wwan2"
+		uci set qmodem.u1_1_2.sim_led="green:sim2"
+	#(slot 1)
+		uci set qmodem.u1_1_4="modem-slot"
+		uci set qmodem.u1_1_4.slot="1-1.4"
+		uci set qmodem.u1_1_4.type="usb"
+		uci set qmodem.u1_1_4.net_led="wwan1"
+		uci set qmodem.u1_1_4.sim_led="green:sim1"
+	#mini pci slot
+	#(slot 2)
+		uci set qmodem.u1_1_2="modem-slot"
+		uci set qmodem.u1_1_2.slot="1-1.2"
+		uci set qmodem.u1_1_2.type="usb"
+		uci set qmodem.u1_1_2.net_led="wwan2"
+		uci set qmodem.u1_1_2.sim_led="green:sim2"
+	#(slot 1)
+		uci set qmodem.u1_1_3="modem-slot"
+		uci set qmodem.u1_1_3.slot="1-1.3"
+		uci set qmodem.u1_1_3.type="usb"
+		uci set qmodem.u1_1_3.net_led="wwan1"
+		uci set qmodem.u1_1_3.sim_led="green:sim1"
+
+		uci commit qmodem
+		;;
+	
+	esac
+}
+
+board=$(board_name)
+modem_settings $board
+exit 0

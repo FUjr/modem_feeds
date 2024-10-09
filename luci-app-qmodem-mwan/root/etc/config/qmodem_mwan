@@ -1,0 +1,11 @@
+config ipv4
+	list member_track_ip 'test.ustc.edu.cn'
+	list member_track_ip 'cip.cc'
+	list member_track_ip '208.67.222.222'
+	list member_track_ip '208.67.220.220'
+	list member_interface 'wan'
+	option member_priority '1'
+	option member_weight '1'
+
+config global 'global'
+        option enable_mwan '1'

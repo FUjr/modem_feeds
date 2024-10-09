@@ -1,0 +1,50 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/uci-defaults.sh
+. /lib/functions/system.sh
+
+modem_settings()
+{
+	local board="$1"
+
+	case $board in
+	HC,HC-G80)
+		add_ipv4_config "1_1_1"
+		add_ipv4_config "1_1_4"
+		add_ipv4_config "2_1"
+		uci commit qmodem_mwan
+		;;
+	huasifei,ws3006)
+		add_ipv4_config "2_1_2"
+		add_ipv4_config "2_1_4"
+		add_ipv4_config "1_1_1"
+		add_ipv4_config "1_1_2"
+		add_ipv4_config "1_1_3"
+		uci commit qmodem_mwan
+		;;
+	
+	esac
+}
+
+
+add_ipv4_config(){
+	local interface_name="$1"
+	cfg=$(uci add qmodem_mwan ipv4)
+uci batch<<-EOF >/dev/null
+set qmodem_mwan.$cfg.member_interface=$interface_name
+set qmodem_mwan.$cfg.member_priority=2
+set qmodem_mwan.$cfg.member_weight=1
+add_list qmodem_mwan.$cfg.member_track_ip='test.ustc.edu.cn'
+add_list qmodem_mwan.$cfg.member_track_ip='cip.cc'
+add_list qmodem_mwan.$cfg.member_track_ip='208.67.220.220'
+add_list qmodem_mwan.$cfg.member_track_ip='208.67.222.222'
+EOF
+}
+
+
+
+
+board=$(board_name)
+modem_settings $board
+exit 0
