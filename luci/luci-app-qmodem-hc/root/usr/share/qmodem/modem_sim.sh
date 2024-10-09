@@ -1,15 +1,15 @@
 #!/bin/sh
 sim_gpio="/sys/class/gpio/sim/value"
 modem_gpio="/sys/class/gpio/4g/value"
-ping_dest=$(uci -q get modem_sim.@global[0].ping_dest)
-wwan_ifname=$(uci -q get modem_sim.@global[0].wwan_ifname)
-[ -n $wwan_ifname ] && modem_config=$wwan_ifname
-is_empty=$(uci -q get modem.$modem_config)
+ping_dest=$(uci -q get qmodem_hc_sim.main.ping_dest)
+wwan_ifname=$(uci -q get qmodem_hc_sim.main.wwan_ifname)
+[ -n $wwan_ifname ] && modem_config=$(uci -q get network.$wwan_ifname.modem_config)
+is_empty=$(uci -q get qmodem.$modem_config)
 [ -z $is_empty ] && unset modem_config
 [ -z "$modem_config" ] && get_first_avalible_config
 netdev=$(ifstatus $wwan_ifname | jq -r .device)
-judge_time=$(uci -q get modem_sim.@global[0].judge_time)
-detect_interval=$(uci -q get modem_sim.@global[0].detect_interval)
+judge_time=$(uci -q get qmodem_hc_sim.main.judge_time)
+detect_interval=$(uci -q get qmodem_hc_sim.main.detect_interval)
 [ -z $detect_interval ] && detect_interval=10
 [ -z $judge_time ] && judge_time=5
 
@@ -24,7 +24,7 @@ set_modem_config()
 get_first_avalible_config()
 {
     . /lib/functions.sh
-    config_load modem
+    config_load qmodem
     config_foreach set_modem_config modem-device
 }
 
@@ -32,7 +32,7 @@ sendat()
 {
     tty=$1
     cmd=$2
-    sms_tool -d $tty at $cmd 2>&1
+    sms_tool_q -d $tty at $cmd 2>&1
 }
 
 reboot_modem() {
@@ -103,11 +103,11 @@ at_sim_monitor() {
 precheck()
 {
     modem_config=$1
-    config=$(uci -q show modem.$modem_config)
+    config=$(uci -q show qmodem.$modem_config)
     [ -z "$config" ] && return 1
-    ttydev=$(uci -q get modem.$modem_config.at_port)
-    enable_dial=$(uci -q get modem.$modem_config.enable_dial)
-    global_en=$(uci -q get modem.global.enable_dial)
+    ttydev=$(uci -q get qmodem.$modem_config.at_port)
+    enable_dial=$(uci -q get qmodem.$modem_config.enable_dial)
+    global_en=$(uci -q get qmodem.global.enable_dial)
     [ "$global_en" == "0" ] && return 1
     [ -z "$enable_dial" ] || [ "$enable_dial" == "0" ] && return 1
     [ -z "$ttydev" ] && return 1
@@ -133,8 +133,8 @@ main_monitor() {
             ping_result=$?
         fi
 
-        [ -z $ttydev ] && ttydev=$(uci -q get modem.$modem_config.at_port)
-        [ -z $define_connect ] && define_connect=$(uci -q get modem.$modem_config.define_connect)
+        [ -z $ttydev ] && ttydev=$(uci -q get qmodem.$modem_config.at_port)
+        [ -z $define_connect ] && define_connect=$(uci -q get qmodem.$modem_config.define_connect)
         if [ -n $define_connect ] && [ -n $ttydev ];then
             at_dial_monitor $ttydev $define_connect
             dial_result=$?

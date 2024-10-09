@@ -12,7 +12,7 @@
 	function set_sim(){
 		select = document.getElementById("sim_slot_select");
 		slot = select.value;
-		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "set_sim")%>', {"slot": slot },
+		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "set_sim")%>', {"slot": slot },
 			function (x, data) {
 				set_sim_view(data);
 			}
@@ -20,7 +20,7 @@
 	}
 
 	window.onload=function(){
-		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "modem", "get_sim")%>', null,
+		XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "get_sim")%>', null,
 					function (x, data) {
 						set_sim_view(data);
 					}

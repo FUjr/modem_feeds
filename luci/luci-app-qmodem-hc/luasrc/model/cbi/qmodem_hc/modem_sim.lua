@@ -1,5 +1,5 @@
-m = Map("modem_sim", translate("SIM Settings"))
-s = m:section(TypedSection, "global", translate("SIM Settings"))
+m = Map("qmodem_hc_sim", translate("SIM Settings"))
+s = m:section(NamedSection,"main","main", translate("SIM Settings"))
 s.anonymous = true
 s.addremove = false
 
@@ -24,6 +24,6 @@ o.nocreate = true
 
 o.default = "cpewan0"
 
-m:section(SimpleSection).template = "modem_hc/modem_sim"
+m:section(SimpleSection).template = "qmodem_hc/modem_sim"
 
 return m

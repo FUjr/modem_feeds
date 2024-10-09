@@ -3,18 +3,18 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=luci-app-5gmodem-hc
-LUCI_TITLE:=hc-g50 sim switch
+PKG_NAME:=luci-app-qmodem-hc
+LUCI_TITLE:=hc-g80 sim switch
 LUCI_PKGARCH:=all
-PKG_VERSION:=2.0
+PKG_VERSION:=2.1
 PKG_LICENSE:=GPLv3
 PKG_LINCESE_FILES:=LICENSE
-PKF_MAINTAINER:=fujr
-LUCI_DEPENDS:=+luci-app-5gmodem
+PKG_MAINTAINER:=Tom <fjrcn@outlook.com>
+LUCI_DEPENDS:=+luci-app-qmodem
 		
 
-define Package/luci-app-5gmodem-hc/conffiles
-/etc/config/modem_sim
+define Package/luci-app-qmodem-hc/conffiles
+/etc/config/qmodem_hc_sim
 endef
 
 include $(TOPDIR)/feeds/luci/luci.mk
