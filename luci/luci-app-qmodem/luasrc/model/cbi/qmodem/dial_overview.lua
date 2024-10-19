@@ -1,35 +1,22 @@
 local d = require "luci.dispatcher"
-local uci = luci.model.uci.cursor()
 local sys  = require "luci.sys"
 
 m = Map("qmodem")
 m.title = translate("Dial Overview")
-m.description = translate("Check and add modem dialing configurations")
 
 --全局配置
-s = m:section(NamedSection, "global", "global", translate("Global Config"))
+s = m:section(NamedSection, "main", "main", translate("Global Config"))
 s.anonymous = true
 s.addremove = false
 
--- 模组扫描
-o = s:option(Button, "modem_scan", translate("Modem Scan"))
-o.template = "qmodem/modem_scan"
-
--- 启用手动配置
-o = s:option(Flag, "manual_configuration", translate("Manual Configuration"))
+o = s:option(Flag, "enable_dial", translate("Enable Dial")..translate("(Global)"))
 o.rmempty = false
-o.description = translate("Enable the manual configuration of modem information").." " translate("(After enable, the automatic scanning and configuration function for modem information will be disabled)")
 
 
-o = s:option(Flag, "enable_dial", translate("Enable Dial"))
-o.rmempty = false
-o.description = translate("Enable dial configurations")
-
-o = s:option(Button, "reload_dial", translate("Reload Dial Configurations"))
+o = s:option(Button, "reload_dial", translate("Restart Dial Service"))
 o.inputstyle = "apply"
-o.description = translate("Manually Reload dial configurations When the dial configuration fails to take effect")
 o.write = function()
-    sys.call("/etc/init.d/qmodem_network reload")
+    sys.call("/etc/init.d/qmodem_network reload  > /dev/null 2>&1")
     luci.http.redirect(d.build_url("admin", "network", "qmodem", "dial_overview"))
 end
 
@@ -38,17 +25,17 @@ s.addremove = ture
 s.template = "cbi/tblsection"
 s.extedit = d.build_url("admin", "network", "qmodem", "dial_config", "%s")
 
-o = s:option(Flag, "enable_dial", translate("enable_dial"))
+o = s:option(Flag, "enable_dial", translate("Enable Dial"))
 o.width = "5%"
 o.rmempty = false
 
-o = s:option(DummyValue, "name", translate("Modem Name"))
+o = s:option(DummyValue, "name", translate("Modem Model"))
 o.cfgvalue = function(t, n)
     local name = (Value.cfgvalue(t, n) or "")
     return name:upper()
 end
 
-o = s:option(DummyValue, "alias", translate("Alias"))
+o = s:option(DummyValue, "alias", translate("Modem Alias"))
 o.cfgvalue = function(t, n)
     local alias = (Value.cfgvalue(t, n) or "-")
     return alias
@@ -60,9 +47,6 @@ o.cfgvalue = function(t, n)
     local name = translate(Value.cfgvalue(t, n) or "")
     return name:upper()
 end
-
-
-
 
 
 o = s:option(DummyValue, "pdp_type", translate("PDP Type"))
@@ -86,7 +70,7 @@ o.cfgvalue = function(t, n)
     return apn
 end
 
-remove_btn = s:option(Button, "_remove", translate("Remove"))
+remove_btn = s:option(Button, "_remove", translate("Remove Modem"))
 remove_btn.inputstyle = "remove"
 function remove_btn.write(self, section)
     local shell

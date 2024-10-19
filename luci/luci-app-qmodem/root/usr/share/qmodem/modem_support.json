@@ -247,6 +247,13 @@
                 "define_connect":"1",
                 "modes":["qmi","gobinet","mbim"]
             },
+            "rm502q-ae":{
+                "manufacturer":"quectel",
+                "platform":"qualcomm",
+                "data_interface":"pcie",
+                "define_connect":"1",
+                "modes":["qmi","gobinet","mbim"]
+            },
             "rm520n-gl":{
                 "manufacturer":"quectel",
                 "platform":"qualcomm",

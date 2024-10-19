@@ -1,4 +1,5 @@
 -- Copyright 2024 Siriling <siriling@qq.com>
+-- Copyright 2024 FJR <fjrcn@outlook.com>
 module("luci.controller.qmodem", package.seeall)
 local http = require "luci.http"
 local fs = require "nixio.fs"
@@ -23,9 +24,12 @@ function index()
 	entry({"admin", "network", "qmodem", "dial_config"}, cbi("qmodem/dial_config")).leaf = true
 	entry({"admin", "network", "qmodem", "modems_dial_overview"}, call("getOverviews"), nil).leaf = true
 	--模块调试
-	entry({"admin", "network", "qmodem", "modem_debug"},template("qmodem/modem_debug"),luci.i18n.translate("QModem Debug"),4).leaf = true
+	entry({"admin", "network", "qmodem", "modem_debug"},template("qmodem/modem_debug"),luci.i18n.translate("Advance Modem Settings"),4).leaf = true
 	entry({"admin", "network", "qmodem", "send_at_command"}, call("sendATCommand"), nil).leaf = true
-	entry({"admin", "network", "qmodem", "modem_scan"}, call("modemScan"), nil).leaf = true
+
+	--Qmodem设置
+	entry({"admin", "network", "qmodem", "settings"}, cbi("qmodem/settings"), luci.i18n.translate("QModem Settings"),100).leaf = true
+	entry({"admin", "network", "qmodem", "slot_config"}, cbi("qmodem/slot_config")).leaf = true
 end
 
 --[[
@@ -213,16 +217,4 @@ function sendATCommand()
 	-- 写入Web界面
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(response)
-end
-
---[[
-@Description 模组扫描
-]]
-function modemScan()
-
-	local command=script_path.."modem_scan.sh scan"
-	local result=shell(command)
-	-- 写入Web界面
-	luci.http.prepare_content("application/json")
-	luci.http.write_json(result)
 end

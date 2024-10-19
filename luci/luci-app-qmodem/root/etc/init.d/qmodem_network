@@ -20,7 +20,7 @@ start_service() {
     
 	#加载模组配置
 	config_load qmodem
-    config_get enabled global enable_dial
+    config_get enabled main enable_dial
     [ "$enabled" = "0" ] && config_foreach hang_modem modem-device && stop
     config_foreach run_modem modem-device
 }

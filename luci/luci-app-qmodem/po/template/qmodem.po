@@ -1,0 +1,449 @@
+#controller/qmodem.lua
+msgid "QModem"
+msgstr ""
+
+msgid "QModem Information"
+msgstr ""
+
+msgid "Dial Overview"
+msgstr ""
+
+msgid "Advance Modem Settings"
+msgstr ""
+
+msgid "QModem Settings"
+msgstr ""
+
+# model/cbi/dial_config.lua
+msgid "Modem Configuration"
+msgstr ""
+
+msgid "General Settings"
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Enable Dial"
+msgstr ""
+
+msgid "Modem Alias"
+msgstr ""
+
+msgid "AT Port"
+msgstr ""
+
+msgid "SMS AT Port"
+msgstr ""
+
+msgid "RA Master"
+msgstr ""
+
+msgid "After checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master."
+msgstr ""
+
+msgid "Extend Prefix"
+msgstr ""
+
+msgid "Once checking, the prefix will be apply to lan zone"
+msgstr ""
+
+msgid "PDP Type"
+msgstr ""
+
+msgid "Auto Choose"
+msgstr ""
+
+msgid "China Mobile"
+msgstr ""
+
+msgid "China Unicom"
+msgstr ""
+
+msigd "China Telecom"
+msgstr ""
+
+msgid "China Broadcast"
+msgstr ""
+
+msgid "Skytone"
+msgstr ""
+
+msgid "Authentication Type"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "PAP"
+msgstr ""
+
+msgid "CHAP"
+msgstr ""
+
+msgid "PAP/CHAP (both)"
+msgstr ""
+
+msgid "PAP/CHAP Username"
+msgstr ""
+
+msgid "PAP/CHAP Password"
+msgstr ""
+
+msgid "PIN Code"
+msgstr ""
+
+msgid "If the PIN code is not set, leave it blank."
+msgstr ""
+
+msgid "If solt 2 config is not set,will use slot 1 config."
+msgstr ""
+
+msgid "The metric value is used to determine the priority of the route. The smaller the value, the higher the priority. Cannot duplicate."
+msgstr ""
+
+#odel/cbi/dial_overview.lua
+msgid "Dial Overview"
+msgstr ""
+
+msgid "Global Config"
+msgstr ""
+
+msgid "Enable Dial"
+msgstr ""
+
+msgid "(Global)"
+msgstr ""
+
+msgid "Restart Dial Service"
+msgstr ""
+
+msgid "Config List"
+msgstr ""
+
+msgid "Modem Model"
+msgstr ""
+
+msgid "Modem Alias"
+msgstr ""
+
+msgid "Modem Status"
+msgstr ""
+
+msgid "Remove Modem"
+msgstr ""
+
+# model/cbi/settings.lua
+msgid "QModem Settings"
+msgstr ""
+
+msgid "Modem Probe setting"
+msgstr ""
+
+msgid "Block Auto Probe/Remove"
+msgstr ""
+
+msgid "If enabled, the modem auto scan will be blocked."
+msgstr ""
+
+msgid "Enable PCIE Scan"
+msgstr ""
+
+msgid "Once enabled, the PCIe ports will be scanned on every boot."
+msgstr ""
+
+msgid "Enable USB Scan"
+msgstr ""
+
+msgid "Once enabled, the USB ports will be scanned on every boot."
+msgstr ""
+
+msgid "Try Preset USB Port"
+msgstr ""
+
+msgid "Attempt to use pre-configured USB settings from the cpe vendor."
+msgstr ""
+
+msgid "Try Preset PCIE Port"
+msgstr ""
+
+msgid "Attempt to use pre-configured PCIE settings from the cpe vendor."
+msgstr ""
+
+msgid "Scan ALL Manually"
+msgstr ""
+
+msgid "Scan PCIE manually."
+msgstr ""
+
+msgid "Scan USB Manually"
+msgstr ""
+
+msgid "Modem Slot Config List"
+msgstr ""
+
+msgid "Slot Type"
+msgstr ""
+
+msgid "Slot Path"
+msgstr ""
+
+msgid "Config Name"
+msgstr ""
+
+# model/cbi/slot_config.lua
+msgid "Slot Configuration"
+msgstr ""
+
+msgid "Slot Type"
+msgstr ""
+
+msgid "Slot ID"
+msgstr ""
+
+msgid "SIM LED"
+msgstr ""
+
+msgid "NET LED"
+msgstr ""
+
+msgid "Enable 5G Ethernet"
+msgstr ""
+
+msgid "If a 5G module is connected to the Ethernet PHY, please specify the associated interface name here."
+msgstr ""
+
+msgid "Associated USB"
+msgstr ""
+
+msgid "If a USB modem is connected to the USB port, please specify the associated USB port here.(for tty port)"
+msgstr ""
+
+# view/qmodem/dial_overview.htm
+msgid "Connected"
+msgstr ""
+
+msgid "Disconnected"
+msgstr ""
+
+msgid "Unknown"
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Modem Status"
+msgstr ""
+
+msgid "Modem Log"
+msgstr ""
+
+# view/qmodem/modem_debug.htm
+msgid "Lock Band"
+msgstr ""
+
+msgid "Select All"
+msgstr ""
+
+msgid "Submit"
+msgstr ""
+
+msgid "Rat Prefer"
+msgstr ""
+
+msgid "Current Mode%"
+msgstr ""
+
+msgid "Dial Mode"
+msgstr ""
+
+msgid "Neighbor Cell"
+msgstr ""
+
+msgid "Lock Cell Setting"
+msgstr ""
+
+msgid "RAT"
+msgstr ""
+
+msgid "PCI"
+msgstr ""
+
+msgid "ARFCN"
+msgstr ""
+
+msgid "TAC"
+msgstr ""
+
+msgid "Band"
+msgstr ""
+
+msgid "SCS"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Set IMEI"
+msgstr ""
+
+msgid "Modem Name"
+msgstr ""
+
+msgid "Warning!"
+msgstr ""
+
+# root/usr/share/qmodem/fibocom.sh
+msgid "Voltage"
+msgstr ""
+
+msgid "Temperature"
+msgstr ""
+
+msgid "Manufacturer"
+msgstr ""
+
+msgid "SIM Status"
+msgstr ""
+
+msgid "Internet Service Provider"
+msgstr ""
+
+msgid "SIM Slot"
+msgstr ""
+
+msgid "SIM Number"
+msgstr ""
+
+msgid "International Mobile Equipment Identity"
+msgstr ""
+
+msgid "International Mobile Subscriber Identity"
+msgstr ""
+
+msgid "Integrate Circuit Card Identity"
+msgstr ""
+
+msgid "Network Type"
+msgstr ""
+
+msgid "Channel Quality Indicator for Uplink"
+msgstr ""
+
+msgid "Channel Quality Indicator for Downlink"
+msgstr ""
+
+msgid "Access Maximum Bit Rate for Uplink"
+msgstr ""
+
+msgid "Access Maximum Bit Rate for Downlink"
+msgstr ""
+
+msgid "Transmit Rate"
+msgstr ""
+
+msgid "Receive Rate"
+msgstr ""
+
+msgid "Network Mode"
+msgstr ""
+
+msgid "Mobile Country Code"
+msgstr ""
+
+msgid "Mobile Network Code"
+msgstr ""
+
+msgid "Duplex Mode"
+msgstr ""
+
+msgid "Physical Cell ID"
+msgstr ""
+
+msgid "Tracking area code of cell servedby neighbor Enb"
+msgstr ""
+
+msgid "Absolute Radio-Frequency Channel Number"
+msgstr ""
+
+msgid "Band"
+msgstr ""
+
+msgid "DL Bandwidth"
+msgstr ""
+
+msgid "Reference Signal Received Power"
+msgstr ""
+
+msgid "Reference Signal Received Quality"
+msgstr ""
+
+msgid "Signal to Interference plus Noise Ratio Bandwidth"
+msgstr ""
+
+msgid "Received Signal Level"
+msgstr ""
+
+msgid "SCS"
+msgstr ""
+
+msgid "Serving Cell Receive Level"
+msgstr ""
+
+msgid "E-UTRA Absolute Radio Frequency Channel Number"
+msgstr ""
+
+msgid "Freq band indicator"
+msgstr ""
+
+msgid "UL Bandwidth"
+msgstr ""
+
+msgid "DL Bandwidth"
+msgstr ""
+
+msgid "Received Signal Strength Indicator"
+msgstr ""
+
+msgid "Radio Signal Strength Noise Ratio"
+msgstr ""
+
+msgid "Channel Quality Indicator"
+msgstr ""
+
+msgid "TX Power"
+msgstr ""
+
+msgid "ocation Area Code"
+msgstr ""
+
+msgid "Speech Code"
+msgstr ""
+
+msgid "Ec/No"
+msgstr ""
+
+msgid "Ec/Io"
+msgstr ""
+
+msgid "Spreading Factor"
+msgstr ""
+
+msgid "Compression Mode"
+msgstr ""
+
+msgid "RxLev"
+msgstr ""
+
+# root/usr/share/qmodem/generic.sh
+msgid " "SIM Error,Error code:" "warning""
+msgstr ""
+
+msgid "Connect Status"
+msgstr ""

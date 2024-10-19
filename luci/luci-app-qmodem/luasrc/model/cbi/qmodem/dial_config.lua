@@ -2,7 +2,7 @@ local dispatcher = require "luci.dispatcher"
 local uci = require "luci.model.uci".cursor()
 local http = require "luci.http"
 
-m = Map("qmodem", translate("Dial Config"))
+m = Map("qmodem", translate("Modem Configuration"))
 m.redirect = dispatcher.build_url("admin", "network", "qmodem","dial_overview")
 
 s = m:section(NamedSection, arg[1], "modem-device", "")
@@ -14,25 +14,44 @@ s:tab("advanced", translate("Advanced Settings"))
 --------general--------
 
 -- 是否启用
-enable = s:taboption("general", Flag, "enable_dial", translate("enable_dial"))
+enable = s:taboption("general", Flag, "enable_dial", translate("Enable Dial"))
 enable.default = "0"
 enable.rmempty = false
 
 -- 别名
-alias = s:taboption("general", Value, "alias", translate("Alias"))
+alias = s:taboption("general", Value, "alias", translate("Modem Alias"))
 alias.rmempty = true
 
 -- AT串口
 at_port = s:taboption("general",Value, "at_port", translate("AT Port"))
+sms_at_port = s:taboption("general",Value, "sms_at_port", translate("SMS AT Port"))
+sms_at_port.rmempty = true
+valid_at_ports = uci:get("qmodem",arg[1],"valid_at_ports")
+avalible_ports = uci:get("qmodem",arg[1],"ports")
+for i1,v1 in ipairs(avalible_ports) do
+    for i2,v2 in ipairs(valid_at_ports) do
+        if v1 == v2 then
+            valid=true
+        end
+    end
+    if not valid then
+        msg = v1 .. translate("(Not PASS)")
+    else
+        msg = v1 .. translate("(PASSED)")
+    end
+	at_port:value(v1,msg)
+    sms_at_port:value(v1,msg)
+end
+
 at_port.placeholder = translate("Not null")
 at_port.rmempty = false
 
 ra_master = s:taboption("advanced", Flag, "ra_master", translate("RA Master"))
-ra_master.description = translate("After checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master.")
+ra_master.description = translate("Once checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master.")
 ra_master.default = "0"
 
 extend_prefix = s:taboption("advanced", Flag, "extend_prefix", translate("Extend Prefix"))
-extend_prefix.description = translate("After checking, the prefix will be apply to lan zone")
+extend_prefix.description = translate("Once checking, the prefix will be apply to lan zone")
 extend_prefix.default = "0"
 
 -- 网络类型
@@ -118,12 +137,6 @@ pincode.description = translate("If the PIN code is not set, leave it blank.")
 metric = s:taboption("advanced", Value, "metric", translate("Metric"))
 metric.description = translate("The metric value is used to determine the priority of the route. The smaller the value, the higher the priority. Cannot duplicate.")
 metric.default = "10"
-
--- 配置ID
-id = s:taboption("advanced", ListValue, "id", translate("Config ID"))
-id.rmempty = false
-id:value(arg[1])
--- uci:set('modem',arg[1],'id',arg[1])
 
 
 return m

@@ -6,7 +6,38 @@
 		height: auto;
 
 	}
+    
+
+    
+    .cbi-progressbar {
+	border: 1px solid var(--border-color-high,var(--progressbarColor));
+	border-radius: 3px;
+	position: relative;
+	min-width: 170px;
+	height: 8px;
+	margin: 1.4em 0 4px 0;
+	background: var(--background-color-medium,var(--progressbarColor));
+    }
+
+    .cbi-progressbar > div {
+        background: var(--primary-color-medium,var(--progressbar));
+        height: 100%;
+        transition: width .25s ease-in;
+        width: 0%;
+        border-radius: 2px;
+    }
+
+    .cbi-progressbar::before {
+        position: absolute;
+        top: -1.4em;
+        left: 0;
+        content: attr(title);
+        white-space: pre;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 </style>
+
 <script>
 
 class LuciTable{
@@ -23,7 +54,7 @@ class LuciTable{
             fieldset.className="cbi-section";
             //set fieldset Header name
             var legend = document.createElement('legend');
-            var title_span = document.createElement('span');
+            var title_span = document.createElement('h2');
             title_span.className="panel-title"
             //init table
             var table = document.createElement('table');

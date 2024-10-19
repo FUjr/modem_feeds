@@ -4,24 +4,47 @@ action=$1
 config=$2
 slot_type=$3
 modem_support=$(cat /usr/share/qmodem/modem_support.json)
-
+source /lib/functions.sh
 source /usr/share/qmodem/modem_util.sh
+
+get_associate_usb()
+{
+    target_slot=$1
+    config_load qmodem
+    config_foreach _get_associated_usb_by_path modem-slot
+}
+
+_get_associated_usb_by_path()
+{
+    local cfg="$1"
+    echo $target_slot
+    config_get _get_slot $cfg slot
+    if [ "$target_slot" == "$_get_slot" ];then
+        config_get associated_usb $cfg associated_usb
+        echo \[$target_slot\]associated_usb:$associated_usb
+    fi
+    
+}
 
 scan()
 {
-    scan_usb
-    scan_pcie
-    #remove duplicate
-    usb_slots=$(echo $usb_slots | uniq )
-    pcie_slots=$(echo $pcie_slots | uniq )
-    for slot in $usb_slots; do
-        slot_type="usb"
-        add $slot
-    done
-    for slot in $pcie_slots; do
-        slot_type="pcie"
-        add $slot
-    done
+    local slot_type=$1
+    if [ "$slot_type" == "usb" ] || [ -z "$slot_type" ];then
+        scan_usb
+        usb_slots=$(echo $usb_slots | uniq )
+        for slot in $usb_slots; do
+            slot_type="usb"
+            add $slot
+        done
+    fi
+    if [ "$slot_type" == "pcie" ] || [ -z "$slot_type" ];then
+        scan_pcie
+        pcie_slots=$(echo $pcie_slots | uniq )
+        for slot in $pcie_slots; do
+            slot_type="pcie"
+            add $slot
+        done
+    fi
 }
 
 scan_usb()
@@ -35,7 +58,7 @@ scan_usb()
             [ -z "$netdev_path" ] && continue
             [ -z "$(echo $netdev_path | grep usb)" ] && continue
             usb_slot=$(basename $(dirname $netdev_path))
-            echo "netdev_path: $netdev_path usb slot: $usb_slot"
+            m_debug "netdev_path: $netdev_path usb slot: $usb_slot"
             [ -z "$usb_slots" ] && usb_slots="$usb_slot" || usb_slots="$usb_slots $usb_slot"
         done
     done
@@ -43,8 +66,93 @@ scan_usb()
 
 scan_pcie()
 {
-    #not implemented
-    echo "scan_pcie"
+    #beta
+    m_debug "scan_pcie"
+    pcie_net_device_prefixs="rmnet"
+    pcie_slots=""
+    for pcie_net_device_prefix in $pcie_net_device_prefixs; do
+        pcie_netdev=$(ls /sys/class/net | grep -E "${pcie_net_device_prefix}")
+        for netdev in $pcie_netdev; do
+            netdev_path=$(readlink -f "/sys/class/net/$netdev/device/")
+            [ -z "$netdev_path" ] && continue
+            [ -z "$(echo $netdev_path | grep pcie)" ] && continue
+            pcie_slot=$(basename $(dirname $netdev_path))
+            [ "$pcie_slot" == "net" ] && continue
+            m_debug "netdev_path: $netdev_path pcie slot: $pcie_slot"
+            [ -z "$pcie_slots" ] && pcie_slots="$pcie_slot" || pcie_slots="$pcie_slots $pcie_slot"
+        done
+    done
+}
+
+scan_pcie_slot_interfaces()
+{
+    local slot=$1
+    local slot_path="/sys/bus/pci/devices/$slot"
+    net_devices=""
+    dun_devices=""
+    [ ! -d "$slot_path" ] && return
+    local short_slot_name=`echo ${slot:2:-2} |tr ":" "."`
+    local slot_interfaces=$(ls $slot_path | grep -E "_${short_slot_name}_")
+    for interface in $slot_interfaces; do
+        unset device
+        unset dun_device
+        interface_driver_path="$slot_path/$interface/driver"
+        [ ! -d "$interface_driver_path" ] && continue
+        interface_driver=$(basename $(readlink $interface_driver_path))
+        [ -z "$interface_driver" ] && continue
+        case $interface_driver in
+            mhi_netdev)
+                net_path="$slot_path/$interface/net"
+                [ ! -d "$net_path" ] && continue
+                device=$(ls $net_path)
+                [ -z "$net_devices" ] && net_devices="$device" || net_devices="$net_devices $device"
+                ;;
+            mhi_uci_q)
+                dun_device=$(ls "$slot_path/$interface/mhi_uci_q" | grep mhi_DUN)
+                [ -z "$dun_device" ] && continue
+                dun_device_path="$slot_path/$interface/mhi_uci_q/$dun_device"
+                [ ! -d "$dun_device_path" ] && continue
+                dun_device_path=$(readlink -f "$dun_device_path")
+                [ ! -d "$dun_device_path" ] && continue
+                dun_device=$(basename "$dun_device_path")
+                [ -z "$dun_device" ] && continue
+                [ -z "$dun_devices" ] && dun_devices="$dun_device" || dun_devices="$dun_devices $dun_device"
+                ;;
+        esac
+    done
+    m_debug "net_devices: $net_devices dun_devices: $dun_devices"
+    at_ports="$dun_devices" 
+    [ -n "$net_devices" ] && get_associate_usb $slot
+    if [ -n "$associated_usb" ]; then
+        echo checking associated_usb: $associated_usb
+        local assoc_usb_path="/sys/bus/usb/devices/$associated_usb"
+        [ ! -d "$assoc_usb_path" ] && return
+        local slot_interfaces=$(ls $assoc_usb_path | grep -E "$associated_usb:[0-9]\.[0-9]+")
+        echo checking slot_interfaces: $slot_interfaces
+        for interface in $slot_interfaces; do
+            unset device
+            unset ttyUSB_device
+            unset ttyACM_device
+            interface_driver_path="$assoc_usb_path/$interface/driver"
+            [ ! -d "$interface_driver_path" ] && continue
+            interface_driver=$(basename $(readlink $interface_driver_path))
+            [ -z "$interface_driver" ] && continue
+            case $interface_driver in
+                option|\
+                usbserial)
+                    ttyUSB_device=$(ls "$assoc_usb_path/$interface/" | grep ttyUSB)
+                    ttyACM_device=$(ls "$assoc_usb_path/$interface/" | grep ttyACM)
+                    [ -z "$ttyUSB_device" ] && [ -z "$ttyACM_device" ] && continue
+                    [ -n "$ttyUSB_device" ] && device="$ttyUSB_device"
+                    [ -n "$ttyACM_device" ] && device="$ttyACM_device"
+                    [ -z "$tty_devices" ] && tty_devices="$device" || tty_devices="$tty_devices $device"
+                ;;
+            esac 
+        done
+        at_ports="$at_ports $tty_devices"
+    fi
+        
+    validate_at_port
 }
 
 scan_usb_slot_interfaces()
@@ -96,7 +204,7 @@ validate_at_port()
     for at_port in $at_ports; do
         dev_path="/dev/$at_port"
         [ ! -e "$dev_path" ] && continue
-        res=$(at $dev_path "AT")
+        res=$(at $dev_path "ATI")
         [ -z "$res" ] && continue
         [ "$res" == *"No"* ] && [ "$res" == *"failed"* ] && continue #for sms_tools No response from modem
         valid_at_port="$at_port"
@@ -155,17 +263,21 @@ add()
     #slot_type is usb or pcie
     #section name is replace slot .:- with _ 
     section_name=$(echo $slot | sed 's/[\.:-]/_/g')
-    is_exist=$(uci get qmodem.$section_name)
+    is_exist=$(uci -q get qmodem.$section_name)
     case $slot_type in
         "usb")
             scan_usb_slot_interfaces $slot
+            modem_path="/sys/bus/usb/devices/$slot/"
             ;;
         "pcie")
-            #not implemented
+            #under test
+            scan_pcie_slot_interfaces $slot
+            modem_path="/sys/bus/pci/devices/$slot/"
             ;;
     esac
     for at_port in $valid_at_ports; do
         get_modem_model "/dev/$at_port"
+        echo "modem_name:$modem_name"
         [ $? -eq 0 ] && break
     done
     [ -z "$modem_name" ] && lock -u /tmp/lock/modem_add_$slot && return
@@ -185,17 +297,17 @@ add()
     else
     #aqcuire lock
         lock /tmp/lock/modem_add
-        modem_count=$(uci get qmodem.@global[0].modem_count)
+        modem_count=$(uci get qmodem.main.modem_count)
         [ -z "$modem_count" ] && modem_count=0
         modem_count=$(($modem_count+1))
-        uci set qmodem.@global[0].modem_count=$modem_count
+        uci set qmodem.main.modem_count=$modem_count
         uci set qmodem.$section_name=modem-device
         uci commit qmodem
         lock -u /tmp/lock/modem_add
     #release lock
         metric=$(($modem_count+10))
         uci batch << EOF
-set qmodem.$section_name.path="/sys/bus/usb/devices/$slot/"
+set qmodem.$section_name.path="$modem_path"
 set qmodem.$section_name.data_interface="$slot_type"
 set qmodem.$section_name.enable_dial="1"
 set qmodem.$section_name.pdp_type="ip"
@@ -235,10 +347,10 @@ remove()
     is_exist=$(uci get qmodem.$section_name)
     [ -z "$is_exist" ] && return
     lock /tmp/lock/modem_remove
-    modem_count=$(uci get qmodem.@global[0].modem_count)
+    modem_count=$(uci get qmodem.main.modem_count)
     [ -z "$modem_count" ] && modem_count=0
     modem_count=$(($modem_count-1))
-    uci set qmodem.@global[0].modem_count=$modem_count
+    uci set qmodem.main.modem_count=$modem_count
     uci commit qmodem
     uci batch <<EOF
 del qmodem.${section_name}
@@ -280,9 +392,9 @@ case $action in
     "scan")
         debug_subject="modem_scan_scan"
         [ -n "$config" ] && delay=$config && sleep $delay
-        lock -n /tmp/lock/modem_scan
+        lock -n /tmp/lock/modem_scan 
         [ $? -eq 1 ] && exit 0
-        scan
+        scan $slot_type
         lock -u /tmp/lock/modem_scan
         ;;
 esac

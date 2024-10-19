@@ -11,31 +11,44 @@ debug_subject="modem_dial"
 source "${SCRIPT_DIR}/generic.sh"
 touch $log_file
 
+get_led()
+{
+    config_foreach get_led_by_slot modem-slot
+}
+
+get_led_by_slot()
+{
+    local cfg="$1"
+    config_get slot "$cfg" slot
+    if [ "$modem_slot" = "$slot" ];then
+        config_get sim_led "$cfg" sim_led
+        config_get net_led "$cfg" net_led
+    fi
+}
+
+get_associate_ethernet_by_path()
+{
+    local cfg="$1"
+    config_get slot "$cfg" slot
+    config_get ethernet "$cfg" ethernet
+    if [ "$modem_slot" = "$slot" ];then
+        config_get ethernet_5g "$cfg" ethernet_5g
+    fi
+}
+
 set_led()
 {
     local type=$1
     local modem_config=$2
     local value=$3
-    case $data_interface in
-        usb)
-            config_get sim_led u$modem_config sim_led
-            config_get net_led u$modem_config net_led
-        ;;
-        pcie)
-            config_get sim_led p$modem_config sim_led
-            config_get net_led p$modem_config net_led
-        ;;
-        *)
-            #usb
-            config_get sim_led u$modem_config sim_led
-            config_get net_led u$modem_config net_led
-        ;;
-    esac
+    get_led "$modem_slot"
     case $type in
         sim)
+            [ -z "$sim_led" ] && return
             echo $value > /sys/class/leds/$sim_led/brightness
             ;;
         net)
+            [ -z "$net_led" ] && return
             uci set system.led_${net_led}.dev=$value
             uci commit system
             /etc/init.d/led restart
@@ -71,6 +84,10 @@ get_driver()
 					mode="rndis"
 					break
 					;;
+                "mhi_netdev")
+                    mode="mhi"
+                    break
+                    ;;
 				*)
 					if [ -z "$mode" ]; then
 						mode="unknown"
@@ -122,8 +139,10 @@ update_config()
     config_get define_connect $modem_config define_connect
     config_get ra_master $modem_config ra_master
     config_get extend_prefix $modem_config extend_prefix
-    config_get global_dial global enable_dial
-    config_get ethernet_5g u$modem_config ethernet
+    config_get global_dial main enable_dial
+    # config_get ethernet_5g u$modem_config ethernet 转往口获取命令更新，待测试
+    get_associate_ethernet_by_path
+    modem_slot=$(basename $modem_path)
     config_get alias $modem_config alias
     driver=$(get_driver)
     update_sim_slot
@@ -422,6 +441,9 @@ dial(){
         "mbim")
             mbim_dial
             ;;
+        "mhi")
+            mhi_dial
+            ;;
         "ncm")
             at_dial_monitor
             ;;
@@ -484,19 +506,24 @@ hang()
         "mbim")
             wwan_hang
             ;;
+        "mhi")
+            wwan_hang
+            ;;
     esac
     flush_if
 }
 
 mbim_dial(){
-    modem_path=$1
-    modem_dial=$2
     if [ -z "$apn" ];then
         apn="auto"
     fi
     qmi_dial
 }
 
+mhi_dial()
+{
+    qmi_dial
+}
 qmi_dial()
 {
     cmd_line="quectel-CM"
@@ -525,6 +552,7 @@ qmi_dial()
 	fi
 	if [ -n "$modem_netcard" ]; then
         qmi_if=$(echo "$modem_netcard" | cut -d_ -f1)
+        qmi_if=$(echo "$modem_netcard" | cut -d. -f1)
 		cmd_line="${cmd_line} -i ${qmi_if}"
 	fi
     

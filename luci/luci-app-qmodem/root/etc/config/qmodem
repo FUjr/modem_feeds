@@ -1,4 +1,15 @@
-config global 'global'
+config main 'main'
 	option enable_dial '1'
 	option modem_number '0'
 	option manual_configuration '0'
+	option enable_pcie_scan "1"
+	option enable_usb_scan "0"
+	option try_preset_usb "1"
+	option try_preset_pcie "1"
+
+config modem-slot 'm2_0'
+	option type 'pcie'
+	option slot '0001:11:00.0'
+	option net_led 'B:LED3'
+	option associated_usb '8-1'
+	option sim_led 'G:LED2'

@@ -3,6 +3,7 @@ source /usr/share/libubox/jshn.sh
 method=$1
 config_section=$2
 at_port=$(uci get qmodem.$config_section.at_port)
+sms_at_port=$(uci get qmodem.$config_section.sms_at_port)
 vendor=$(uci get qmodem.$config_section.manufacturer)
 platform=$(uci get qmodem.$config_section.platform)
 define_connect=$(uci get qmodem.$config_section.define_connect)
@@ -28,6 +29,7 @@ try_cache() {
     function_name=$3
     current_time=$(date +%s)
     file_time=$(stat -t $cache_file | awk '{print $14}')
+    [ -z "$file_time" ] && file_time=0
     if [ ! -f $cache_file ] || [ $(($current_time - $file_time)) -gt $cache_timeout ]; then
         touch $cache_file
         json_add_array modem_info
@@ -42,10 +44,12 @@ try_cache() {
 }
 
 get_sms(){
+    [ -n "$sms_at_port" ] && at_port=$sms_at_port
     cache_timeout=$1
     cache_file=$2
     current_time=$(date +%s)
     file_time=$(stat -t $cache_file | awk '{print $14}')
+    [ -z "$file_time" ] && file_time=0
     if [ ! -f $cache_file ] || [ $(($current_time - $file_time)) -gt $cache_timeout ]; then
         touch $cache_file
         sms_tool_q -d $at_port -j recv > $cache_file
@@ -128,6 +132,7 @@ case $method in
         cmd_json=$3
         phone_number=$(echo $cmd_json | jq -r '.phone_number')
         message_content=$(echo $cmd_json | jq -r '.message_content')
+        [ -n "$sms_at_port" ] && at_port=$sms_at_port
         sms_tool_q -d $at_port send "$phone_number" "$message_content" > /dev/null
         json_select result
         if [ "$?" == 0 ]; then
@@ -141,6 +146,7 @@ case $method in
         ;;
     "send_raw_pdu")
         cmd=$3
+        [ -n "$sms_at_port" ] && at_port=$sms_at_port
         res=$(sms_tool_q -d $at_port send_raw_pdu "$cmd" )
         json_select result
         if [ "$?" == 0 ]; then
@@ -154,6 +160,7 @@ case $method in
     "delete_sms")
         json_select result
         index=$3
+        [ -n "$sms_at_port" ] && at_port=$sms_at_port
         for i in $index; do
             sms_tool_q -d $at_port delete $i > /dev/null
             touch /tmp/cache_sms_$2
