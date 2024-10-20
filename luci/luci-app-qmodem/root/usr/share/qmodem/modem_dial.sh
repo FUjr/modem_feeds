@@ -565,7 +565,7 @@ qmi_dial()
 		cmd_line="${cmd_line} -i ${qmi_if}"
 	fi
     
-    cmd_line="$cmd_line -f $log_file"
+    cmd_line="$cmd_line -d -f $log_file"
     $cmd_line
     
     
