@@ -39,8 +39,8 @@ msgstr "短信AT端口"
 msgid "RA Master"
 msgstr "作为RA上游"
 
-msgid "After checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master."
-msgstr "设置后，该接口会作为IPV6 RA上游，同一时间只有一个接口可以是RA上游"
+msgid "Caution: Enabling this option will make it the IPV6 RA Master, and only one interface can be configured as such."
+msgstr "警告：启用此选项将使其成为IPV6 RA Master，只能配置一个接口为RA Master"
 
 msgid "Extend Prefix"
 msgstr "扩展前缀"
@@ -464,3 +464,10 @@ msgstr "网络信息"
 
 msgid "SIM Information"
 msgstr "SIM卡信息"
+
+# modem_state
+msgid "ENABLED"
+msgstr "已启用"
+
+msgid "DISABLED"
+msgstr "已禁用"

@@ -464,3 +464,10 @@ msgstr "网络信息"
 
 msgid "SIM Information"
 msgstr "SIM卡信息"
+
+# modem_state
+msgid "ENABLED"
+msgstr "已启用"
+
+msgid "DISABLED"
+msgstr "已禁用"
