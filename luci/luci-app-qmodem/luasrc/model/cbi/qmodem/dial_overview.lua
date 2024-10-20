@@ -44,8 +44,7 @@ end
 
 o = s:option(DummyValue, "state", translate("Modem Status"))
 o.cfgvalue = function(t, n)
-    local name = translate(Value.cfgvalue(t, n) or "")
-    return name:upper()
+    return translate(Value.cfgvalue(t, n):upper() or "-")
 end
 
 
