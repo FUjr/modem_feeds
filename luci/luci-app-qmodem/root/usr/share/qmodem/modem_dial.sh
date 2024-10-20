@@ -49,7 +49,8 @@ set_led()
             ;;
         net)
             [ -z "$net_led" ] && return
-            uci set system.led_${net_led}.dev=$value
+            cfg_name=$(echo $net_led |tr ":" ".") 
+            uci set system.led_n${net_led}.dev=$value
             uci commit system
             /etc/init.d/led restart
             ;;

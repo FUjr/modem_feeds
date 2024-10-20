@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright (C) 2024 Tom <fjrcn@outlook.com>
-manual=$(uci get -q qmodem.global.manual_configuration)
+manual=$(uci get -q qmodem.main.block_auto_probe)
 [ "${manual}" -eq 1 ] && exit
 logger -t modem_hotplug "net slot: ${DEVPATH} action: ${ACTION}"
 #网络设备名称不存在，退出

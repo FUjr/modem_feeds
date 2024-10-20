@@ -9,19 +9,19 @@ start_service() {
     
 	config_load qmodem
     config_foreach _mk_rundir modem-device
-    config_get manual_configuration main manual_configuration 0
-    config_get enable_pcie main enable_pcie_scan 0
-    config_get enable_usb main enable_usb_scan 0
-    config_get try_preset_usb main try_vendor_preset_usb 1
-    config_get try_preset_pcie main try_vendor_preset_pcie 1
+    config_get block_auto_probe main block_auto_probe 0
+    config_get enable_pcie_scan main enable_pcie_scan 0
+    config_get enable_usb_scan main enable_usb_scan 0
+    config_get try_preset_usb main try_preset_usb 1
+    config_get try_preset_pcie main try_preset_pcie 1
     #once enabled, skip all check or scan
-    [ "$manual_configuration" -eq 1 ] && return
+    [ "$block_auto_probe" -eq 1 ] && return
     
     #enabled by default
-    if [ "$try_vendor_preset_pcie" -eq 1 ];then
+    if [ "$try_preset_pcie" -eq 1 ];then
         _try_vendor_preset_pcie
     fi
-    if [ "$try_vendor_preset_usb" -eq 1 ];then
+    if [ "$try_preset_usb" -eq 1 ];then
         _try_vendor_preset_usb
     fi
 
@@ -32,7 +32,6 @@ start_service() {
     if [ "$enable_pcie_scan" -eq 1 ];then
         _scan_pcie
     fi
-
 }
 
 _try_vendor_preset_usb()
@@ -119,7 +118,16 @@ _try_slot()
 _try_device()
 {
     config_get path "$1" path
+    config_get type "$1" type
+    case "$type" in
+        usb)
+            path="/sys/bus/usb/devices/${path}"
+            ;;
+        pcie)
+            path="/sys/bus/pci/devices/${path}"
+            ;;
+    esac
     if [ ! -d "$path" ]; then
-        /usr/share/modem/modem_scan.sh disable "$1"
+        /usr/share/qmodem/modem_scan.sh disable "$1"
     fi
 }

@@ -5,8 +5,8 @@ m.title = translate("QModem Setting")
 
 this_page = d.build_url("admin", "network", "qmodem", "settings")
 s = m:section(NamedSection, "main", "main", translate("Modem Probe setting"))
-manual_configuration = s:option(Flag, "manual_configuration", translate("Block Auto Probe/Remove"))
-manual_configuration.description = translate("If enabled, the modem auto scan will be blocked.")
+block_auto_probe = s:option(Flag, "block_auto_probe", translate("Block Auto Probe/Remove"))
+block_auto_probe.description = translate("If enabled, the modem auto scan will be blocked.")
 
 enable_pcie_scan = s:option(Flag, "enable_pcie_scan", translate("Enable PCIE Scan"))
 enable_pcie_scan.description = translate("Once enabled, the PCIe ports will be scanned on every boot.")

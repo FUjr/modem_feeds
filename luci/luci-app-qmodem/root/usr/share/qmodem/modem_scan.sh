@@ -149,7 +149,7 @@ scan_pcie_slot_interfaces()
                 ;;
             esac 
         done
-        at_ports="$at_ports $tty_devices"
+        at_ports="$dun_devices $tty_devices"
     fi
         
     validate_at_port
@@ -204,7 +204,7 @@ validate_at_port()
     for at_port in $at_ports; do
         dev_path="/dev/$at_port"
         [ ! -e "$dev_path" ] && continue
-        res=$(at $dev_path "ATI")
+        res=$(fastat $dev_path "ATI")
         [ -z "$res" ] && continue
         [ "$res" == *"No"* ] && [ "$res" == *"failed"* ] && continue #for sms_tools No response from modem
         valid_at_port="$at_port"
@@ -275,6 +275,7 @@ add()
             modem_path="/sys/bus/pci/devices/$slot/"
             ;;
     esac
+    [ -z "$net_devices" ] && return
     for at_port in $valid_at_ports; do
         get_modem_model "/dev/$at_port"
         echo "modem_name:$modem_name"

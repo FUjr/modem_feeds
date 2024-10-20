@@ -11,7 +11,7 @@ msgstr "拨号概览"
 msgid "Advance Modem Settings"
 msgstr "高级模组设置"
 
-msgid "QModem Settings"
+msgid "QModem Setting"
 msgstr "QModem 设置"
 
 # model/cbi/dial_config.lua
@@ -39,8 +39,8 @@ msgstr "短信AT端口"
 msgid "RA Master"
 msgstr "作为RA上游"
 
-msgid "After checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master."
-msgstr "设置后，该接口会作为IPV6 RA上游，同一时间只有一个接口可以是RA上游"
+msgid "Caution: Enabling this option will make it the IPV6 RA Master, and only one interface can be configured as such."
+msgstr "警告：启用此选项将使其成为IPV6 RA Master，只能配置一个接口为RA Master"
 
 msgid "Extend Prefix"
 msgstr "扩展前缀"
@@ -158,7 +158,7 @@ msgstr "启用USB模组扫描"
 msgid "Once enabled, the USB ports will be scanned on every boot."
 msgstr "如果启用了，每次开机会扫描USB接口"
 
-msgid "Try Preset USB"
+msgid "Try Preset USB Port"
 msgstr "监控预设的USB端口"
 
 msgid "Attempt to use pre-configured USB settings from the cpe vendor."
@@ -173,7 +173,7 @@ msgstr "尝试使用预设PCIe端口"
 msgid "Scan ALL Manually"
 msgstr "手动扫描所有"
 
-msgid "Scan PCIE manually."
+msgid "Scan PCIE Manually"
 msgstr "手动扫描PCIe"
 
 msgid "Scan USB Manually"
@@ -208,7 +208,7 @@ msgid "NET LED"
 msgstr "网络指示灯"
 
 msgid "Enable 5G Ethernet"
-msgstr "启用5G转往口"
+msgstr "启用5G转网口"
 
 msgid "For 5G modules using the Ethernet PHY connection, please specify the network interface name. (e.g., eth0, eth1)"
 msgstr "如果模组使用PHY连接，请指定网卡名称（如eth1 eth2)"
@@ -256,6 +256,9 @@ msgstr "制式偏好"
 
 msgid "Current Mode"
 msgstr "当前模式"
+
+msgid "Setting"
+msgstr "设置"
 
 msgid "Dial Mode"
 msgstr "拨号模式"
@@ -449,3 +452,15 @@ msgstr "警告"
 
 msgid "Connect Status"
 msgstr "连接状态"
+
+msgid "Cell Information"
+msgstr "基站信息"
+
+msgid "Base Information"
+msgstr "基本信息"
+
+msgid "Network Information"
+msgstr "网络信息"
+
+msgid "SIM Information"
+msgstr "SIM卡信息"

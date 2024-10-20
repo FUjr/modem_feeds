@@ -73,7 +73,16 @@ modem_settings()
 
 		uci commit qmodem
 		;;
-	
+	cyber,cyber3588-aib)
+uci batch << EOF
+set	qmodem.m2_0=modem-slot
+set	qmodem.m2_0.type='pcie'
+set	qmodem.m2_0.slot='0001:11:00.0'
+set	qmodem.m2_0.net_led='blue:status'
+set	qmodem.m2_0.associated_usb='8-1'
+set	qmodem.m2_0.sim_led='green:status'
+commit qmodem
+EOF
 	esac
 }
 

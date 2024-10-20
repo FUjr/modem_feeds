@@ -1,449 +1,466 @@
 #controller/qmodem.lua
 msgid "QModem"
-msgstr ""
+msgstr "QWRT模组管理"
 
 msgid "QModem Information"
-msgstr ""
+msgstr "模组信息"
 
 msgid "Dial Overview"
-msgstr ""
+msgstr "拨号概览"
 
 msgid "Advance Modem Settings"
-msgstr ""
+msgstr "高级模组设置"
 
-msgid "QModem Settings"
-msgstr ""
+msgid "QModem Setting"
+msgstr "QModem 设置"
 
 # model/cbi/dial_config.lua
 msgid "Modem Configuration"
-msgstr ""
+msgstr "模组配置"
 
 msgid "General Settings"
-msgstr ""
+msgstr "一般设置"
 
 msgid "Advanced Settings"
-msgstr ""
+msgstr "高级设置"
 
 msgid "Enable Dial"
-msgstr ""
+msgstr "启用拨号"
 
 msgid "Modem Alias"
-msgstr ""
+msgstr "模组别名"
 
 msgid "AT Port"
-msgstr ""
+msgstr "AT端口"
 
 msgid "SMS AT Port"
-msgstr ""
+msgstr "短信AT端口"
 
 msgid "RA Master"
-msgstr ""
+msgstr "作为RA上游"
 
 msgid "After checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master."
-msgstr ""
+msgstr "设置后，该接口会作为IPV6 RA上游，同一时间只有一个接口可以是RA上游"
 
 msgid "Extend Prefix"
-msgstr ""
+msgstr "扩展前缀"
 
 msgid "Once checking, the prefix will be apply to lan zone"
-msgstr ""
+msgstr "启用后，该接口的前缀会被通告至Lan区域"
 
 msgid "PDP Type"
-msgstr ""
+msgstr "PDP类型"
 
 msgid "Auto Choose"
-msgstr ""
+msgstr "自动选择"
 
 msgid "China Mobile"
-msgstr ""
+msgstr "中国移动"
 
 msgid "China Unicom"
-msgstr ""
+msgstr "中国联通"
 
 msigd "China Telecom"
-msgstr ""
+msgstr "中国电信"
 
 msgid "China Broadcast"
-msgstr ""
+msgstr "中国广电"
 
 msgid "Skytone"
-msgstr ""
+msgstr "天际通"
 
 msgid "Authentication Type"
-msgstr ""
+msgstr "认证类型"
 
 msgid "None"
-msgstr ""
+msgstr "无"
 
 msgid "PAP"
-msgstr ""
+msgstr "PAP认证"
 
 msgid "CHAP"
-msgstr ""
+msgstr "CHAP认证"
 
 msgid "PAP/CHAP (both)"
-msgstr ""
+msgstr "PAP/CHAP认证"
 
 msgid "PAP/CHAP Username"
-msgstr ""
+msgstr "PAP/CHAP 用户名"
 
 msgid "PAP/CHAP Password"
-msgstr ""
+msgstr "PAP/CHAP 密码"
 
 msgid "PIN Code"
-msgstr ""
+msgstr "Pin码"
 
 msgid "If the PIN code is not set, leave it blank."
-msgstr ""
+msgstr "如果未设置PIN码，请留空。"
 
 msgid "If solt 2 config is not set,will use slot 1 config."
-msgstr ""
+msgstr "如果卡2的设置为空，会使用卡1的设置"
 
 msgid "The metric value is used to determine the priority of the route. The smaller the value, the higher the priority. Cannot duplicate."
-msgstr ""
+msgstr "路由优先级,越小的数字优先级越高。不可以和其他接口重复"
 
 #odel/cbi/dial_overview.lua
 msgid "Dial Overview"
-msgstr ""
+msgstr "拨号总览"
 
 msgid "Global Config"
-msgstr ""
+msgstr "全局设置"
 
 msgid "Enable Dial"
-msgstr ""
+msgstr "启用拨号"
 
 msgid "(Global)"
-msgstr ""
+msgstr "（全局）"
 
 msgid "Restart Dial Service"
-msgstr ""
+msgstr "重启拨号服务"
 
 msgid "Config List"
-msgstr ""
+msgstr "配置列表"
 
 msgid "Modem Model"
-msgstr ""
+msgstr "模组型号"
 
 msgid "Modem Alias"
-msgstr ""
+msgstr "模组别名"
 
 msgid "Modem Status"
-msgstr ""
+msgstr "模组状态"
 
 msgid "Remove Modem"
-msgstr ""
+msgstr "移除模组"
 
 # model/cbi/settings.lua
 msgid "QModem Settings"
-msgstr ""
+msgstr "QModem设置"
 
 msgid "Modem Probe setting"
-msgstr ""
+msgstr "模组加载设置"
 
 msgid "Block Auto Probe/Remove"
-msgstr ""
+msgstr "禁用自动加载/移除模组"
 
 msgid "If enabled, the modem auto scan will be blocked."
-msgstr ""
+msgstr "富国开启了，自动扫描模组服务会关闭"
 
 msgid "Enable PCIE Scan"
-msgstr ""
+msgstr "启用PCIe模组扫描"
 
 msgid "Once enabled, the PCIe ports will be scanned on every boot."
-msgstr ""
+msgstr "如果启用了，每次开机会扫描PCIe接口"
 
 msgid "Enable USB Scan"
-msgstr ""
+msgstr "启用USB模组扫描"
 
 msgid "Once enabled, the USB ports will be scanned on every boot."
-msgstr ""
+msgstr "如果启用了，每次开机会扫描USB接口"
 
 msgid "Try Preset USB Port"
-msgstr ""
+msgstr "监控预设的USB端口"
 
 msgid "Attempt to use pre-configured USB settings from the cpe vendor."
-msgstr ""
+msgstr "尝试使用预设USB端口"
 
 msgid "Try Preset PCIE Port"
-msgstr ""
+msgstr "监控预设的PCIe端口"
 
 msgid "Attempt to use pre-configured PCIE settings from the cpe vendor."
-msgstr ""
+msgstr "尝试使用预设PCIe端口"
 
 msgid "Scan ALL Manually"
-msgstr ""
+msgstr "手动扫描所有"
 
-msgid "Scan PCIE manually."
-msgstr ""
+msgid "Scan PCIE Manually"
+msgstr "手动扫描PCIe"
 
 msgid "Scan USB Manually"
-msgstr ""
+msgstr "手动扫描USB"
 
 msgid "Modem Slot Config List"
-msgstr ""
+msgstr "模组插槽配置列表"
 
 msgid "Slot Type"
-msgstr ""
+msgstr "插槽类型"
 
 msgid "Slot Path"
-msgstr ""
+msgstr "插槽路径"
 
 msgid "Config Name"
-msgstr ""
+msgstr "配置名称"
 
 # model/cbi/slot_config.lua
 msgid "Slot Configuration"
-msgstr ""
+msgstr "插槽配置"
 
 msgid "Slot Type"
-msgstr ""
+msgstr "插槽类型"
 
 msgid "Slot ID"
-msgstr ""
+msgstr "插槽ID"
 
 msgid "SIM LED"
-msgstr ""
+msgstr "SIM卡指示灯"
 
 msgid "NET LED"
-msgstr ""
+msgstr "网络指示灯"
 
 msgid "Enable 5G Ethernet"
-msgstr ""
+msgstr "启用5G转网口"
 
-msgid "If a 5G module is connected to the Ethernet PHY, please specify the associated interface name here."
-msgstr ""
+msgid "For 5G modules using the Ethernet PHY connection, please specify the network interface name. (e.g., eth0, eth1)"
+msgstr "如果模组使用PHY连接，请指定网卡名称（如eth1 eth2)"
 
 msgid "Associated USB"
-msgstr ""
+msgstr "关联的USB"
 
-msgid "If a USB modem is connected to the USB port, please specify the associated USB port here.(for tty port)"
-msgstr ""
+msgid "For M.2 slots with both PCIe and USB support, specify the associated USB port (for ttyUSB access)"
+msgstr "如果M.2接口同时提供pcie和usb，请关联usb（用于使用usb tty接口）"
 
 # view/qmodem/dial_overview.htm
 msgid "Connected"
-msgstr ""
+msgstr "已连接"
 
 msgid "Disconnected"
-msgstr ""
+msgstr "未连接"
 
 msgid "Unknown"
-msgstr ""
+msgstr "未知"
 
 msgid "Download"
-msgstr ""
+msgstr "下载"
 
 msgid "Clear"
-msgstr ""
+msgstr "清除"
 
 msgid "Modem Status"
-msgstr ""
+msgstr "模组状态"
 
 msgid "Modem Log"
-msgstr ""
+msgstr "模组日志"
 
 # view/qmodem/modem_debug.htm
 msgid "Lock Band"
-msgstr ""
+msgstr "锁频"
 
 msgid "Select All"
-msgstr ""
+msgstr "全选"
 
 msgid "Submit"
-msgstr ""
+msgstr "提交"
 
 msgid "Rat Prefer"
-msgstr ""
+msgstr "制式偏好"
 
-msgid "Current Mode%"
-msgstr ""
+msgid "Current Mode"
+msgstr "当前模式"
+
+msgid "Setting"
+msgstr "设置"
 
 msgid "Dial Mode"
-msgstr ""
+msgstr "拨号模式"
 
 msgid "Neighbor Cell"
-msgstr ""
+msgstr "邻区"
 
 msgid "Lock Cell Setting"
-msgstr ""
+msgstr "锁频设置"
 
 msgid "RAT"
-msgstr ""
+msgstr "制式"
 
 msgid "PCI"
-msgstr ""
+msgstr "物理小区ID（PCI)"
 
 msgid "ARFCN"
-msgstr ""
+msgstr "频点（ARFCN）"
 
 msgid "TAC"
-msgstr ""
+msgstr "TAC"
 
 msgid "Band"
-msgstr ""
+msgstr "频段"
 
 msgid "SCS"
-msgstr ""
+msgstr "子载波间隔（SCS）"
 
 msgid "Status"
-msgstr ""
+msgstr "状态"
 
 msgid "Copy"
-msgstr ""
+msgstr "复制"
 
 msgid "Set IMEI"
-msgstr ""
+msgstr "设置IMEI"
 
 msgid "Modem Name"
-msgstr ""
+msgstr "模组名称"
 
 msgid "Warning!"
-msgstr ""
+msgstr "警告!"
 
 # root/usr/share/qmodem/fibocom.sh
 msgid "Voltage"
-msgstr ""
+msgstr "电压"
 
 msgid "Temperature"
-msgstr ""
+msgstr "温度"
 
 msgid "Manufacturer"
-msgstr ""
+msgstr "制造商"
 
 msgid "SIM Status"
-msgstr ""
+msgstr "SIM 状态"
 
 msgid "Internet Service Provider"
-msgstr ""
+msgstr "互联网服务提供商"
 
 msgid "SIM Slot"
-msgstr ""
+msgstr "SIM 插槽"
 
 msgid "SIM Number"
-msgstr ""
+msgstr "SIM 卡号码"
 
 msgid "International Mobile Equipment Identity"
-msgstr ""
+msgstr "国际移动设备身份（IMEI）"
 
 msgid "International Mobile Subscriber Identity"
-msgstr ""
+msgstr "国际移动用户身份（IMSI）"
 
 msgid "Integrate Circuit Card Identity"
-msgstr ""
+msgstr "集成电路卡身份（ICCID）"
 
 msgid "Network Type"
-msgstr ""
+msgstr "网络类型"
 
 msgid "Channel Quality Indicator for Uplink"
-msgstr ""
+msgstr "上行链路信道质量指示器（CQI）"
 
 msgid "Channel Quality Indicator for Downlink"
-msgstr ""
+msgstr "下行链路信道质量指示器（CQI）"
 
 msgid "Access Maximum Bit Rate for Uplink"
-msgstr ""
+msgstr "上行链路最大比特率"
 
 msgid "Access Maximum Bit Rate for Downlink"
-msgstr ""
+msgstr "下行链路最大比特率"
 
 msgid "Transmit Rate"
-msgstr ""
+msgstr "传输速率"
 
 msgid "Receive Rate"
-msgstr ""
+msgstr "发送速率"
+
 
 msgid "Network Mode"
-msgstr ""
+msgstr "网络模式"
 
 msgid "Mobile Country Code"
-msgstr ""
+msgstr "移动国家代码（MCC）"
 
 msgid "Mobile Network Code"
-msgstr ""
+msgstr "移动网络代码（MMC）"
 
 msgid "Duplex Mode"
-msgstr ""
+msgstr "双工模式"
 
 msgid "Physical Cell ID"
-msgstr ""
+msgstr "物理小区 ID（PCI）"
 
 msgid "Tracking area code of cell servedby neighbor Enb"
-msgstr ""
+msgstr "邻近 eNB 服务的小区跟踪区代码（TAC）"
 
 msgid "Absolute Radio-Frequency Channel Number"
-msgstr ""
+msgstr "绝对射频信道编号（ARRCN）"
 
 msgid "Band"
-msgstr ""
-
-msgid "DL Bandwidth"
-msgstr ""
+msgstr "频段"
 
 msgid "Reference Signal Received Power"
-msgstr ""
+msgstr "参考信号接收功率（RSRP）"
 
 msgid "Reference Signal Received Quality"
-msgstr ""
+msgstr "参考信号接收质量（RSRQ）"
 
 msgid "Signal to Interference plus Noise Ratio Bandwidth"
-msgstr ""
+msgstr "信号与干扰加噪声比带宽（SINRB）"
 
 msgid "Received Signal Level"
-msgstr ""
+msgstr "接收信号水平（RSL）"
 
 msgid "SCS"
-msgstr ""
+msgstr "子载波间隔（SCS）"
 
 msgid "Serving Cell Receive Level"
-msgstr ""
+msgstr "服务小区接收水平（SCRL）"
 
 msgid "E-UTRA Absolute Radio Frequency Channel Number"
-msgstr ""
+msgstr "E-UTRA 绝对射频信道编号（ARFCN）"
 
 msgid "Freq band indicator"
-msgstr ""
+msgstr "频段指示器（FBI）"
 
 msgid "UL Bandwidth"
-msgstr ""
+msgstr "上行带宽"
 
 msgid "DL Bandwidth"
-msgstr ""
+msgstr "下行带宽"
 
 msgid "Received Signal Strength Indicator"
-msgstr ""
+msgstr "接收信号强度指示器(RSSI)"
 
 msgid "Radio Signal Strength Noise Ratio"
-msgstr ""
+msgstr "无线信号强度噪声比(RSSNR)"
 
 msgid "Channel Quality Indicator"
-msgstr ""
+msgstr "信道质量指示器(CQI)"
 
 msgid "TX Power"
-msgstr ""
+msgstr "发射功率"
 
 msgid "ocation Area Code"
-msgstr ""
+msgstr "位置区域代码"
 
 msgid "Speech Code"
-msgstr ""
+msgstr "语音编码"
 
 msgid "Ec/No"
-msgstr ""
+msgstr "Ec/No"
 
 msgid "Ec/Io"
-msgstr ""
+msgstr "Ec/Io"
 
 msgid "Spreading Factor"
-msgstr ""
+msgstr "扩频因子"
 
 msgid "Compression Mode"
-msgstr ""
+msgstr "压缩模式"
 
 msgid "RxLev"
-msgstr ""
+msgstr "接收电平"
 
 # root/usr/share/qmodem/generic.sh
-msgid " "SIM Error,Error code:" "warning""
-msgstr ""
+msgid " "SIM Error,Error code:" 
+msgstr "SIM 错误，错误代码："
+
+msgid "warning"
+msgstr "警告"
+
 
 msgid "Connect Status"
-msgstr ""
+msgstr "连接状态"
+
+msgid "Cell Information"
+msgstr "基站信息"
+
+msgid "Base Information"
+msgstr "基本信息"
+
+msgid "Network Information"
+msgstr "网络信息"
+
+msgid "SIM Information"
+msgstr "SIM卡信息"

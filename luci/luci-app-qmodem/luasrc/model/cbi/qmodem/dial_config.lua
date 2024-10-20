@@ -28,6 +28,12 @@ sms_at_port = s:taboption("general",Value, "sms_at_port", translate("SMS AT Port
 sms_at_port.rmempty = true
 valid_at_ports = uci:get("qmodem",arg[1],"valid_at_ports")
 avalible_ports = uci:get("qmodem",arg[1],"ports")
+if valid_at_ports == nil then
+    valid_at_ports = {}
+end
+if avalible_ports == nil then
+    avalible_ports = {}
+end
 for i1,v1 in ipairs(avalible_ports) do
     for i2,v2 in ipairs(valid_at_ports) do
         if v1 == v2 then
@@ -47,7 +53,7 @@ at_port.placeholder = translate("Not null")
 at_port.rmempty = false
 
 ra_master = s:taboption("advanced", Flag, "ra_master", translate("RA Master"))
-ra_master.description = translate("Once checking, This interface will enable IPV6 RA Master.Only one interface can be set to RA Master.")
+ra_master.description = translate("Caution: Enabling this option will make it the IPV6 RA Master, and only one interface can be configured as such.")
 ra_master.default = "0"
 
 extend_prefix = s:taboption("advanced", Flag, "extend_prefix", translate("Extend Prefix"))

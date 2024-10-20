@@ -5,18 +5,24 @@
 (使用 js luci 时请添加 luci-compat 软件包)
 
 # 使用方法
+
 ### 增加feed源
+
 ```
 echo >> feeds.conf.default
 echo 'src-git modem https://github.com/FUjr/modem_feeds.git;main' >> feeds.conf.default
 ./scripts/feeds update modem
 ./scripts/feeds install -a -p modem
 ```
+
 ### 集成软件包
+
 ```
 make menuconfig
 ```
+
 ### 选择软件包
+
 ```
 LuCI --->
 3. Applications --->
@@ -26,6 +32,7 @@ LuCI --->
 <*> luci-app-qmodem-sms.......................... Luci qwrt modem sms support 
 < > luci-app-qmodem-ttl.......................... Luci qwrt modem ttl support   
 ```
+
 # 鸣谢
 
 在模组管理插件的开发过程中，参考了以下仓库
@@ -131,31 +138,34 @@ LuCI --->
 ### sms-tool_q
 
 #### 介绍
-     添加了补丁以支持发送原始 pdu ，其余与原项目相同
 
+ 添加了补丁以支持发送原始 pdu ，其余与原项目相同
 ### luci-app
 
-#### 坑 
-    为了给未来切换 js luci 做准备的同时兼顾lua luci的兼容性，我使用脚本写了一个rpcd的warpper来调用modem_ctrl，目前的rpcd仅有获取信息功能，无设置功能。在htdoc下实现了一个简易的首页信息展示
 #### 坑
-    原来设计的扫描所有usb设备的方法在部分路由器下存在性能问题，同时 at探测功能会发送非预期的at指令，因此策略修改为：提前把模组可能的slot写入配置文件，只扫描特定slot（目前认为不需要对普通用户暴露该功能，故没做luci界面）
-#### 坑
-    led 状态的实现，目前led状态的实现相当不优雅，被集成在了modem_dial里，每次拨号状态改变时会触发led状态的修改，因此如果脚本非正常退出等情况出现时，灯会失效。灯与slot的绑定状态同样暂未考虑对用户暴露
-#### 坑
-    更改了配置文件名称，ttl mwan hc 暂未经测试，可能出现错误
 
+为了给未来切换 js luci 做准备的同时兼顾lua luci的兼容性，我使用脚本写了一个rpcd的warpper来调用modem_ctrl，目前的rpcd仅有获取信息功能，无设置功能。在htdoc下实现了一个简易的首页信息展示
+#### 坑
+
+原来设计的扫描所有usb设备的方法在部分路由器下存在性能问题，同时 at探测功能会发送非预期的at指令，因此策略修改为：提前把模组可能的slot写入配置文件，只扫描特定slot（目前认为不需要对普通用户暴露该功能，故没做luci界面）
+#### 坑
+
+led 状态的实现，目前led状态的实现相当不优雅，被集成在了modem_dial里，每次拨号状态改变时会触发led状态的修改，因此如果脚本非正常退出等情况出现时，灯会失效。灯与slot的绑定状态同样暂未考虑对用户暴露
+#### 坑
+
+更改了配置文件名称，ttl mwan hc 暂未经测试，可能出现错误
 对于2、3号坑可以参考 ```luci/luci-app-qmodem/root/etc/uci-defaults/99-add-5g-handler``` 添加你的设备
 
 ### 开发计划
 
 
-| 计划                                              | 进度  |
-| ------------------------------------------------- | ----- |
-| 将后端程序与luci-app完全分离                      | 0     |
-| 修复quectel-CM乱call udhcpd和删除默认路由表的问题 | 0     |
-| 加入pcie模组支持                                  | 0     |
-| 自己实现at收发程序                                | 50%   |
-| 切换js luci                                       | 5%    |
-| 修复ipv6                                          | 5%    |
-| 优化模组扫描逻辑                                  | -100% |
-| 模组led展示                                  | -100% |
+| 计划                                              | 进度       |
+| ------------------------------------------------- | ---------- |
+| 将后端程序与luci-app完全分离                      | 0          |
+| 修复quectel-CM乱call udhcpd和删除默认路由表的问题 | 0          |
+| 加入pcie模组支持                                  | 实验性支持 |
+| 自己实现at收发程序                                | 50%        |
+| 切换js luci                                       | 5%         |
+| 修复ipv6                                          | 5%         |
+| 优化模组扫描逻辑                                  | -100%      |
+| 模组led展示                                       | -100%      |

@@ -10,6 +10,15 @@ at()
     sms_tool_q -d $at_port at "$atcmd"
 }
 
+fastat()
+{
+    local at_port=$1
+    local new_str="${2/[$]/$}"
+	local atcmd="${new_str/\"/\"}"
+	#过滤空行
+    sms_tool_q -t 1 -d $at_port at "$atcmd"
+}
+
 log2file()
 {
 	local subject="$1"
