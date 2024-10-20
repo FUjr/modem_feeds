@@ -259,7 +259,7 @@ add()
 {
     local slot=$1
     lock -n /tmp/lock/modem_add_$slot
-    [ $? -eq 1 ] && return
+    [ $? -eq 0 ] || return
     #slot_type is usb or pcie
     #section name is replace slot .:- with _ 
     section_name=$(echo $slot | sed 's/[\.:-]/_/g')
@@ -275,7 +275,7 @@ add()
             modem_path="/sys/bus/pci/devices/$slot/"
             ;;
     esac
-    [ -z "$net_devices" ] && return
+    [ -z "$net_devices" ] && lock -u /tmp/lock/modem_add_$slot && return
     for at_port in $valid_at_ports; do
         get_modem_model "/dev/$at_port"
         echo "modem_name:$modem_name"
@@ -330,7 +330,7 @@ EOF
         uci add_list qmodem.$section_name.valid_at_ports="/dev/$at_port"
         uci set qmodem.$section_name.at_port="/dev/$at_port"
     done
-    for at_port in $tty_devices; do
+    for at_port in $at_ports; do
         uci add_list qmodem.$section_name.ports="/dev/$at_port"
     done
     uci commit qmodem
@@ -380,7 +380,7 @@ disable()
 case $action in
     "add")
         debug_subject="modem_scan_add"
-        add $config
+        add $config $slot_type
         ;;
     "remove")
         debug_subject="modem_scan_remove"

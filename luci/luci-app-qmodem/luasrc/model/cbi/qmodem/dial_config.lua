@@ -35,6 +35,7 @@ if avalible_ports == nil then
     avalible_ports = {}
 end
 for i1,v1 in ipairs(avalible_ports) do
+    valid=false
     for i2,v2 in ipairs(valid_at_ports) do
         if v1 == v2 then
             valid=true
