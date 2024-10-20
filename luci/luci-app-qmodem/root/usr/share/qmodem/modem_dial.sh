@@ -49,9 +49,17 @@ set_led()
             ;;
         net)
             [ -z "$net_led" ] && return
-            cfg_name=$(echo $net_led |tr ":" ".") 
-            uci set system.led_n${net_led}.dev=$value
-            uci commit system
+            cfg_name=$(echo $net_led |tr ":" "_") 
+            uci batch << EOF
+set system.n${cfg_name}=led
+set system.n${cfg_name}.name=${modem_slot}_net_indicator
+set system.n${cfg_name}.sysfs=${net_led}
+set system.n${cfg_name}.trigger=netdev
+set system.n${cfg_name}.dev=${modem_netcard}
+set system.n${cfg_name}.mode="tx rx"
+commit system
+EOF
+
             /etc/init.d/led restart
             ;;
     esac
