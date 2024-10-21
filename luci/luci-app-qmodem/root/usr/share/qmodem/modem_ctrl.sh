@@ -52,7 +52,8 @@ get_sms(){
     [ -z "$file_time" ] && file_time=0
     if [ ! -f $cache_file ] || [ $(($current_time - $file_time)) -gt $cache_timeout ]; then
         touch $cache_file
-        sms_tool_q -d $at_port -j recv > $cache_file
+        #sms_tool_q -d $at_port -j recv > $cache_file
+        tom_modem -d $at_port -o r > $cache_file
         cat $cache_file
     else
         cat $cache_file
@@ -147,11 +148,12 @@ case $method in
     "send_raw_pdu")
         cmd=$3
         [ -n "$sms_at_port" ] && at_port=$sms_at_port
-        res=$(sms_tool_q -d $at_port send_raw_pdu "$cmd" )
+        #res=$(sms_tool_q -d $at_port send_raw_pdu "$cmd" )
+        res=$(tom_modem -d $at_port -o s -p "$cmd")
         json_select result
         if [ "$?" == 0 ]; then
             json_add_string status "1"
-            json_add_string cmd "sms_tool_q -d $at_port send_raw_pdu \"$cmd\""
+            json_add_string cmd "tom_modem -d $at_port -o s -p \"$cmd\""
             json_add_string "res" "$res"
         else
             json_add_string status "0"
@@ -162,11 +164,12 @@ case $method in
         index=$3
         [ -n "$sms_at_port" ] && at_port=$sms_at_port
         for i in $index; do
-            sms_tool_q -d $at_port delete $i > /dev/null
+            # sms_tool_q -d $at_port delete $i > /dev/null
+            tom_modem -d $at_port -o d -i $i
             touch /tmp/cache_sms_$2
             if [ "$?" == 0 ]; then
                 json_add_string status "1"
-                json_add_string "index$i" "sms_tool_q -d $at_port delete $i"
+                json_add_string "index$i" "tom_modem -d $at_port -o d -i $i"
             else
                 json_add_string status "0"
             fi

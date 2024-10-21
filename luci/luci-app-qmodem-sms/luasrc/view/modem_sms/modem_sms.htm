@@ -599,7 +599,7 @@ class ModemSMS {
         var content = this.message_content.value;
         var is_ascii = /^[\x00-\x7F]*$/.test(content);
         if (is_ascii) {
-            this.send_gsm();
+            this.send_raw_pdu();
         }
         else{
             this.send_raw_pdu();
@@ -782,12 +782,15 @@ class ModemSMS {
                 let at,bt
                 at = a.timestamp;
                 bt = b.timestamp;
-                at = at.replace(/ /g,"");
-                bt = bt.replace(/ /g,"");
-                at = at.replace(/\//g,"");
-                bt = bt.replace(/\//g,"");
-                at = at.replace(/:/g,"");
-                bt = bt.replace(/:/g,"");
+                if (typeof at == "string") {
+                    at = at.replace(/ /g,"");
+                    bt = bt.replace(/ /g,"");
+                    at = at.replace(/\//g,"");
+                    bt = bt.replace(/\//g,"");
+                    at = at.replace(/:/g,"");
+                    bt = bt.replace(/:/g,"");
+                }
+
                 return bt - at;
             });
             this.view = messages;
@@ -831,7 +834,12 @@ class ModemSMS {
         for (let msg of msgs){
             let sender,timestamp,content,part,total,index;
             sender = msg.sender;
-            timestamp = msg.timestamp;
+            if (typeof(msg.timestamp) == "number") {
+                timestamp = new Date(msg.timestamp*1000).toLocaleString();
+            }
+            else{
+                timestamp = msg.timestamp;
+            }
             content = msg.content;
             part = msg.part;
             total = msg.total;

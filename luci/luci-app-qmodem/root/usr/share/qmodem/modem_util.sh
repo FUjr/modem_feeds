@@ -7,7 +7,8 @@ at()
     local new_str="${2/[$]/$}"
 	local atcmd="${new_str/\"/\"}"
 	#过滤空行
-    sms_tool_q -d $at_port at "$atcmd"
+    #sms_tool_q -d $at_port at "$atcmd"
+	tom_modem -d $at_port -o a -c "$atcmd"
 }
 
 fastat()
@@ -16,7 +17,8 @@ fastat()
     local new_str="${2/[$]/$}"
 	local atcmd="${new_str/\"/\"}"
 	#过滤空行
-    sms_tool_q -t 1 -d $at_port at "$atcmd"
+    # sms_tool_q -t 1 -d $at_port at "$atcmd"
+	tom_modem -d $at_port -o a -c "$atcmd" -t 1
 }
 
 log2file()
