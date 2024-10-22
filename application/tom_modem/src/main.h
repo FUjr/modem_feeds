@@ -14,13 +14,12 @@
 
 #define DEFAULT_TIMEOUT 3
 // 
-
-FILE *fdi;             // file descriptor for input
-FILE *fdo;             // file descriptor for output
-int tty_fd;            // file descriptor for tty device
-
-PROFILE_T s_profile;   // global profile     
-char *self_name; // program name
+extern FILE *fdi;             // file descriptor for input
+extern FILE *fdo;             // file descriptor for output
+extern int tty_fd;            // file descriptor for tty device
+extern PROFILE_T s_profile;   // global profile     
+extern char *self_name;       // program name
+extern struct termios oldtio; // old tty setting
 
 extern  int at(PROFILE_T *profile);
 

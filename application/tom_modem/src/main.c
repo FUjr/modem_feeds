@@ -11,8 +11,12 @@
 #include <sys/select.h>
 #include <errno.h>
 
+FILE *fdi;             // file descriptor for input
+FILE *fdo;             // file descriptor for output
+int tty_fd;            // file descriptor for tty device
 
-
+PROFILE_T s_profile;   // global profile     
+char *self_name; // program name
 void _timeout(int signo)
 {
     err_msg("Exit with Signal %d", signo);

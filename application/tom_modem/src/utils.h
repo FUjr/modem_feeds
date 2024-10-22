@@ -9,7 +9,7 @@ extern PROFILE_T s_profile;
 extern FILE *fdi;             // file descriptor for input
 extern FILE *fdo;             // file descriptor for output
 extern int tty_fd;            // file descriptor for tty device
-struct termios oldtio; // old tty setting
+extern struct termios oldtio; // old tty setting
 
 
 

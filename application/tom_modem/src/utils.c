@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "pdu_lib/pdu.h"
+struct termios oldtio;
 
 int match_option(char *option_name)
 {
@@ -164,7 +165,8 @@ int open_tty_device(PROFILE_T *profile)
     }
     tcflush(tty_fd, TCIOFLUSH);
     atexit(clean_up);
-    close(tty_fd);
+    if (tty_fd >= 0)
+        close(tty_fd);
     tty_fd = open(profile->tty_dev, O_RDWR | O_NOCTTY);
     fdi = fdopen(tty_fd, "r");
     fdo = fdopen(tty_fd, "w");
@@ -305,7 +307,8 @@ static void clean_up()
     }
     dbg_msg("Clean up success");
     tcflush(tty_fd, TCIOFLUSH);
-    close(tty_fd);
+    // if (tty_fd >= 0)
+    //     close(tty_fd);
 }
 
 static void escape_json(char *input, char *output)
