@@ -2,8 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:= tom_modem
-PKG_RELEASE:=beta
-PKG_VERSION:=0.9
+PKG_RELEASE:=beta-1
+PKG_VERSION:=0.9.1
 
 include $(INCLUDE_DIR)/package.mk
 
