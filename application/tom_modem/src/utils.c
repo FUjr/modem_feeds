@@ -455,6 +455,7 @@ int tty_read_keyword(FILE *fdi, char *output, int len, int timeout, char *key_wo
         if (strncmp(tmp, "OK", 2) == 0 ||
             strncmp(tmp, "ERROR", 5) == 0 ||
             strncmp(tmp, "+CMS ERROR:", 11) == 0 ||
+            strncmp(tmp, "+CME ERROR:", 11) == 0 ||
             strncmp(tmp, "NO CARRIER", 10) == 0){
                 dbg_msg("Received end sign: %s", tmp);
                 if (key_word == NULL){
@@ -507,7 +508,7 @@ int at(PROFILE_T *profile)
         return -1;
     }
 
-    if (tty_read(fdi, output, COMMON_BUF_SIZE, 1000))
+    if (tty_read(fdi, output, COMMON_BUF_SIZE, 100))
     {
         err_msg("Error reading from tty");
         return -1;
@@ -523,7 +524,7 @@ int sms_read(PROFILE_T *profile)
     char sms_pdu[SMS_BUF_SIZE] = {0};
     tty_write(fdo, SET_PDU_FORMAT);
     alarm(profile->timeout);
-    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 1000, "OK"))
+    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 100, "OK"))
     {
         err_msg("Error setting PDU format");
         return -1;
@@ -531,7 +532,7 @@ int sms_read(PROFILE_T *profile)
     dbg_msg("Set PDU format success");
     tty_write(fdo, READ_ALL_SMS);
     alarm(profile->timeout);
-    if (tty_read_keyword(fdi, sms_pdu, SMS_BUF_SIZE, 1000, "OK"))
+    if (tty_read_keyword(fdi, sms_pdu, SMS_BUF_SIZE, 100, "OK"))
     {
         err_msg("Error reading SMS");
         return -1;
@@ -595,7 +596,7 @@ int sms_send(PROFILE_T *profile)
     char *write_pdu_cmd;
     tty_write(fdo, SET_PDU_FORMAT);
     alarm(profile->timeout);
-    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 1000, "OK"))
+    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 100, "OK"))
     {
         err_msg("Error setting PDU format");
         return -1;
@@ -611,10 +612,10 @@ int sms_send(PROFILE_T *profile)
     free(write_pdu_cmd);
     alarm(0);
     tty_write(fdo, send_sms_cmd);
-    sleep(1);
+    usleep(10000);
     tty_write(fdo, write_pdu_cmd);
     alarm(profile->timeout);
-    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 1000, "+CMGS:"))
+    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 100, "+CMGS:"))
     {
         err_msg("Error sending SMS STEP 2");
         return -1;
@@ -638,7 +639,7 @@ int sms_delete(PROFILE_T *profile)
     snprintf(delete_sms_cmd, 32, DELETE_SMS, profile->sms_index);
     tty_write(fdo, delete_sms_cmd);
     alarm(profile->timeout);
-    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 1000, "OK"))
+    if (tty_read_keyword(fdi, NULL, COMMON_BUF_SIZE, 100, "OK"))
     {
         err_msg("Error deleting SMS");
         return -1;
