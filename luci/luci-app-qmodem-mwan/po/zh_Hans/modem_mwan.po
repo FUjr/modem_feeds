@@ -11,8 +11,8 @@ msgstr "粘性模式"
 msgid "sticky timeout"
 msgstr "粘性超时"
 
-msgid "track_ip"
-msgstr "成员跟踪IP"
+msgid "Track IP"
+msgstr "跟踪IP"
 
 msgid "Interface"
 msgstr "成员接口"
@@ -28,6 +28,9 @@ msgstr "mwan配置"
 
 msgid "IPV4 Config"
 msgstr "IPV4配置"
+
+msgid "Enable MWAN"
+msgstr "启用MWAN"
 
 msgid "Set the weight for the load balancing member. A higher weight means more traffic will be assigned to this member. The default value is 1, with a range from 1 to 255."
 msgstr "设置负载均衡成员的权重。权重越高，该成员被分配到的流量越多。默认值为1，范围为1到255。"
