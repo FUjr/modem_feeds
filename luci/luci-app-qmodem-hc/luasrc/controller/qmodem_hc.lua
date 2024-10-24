@@ -4,9 +4,9 @@ local fs = require "nixio.fs"
 local json = require("luci.jsonc")
 function index()
     --sim卡配置
-	entry({"admin", "network", "qmodem", "modem_sim"}, cbi("qmodem_hc/modem_sim"), luci.i18n.translate("SIM Config"), 23).leaf = true
-	entry({"admin", "network", "qmodem", "set_sim"}, call("setSIM"), nil).leaf = true
-	entry({"admin", "network", "qmodem", "get_sim"}, call("getSIM"), nil).leaf = true
+	entry({"admin", "modem", "qmodem", "modem_sim"}, cbi("qmodem_hc/modem_sim"), luci.i18n.translate("SIM Config"), 23).leaf = true
+	entry({"admin", "modem", "qmodem", "set_sim"}, call("setSIM"), nil).leaf = true
+	entry({"admin", "modem", "qmodem", "get_sim"}, call("getSIM"), nil).leaf = true
 end
 
 function getSimSlot(sim_path)

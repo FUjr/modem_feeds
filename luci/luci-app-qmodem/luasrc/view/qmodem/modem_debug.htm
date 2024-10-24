@@ -18,7 +18,7 @@
 		}
 
 		get_config(){
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "modem_ctrl")%>', 
+			XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "modem_ctrl")%>', 
 			{ 
 				"cfg": this.cfg_id,
 				"action": this.get_action
@@ -33,7 +33,7 @@
 		}
 
 		set_config(config){
-			XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "modem_ctrl")%>', 
+			XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "modem_ctrl")%>', 
 			{ 
 				"cfg": this.cfg_id,
 				"action": this.set_action,
@@ -852,7 +852,7 @@
 		}
 
 		update_modem_cfg_list() {
-			XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "network", "qmodem", "get_modem_cfg")%>', {}, (x, data) => {
+			XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "get_modem_cfg")%>', {}, (x, data) => {
 				var new_cfg_list = [];
 				var cfgs = data.cfgs;
 				for (let i = 0; i < cfgs.length; i++) {

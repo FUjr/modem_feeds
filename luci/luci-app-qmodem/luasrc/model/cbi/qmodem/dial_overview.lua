@@ -17,13 +17,13 @@ o = s:option(Button, "reload_dial", translate("Restart Dial Service"))
 o.inputstyle = "apply"
 o.write = function()
     sys.call("/etc/init.d/qmodem_network reload  > /dev/null 2>&1")
-    luci.http.redirect(d.build_url("admin", "network", "qmodem", "dial_overview"))
+    luci.http.redirect(d.build_url("admin", "modem", "qmodem", "dial_overview"))
 end
 
 s = m:section(TypedSection, "modem-device", translate("Config List"))
 s.addremove = ture
 s.template = "cbi/tblsection"
-s.extedit = d.build_url("admin", "network", "qmodem", "dial_config", "%s")
+s.extedit = d.build_url("admin", "modem", "qmodem", "dial_config", "%s")
 
 o = s:option(Flag, "enable_dial", translate("Enable Dial"))
 o.width = "5%"
@@ -76,7 +76,7 @@ function remove_btn.write(self, section)
     shell="/usr/share/qmodem/modem_scan.sh remove "..section
     luci.sys.call(shell)
     --refresh the page
-    luci.http.redirect(d.build_url("admin", "network", "qmodem", "dial_overview"))
+    luci.http.redirect(d.build_url("admin", "modem", "qmodem", "dial_overview"))
 end
 -- 添加模块拨号日志
 m:append(Template("qmodem/dial_overview"))

@@ -609,7 +609,7 @@ class ModemSMS {
     send_gsm(){
         var phone_number = this.phone_number.value;
         var message_content = this.message_content.value;
-        XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "send_sms")%>',{
+        XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "send_sms")%>',{
             "cfg": this.cfg_id,
             "phone_number": phone_number,
             "message_content": message_content,
@@ -631,7 +631,7 @@ class ModemSMS {
         if (Array.isArray(pdu)) {
             pdu = pdu[0];
         }
-        XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "send_sms")%>',{
+        XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "send_sms")%>',{
             "cfg": this.cfg_id,
             "pdu": pdu,
         },(x,data)=>{
@@ -695,7 +695,7 @@ class ModemSMS {
         if (this.cfg_id == null){
             return;
         }
-        XHR.poll(10,'<%=luci.dispatcher.build_url("admin", "network", "qmodem", "get_sms")%>',{
+        XHR.poll(10,'<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "get_sms")%>',{
             "cfg": this.cfg_id,
 
         }, (x,data) => {
@@ -704,7 +704,7 @@ class ModemSMS {
     }
 
     update(){
-        XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "get_sms")%>',{
+        XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "get_sms")%>',{
             "cfg": this.cfg_id,
         }, (x,data) => {
             this.combine_messages(data);
@@ -712,7 +712,7 @@ class ModemSMS {
     }
 
     update_modem_cfg_list(){
-        XHR.poll(5,'<%=luci.dispatcher.build_url("admin", "network", "qmodem", "get_modem_cfg")%>',{},(x,data)=>{
+        XHR.poll(5,'<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "get_modem_cfg")%>',{},(x,data)=>{
             var new_cfg_list = [];
             var cfgs = data.cfgs;
             for (let i = 0; i < cfgs.length; i++) {
@@ -853,7 +853,7 @@ class ModemSMS {
             delete_btn.value = "<%:Delete%>";
             delete_btn.addEventListener('click',()=>{
                 this.lock();
-                XHR.get('<%=luci.dispatcher.build_url("admin", "network", "qmodem", "delete_sms")%>',{
+                XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "delete_sms")%>',{
                     "cfg": this.cfg_id,
                     "index": index.sort((a,b)=>{return b-a}).join(" "),
                 },(x,data)=>{

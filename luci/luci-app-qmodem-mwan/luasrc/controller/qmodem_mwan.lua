@@ -5,5 +5,5 @@ function index()
         return
     end
 	--mwan配置
-	entry({"admin", "network", "qmodem", "mwan_config"}, cbi("qmodem/mwan_config"), luci.i18n.translate("Mwan Config"), 21).leaf = true
+	entry({"admin", "modem", "qmodem", "mwan_config"}, cbi("qmodem/mwan_config"), luci.i18n.translate("Mwan Config"), 21).leaf = true
 end

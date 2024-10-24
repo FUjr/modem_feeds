@@ -1,5 +1,5 @@
 m = Map("qmodem", translate("Slot Configuration"))
-m.redirect = luci.dispatcher.build_url("admin", "network", "qmodem","settings")
+m.redirect = luci.dispatcher.build_url("admin", "modem", "qmodem","settings")
 
 s = m:section(NamedSection, arg[1], "modem-device", "")
 

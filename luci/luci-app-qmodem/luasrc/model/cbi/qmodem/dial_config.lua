@@ -3,7 +3,7 @@ local uci = require "luci.model.uci".cursor()
 local http = require "luci.http"
 
 m = Map("qmodem", translate("Modem Configuration"))
-m.redirect = dispatcher.build_url("admin", "network", "qmodem","dial_overview")
+m.redirect = dispatcher.build_url("admin", "modem", "qmodem","dial_overview")
 
 s = m:section(NamedSection, arg[1], "modem-device", "")
 s.addremove = false

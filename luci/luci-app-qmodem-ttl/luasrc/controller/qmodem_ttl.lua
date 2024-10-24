@@ -4,5 +4,5 @@ function index()
     if not nixio.fs.access("/etc/config/qmodem_ttl") then
         return
     end
-	entry({"admin", "network", "qmodem", "modem_ttl"}, cbi("qmodem/modem_ttl"), luci.i18n.translate("TTL Config"), 22).leaf = true
+	entry({"admin", "modem", "qmodem", "modem_ttl"}, cbi("qmodem/modem_ttl"), luci.i18n.translate("TTL Config"), 22).leaf = true
 end

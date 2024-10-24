@@ -3,7 +3,7 @@ local d = require "luci.dispatcher"
 m = Map("qmodem")
 m.title = translate("QModem Setting")
 
-this_page = d.build_url("admin", "network", "qmodem", "settings")
+this_page = d.build_url("admin", "modem", "qmodem", "settings")
 s = m:section(NamedSection, "main", "main", translate("Modem Probe setting"))
 block_auto_probe = s:option(Flag, "block_auto_probe", translate("Block Auto Probe/Remove"))
 block_auto_probe.description = translate("If enabled, the modem auto scan will be blocked.")
@@ -45,7 +45,7 @@ end
 s = m:section(TypedSection, "modem-slot", translate("Modem Slot Config List"))
 s.addremove = true
 s.template = "cbi/tblsection"
-s.extedit = d.build_url("admin", "network", "qmodem", "slot_config", "%s")
+s.extedit = d.build_url("admin", "modem", "qmodem", "slot_config", "%s")
 s.sectionhead = translate("Config Name")
 slot_type = s:option(DummyValue, "type", translate("Slot Type"))
 slot_type.cfgvalue = function(t, n)

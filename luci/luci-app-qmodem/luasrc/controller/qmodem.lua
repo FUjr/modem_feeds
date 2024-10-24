@@ -13,23 +13,23 @@ function index()
     if not nixio.fs.access("/etc/config/qmodem") then
         return
     end
-
-	entry({"admin", "network", "qmodem"}, alias("admin", "network", "qmodem", "modem_info"), luci.i18n.translate("QModem"), 100).dependent = true
+	entry({"admin", "modem"}, firstchild(), luci.i18n.translate("Modem"), 50).dependent = true
+	entry({"admin", "modem", "qmodem"}, alias("admin", "modem", "qmodem", "modem_info"), luci.i18n.translate("QModem"), 100).dependent = true
 	--模块信息
-	entry({"admin", "network", "qmodem", "modem_info"}, template("qmodem/modem_info"), luci.i18n.translate("QModem Information"),2).leaf = true
-	entry({"admin", "network", "qmodem", "get_modem_cfg"}, call("getModemCFG"), nil).leaf = true
-	entry({"admin", "network", "qmodem", "modem_ctrl"}, call("modemCtrl")).leaf = true
+	entry({"admin", "modem", "qmodem", "modem_info"}, template("qmodem/modem_info"), luci.i18n.translate("QModem Information"),2).leaf = true
+	entry({"admin", "modem", "qmodem", "get_modem_cfg"}, call("getModemCFG"), nil).leaf = true
+	entry({"admin", "modem", "qmodem", "modem_ctrl"}, call("modemCtrl")).leaf = true
 	--拨号配置
-	entry({"admin", "network", "qmodem", "dial_overview"},cbi("qmodem/dial_overview"),luci.i18n.translate("Dial Overview"),3).leaf = true
-	entry({"admin", "network", "qmodem", "dial_config"}, cbi("qmodem/dial_config")).leaf = true
-	entry({"admin", "network", "qmodem", "modems_dial_overview"}, call("getOverviews"), nil).leaf = true
+	entry({"admin", "modem", "qmodem", "dial_overview"},cbi("qmodem/dial_overview"),luci.i18n.translate("Dial Overview"),3).leaf = true
+	entry({"admin", "modem", "qmodem", "dial_config"}, cbi("qmodem/dial_config")).leaf = true
+	entry({"admin", "modem", "qmodem", "modems_dial_overview"}, call("getOverviews"), nil).leaf = true
 	--模块调试
-	entry({"admin", "network", "qmodem", "modem_debug"},template("qmodem/modem_debug"),luci.i18n.translate("Advance Modem Settings"),4).leaf = true
-	entry({"admin", "network", "qmodem", "send_at_command"}, call("sendATCommand"), nil).leaf = true
+	entry({"admin", "modem", "qmodem", "modem_debug"},template("qmodem/modem_debug"),luci.i18n.translate("Advance Modem Settings"),4).leaf = true
+	entry({"admin", "modem", "qmodem", "send_at_command"}, call("sendATCommand"), nil).leaf = true
 
 	--Qmodem设置
-	entry({"admin", "network", "qmodem", "settings"}, cbi("qmodem/settings"), luci.i18n.translate("QModem Settings"),100).leaf = true
-	entry({"admin", "network", "qmodem", "slot_config"}, cbi("qmodem/slot_config")).leaf = true
+	entry({"admin", "modem", "qmodem", "settings"}, cbi("qmodem/settings"), luci.i18n.translate("QModem Settings"),100).leaf = true
+	entry({"admin", "modem", "qmodem", "slot_config"}, cbi("qmodem/slot_config")).leaf = true
 end
 
 --[[
@@ -174,7 +174,7 @@ function getModemCFG()
 			return
 		end
 		--获取模组的备注
-		local network=modem_device["network"]
+		local network=modem_device["modem"]
 		local alias=modem_device["alias"]
 		local config_name=modem_device[".name"]
 		--设置模组AT串口
