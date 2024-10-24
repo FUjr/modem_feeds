@@ -37,10 +37,6 @@ define Package/luci-app-qmodem/conffiles
 endef
 
 define Package/luci-app-qmodem/config
-	config PACKAGE_luci-app-qmodem_with_lua_index_page
-		bool "Include Lua Index Page"
-		default n
-	
 	config PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT
 		bool "Add PCI SUPPORT"
 		default n
@@ -51,12 +47,11 @@ define Package/luci-app-qmodem/config
 
 	config PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G
 		bool "Using QWRT quectel-CM-5G"
-		default y if Package_quectel-CM-5G
+		default y if PACKAGE_quectel-CM-5G
 	
 	config PACKAGE_luci-app-qmodem_USING_NORMAL_QUECTEL_CM
 		bool "Using Normal quectel-cm"
-		depends on !PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
-		default y if Package_quectel-cm
+		default y if PACKAGE_quectel-cm
 endef
 
 define Package/luci-app-qmodem_with_lua_index_page
