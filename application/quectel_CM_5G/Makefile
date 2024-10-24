@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:= quectel-CM-5G-M
-PKG_RELEASE:=5
+PKG_RELEASE:=6
 PKG_VERSION:=1.6
 
 include $(INCLUDE_DIR)/package.mk
@@ -30,7 +30,6 @@ endef
 define Package/$(PKG_NAME)/install
 		$(INSTALL_DIR) $(1)/usr/bin $(1)/lib/netifd/proto $(1)/lib/netifd
 		$(INSTALL_BIN) $(PKG_BUILD_DIR)/quectel-CM $(1)/usr/bin/quectel-CM-M
-		$(INSTALL_BIN) $(PKG_BUILD_DIR)/quectel-qmi-proxy $(1)/usr/bin/
 		$(INSTALL_BIN) ./files/rmnet.sh $(1)/lib/netifd/proto
 		$(INSTALL_BIN) ./files/rmnet6.sh $(1)/lib/netifd/proto
 		$(INSTALL_BIN) ./files/rmnet6.script $(1)/lib/netifd
