@@ -333,7 +333,7 @@ class ModemInfo {
         for (let entry of data){
             let class_name,full_name,value,type;
             class_name = entry.class;
-            if (type == "warning_message") {
+            if (entry.type == "warning_message") {
                 warning_message.push(entry);
                 continue;
             }
