@@ -24,6 +24,7 @@ set mwan3.$interface.failure_interval='5'
 set mwan3.$interface.recovery_interval='5'
 set mwan3.$interface.down='5'
 set mwan3.$interface.up='5'
+set mwan3.$interface.keep_failure_interval='1'
 set mwan3.$interface.add_by=modem
 delete mwan3.$interface.track_ip
 EOF
