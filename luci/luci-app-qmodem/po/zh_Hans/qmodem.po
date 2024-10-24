@@ -471,3 +471,6 @@ msgstr "已启用"
 
 msgid "DISABLED"
 msgstr "已禁用"
+
+msgid "TTL Config"
+msgstr "TTL配置"
