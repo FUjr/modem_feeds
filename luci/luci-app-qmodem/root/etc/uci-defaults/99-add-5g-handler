@@ -12,22 +12,22 @@ modem_settings()
 	HC,HC-G80)
 		
 		#mini pci slot
-		uci set qmodem.u1_1_4="modem-slot"
-		uci set qmodem.u1_1_4.slot="1-1.4"
-		uci set qmodem.u1_1_4.type="usb"
-		uci set qmodem.u1_1_4.net_led="wwan"
+		uci set qmodem.mini_pci="modem-slot"
+		uci set qmodem.mini_pci.slot="1-1.4"
+		uci set qmodem.mini_pci.type="usb"
+		uci set qmodem.mini_pci.net_led="wwan"
 		#m.2 slot (usb2.0)
-		uci set qmodem.u1_1_1="modem-slot"
-		uci set qmodem.u1_1_1.slot="1-1.1"
-		uci set qmodem.u1_1_1.type="usb"
-		uci set qmodem.u1_1_1.net_led="wwan"
-		uci set qmodem.u1_1_1.ethernet="cpewan0"
+		uci set qmodem.m2_u2="modem-slot"
+		uci set qmodem.m2_u2.slot="1-1.1"
+		uci set qmodem.m2_u2.type="usb"
+		uci set qmodem.m2_u2.net_led="wwan"
+		uci set qmodem.m2_u2.ethernet_5g="cpewan0"
 		#m.2 slot (usb3.0)
-		uci set qmodem.u2_1="modem-slot"
-		uci set qmodem.u2_1.slot="2-1"
-		uci set qmodem.u2_1.type="usb"
-		uci set qmodem.u2_1.net_led="wwan"
-		uci set qmodem.u2_1.ethernet="cpewan0"
+		uci set qmodem.m2_u3="modem-slot"
+		uci set qmodem.m2_u3.slot="2-1"
+		uci set qmodem.m2_u3.type="usb"
+		uci set qmodem.m2_u3.net_led="wwan"
+		uci set qmodem.m2_u3.ethernet_5g="cpewan0"
 		uci commit qmodem
 		;;
 	huasifei,ws3006)
