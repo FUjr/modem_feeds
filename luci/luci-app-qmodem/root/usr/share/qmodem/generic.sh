@@ -18,6 +18,7 @@ add_plain_info_entry()
     json_add_string "type" "plain_text"
     if [ -n "$class" ]; then
         json_add_string "class" "$class"
+        json_add_string "class_origin" "$class"
     fi
     json_close_object
 }
@@ -37,6 +38,7 @@ add_warning_message_entry()
     json_add_string "full_name" "$key_full_name"
     json_add_string "type" "warning_message"
     json_add_string "class" "warning"
+    json_add_string "class_origin" "warning"
     json_close_object
 }
 
@@ -62,6 +64,7 @@ add_bar_info_entry()
     json_add_string "type" "progress_bar"
     if [ -n "$class" ]; then
         json_add_string "class" "$class"
+        json_add_string "class_origin" "$class"
     fi
     json_close_object
 }
