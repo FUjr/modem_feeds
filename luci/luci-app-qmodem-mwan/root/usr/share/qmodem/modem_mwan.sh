@@ -138,7 +138,7 @@ handle_config()
 /etc/init.d/mwan3 stop
 flush_config
 uci commit mwan3
-config_load modem_mwan
+config_load qmodem_mwan
 family=$1
 case $2 in
     "start")

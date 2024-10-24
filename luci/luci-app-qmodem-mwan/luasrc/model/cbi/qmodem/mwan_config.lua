@@ -5,7 +5,7 @@ local uci = luci.model.uci.cursor()
 local sys  = require "luci.sys"
 local script_path="/usr/share/qmodem/"
 
-m = Map("modem_mwan")
+m = Map("qmodem_mwan")
 m.title = translate("Mwan Config")
 m.description = translate("Check and modify the mwan configuration")
 s = m:section(NamedSection, "global", "global", translate("gloal Config"))

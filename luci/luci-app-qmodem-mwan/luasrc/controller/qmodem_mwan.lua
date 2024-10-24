@@ -1,7 +1,7 @@
 module("luci.controller.qmodem_mwan", package.seeall)
 
 function index()
-    if not nixio.fs.access("/etc/config/modem_mwan") then
+    if not nixio.fs.access("/etc/config/qmodem_mwan") then
         return
     end
 	--mwan配置

@@ -11,14 +11,20 @@ msgstr "粘性模式"
 msgid "sticky timeout"
 msgstr "粘性超时"
 
-msgid "member_track_ip"
+msgid "track_ip"
 msgstr "成员跟踪IP"
 
-msgid "member_interface"
+msgid "Interface"
 msgstr "成员接口"
 
-msgid "member_priority"
+msgid "Priority"
 msgstr "成员优先级"
 
-msgid "member_weight"
+msgid "Weight"
 msgstr "成员权重"
+
+msgid "Mwan Config"
+msgstr "mwan配置"
+
+msgid "IPV4 Config"
+msgstr "IPV4配置"
