@@ -1,4 +1,5 @@
 m = Map("qmodem_hc_sim", translate("SIM Settings"))
+uci = require "luci.model.uci".cursor()
 s = m:section(NamedSection,"main","main", translate("SIM Settings"))
 s.anonymous = true
 s.addremove = false
@@ -16,13 +17,19 @@ judge_time.default = 5
 
 ping_dest = s:option(DynamicList, "ping_dest", translate("Ping Destination"))
 
-o = s:option(Value, "wwan_ifname", translate("WWAN Interface"))
-o.description = translate("Please enter the WWAN interface name")
-o.template = "cbi/network_netlist"
+o = s:option(ListValue, "modem_config", translate("WWAN Interface"))
+uci:foreach("qmodem", "modem-device",
+    function(s)
+        if s then
+            o:value(s['.name'])
+        end
+    end
+)
+-- o.description = translate("Please enter the WWAN interface name")
+-- o.template = "cbi/network_netlist"
 -- o.widget = "optional"
-o.nocreate = true
 
-o.default = "cpewan0"
+o.nocreate = true
 
 m:section(SimpleSection).template = "qmodem_hc/modem_sim"
 
