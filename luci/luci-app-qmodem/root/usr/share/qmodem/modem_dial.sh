@@ -150,7 +150,7 @@ update_config()
     config_get extend_prefix $modem_config extend_prefix
     config_get global_dial main enable_dial
     # config_get ethernet_5g u$modem_config ethernet 转往口获取命令更新，待测试
-    get_associate_ethernet_by_path
+    config_foreach get_associate_ethernet_by_path modem-slot
     modem_slot=$(basename $modem_path)
     config_get alias $modem_config alias
     driver=$(get_driver)
