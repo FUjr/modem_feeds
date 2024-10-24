@@ -248,7 +248,7 @@ static const char *ipv6Str(const UCHAR Address[16]) {
     return str;
 }
 
-void update_ipv4_address(const char *ifname, const char *ip, const char *gw, unsigned prefix)
+void update_ipv4_address(const char *ifname, const char *ip, const char *gw, unsigned prefix, char *metric)
 {
     char shell_cmd[128];
 
@@ -263,7 +263,7 @@ void update_ipv4_address(const char *ifname, const char *ip, const char *gw, uns
         ql_system(shell_cmd);
 
         //ping6 www.qq.com
-        snprintf(shell_cmd, sizeof(shell_cmd), "ip -%d route add default via %s dev %s", 4, gw, ifname);
+        snprintf(shell_cmd, sizeof(shell_cmd), "ip -%d route add default via %s dev %s metric %s", 4, gw, ifname, metric);
         ql_system(shell_cmd);
     } else {
         unsigned n =  (0xFFFFFFFF >> (32 - prefix)) << (32 - prefix);
@@ -273,15 +273,16 @@ void update_ipv4_address(const char *ifname, const char *ip, const char *gw, uns
         ql_system(shell_cmd);
 
         //Resetting default routes
-        snprintf(shell_cmd, sizeof(shell_cmd), "route del default dev %s", ifname);
+        dbg_time("Resetting default routes");
+        //snprintf(shell_cmd, sizeof(shell_cmd), "route del default dev %s", ifname);
         while(!system(shell_cmd));
 
-        snprintf(shell_cmd, sizeof(shell_cmd), "route add default gw %s dev %s", gw, ifname);
+        snprintf(shell_cmd, sizeof(shell_cmd), "route add default gw %s dev %s metric %s ", gw, ifname, metric);
         ql_system(shell_cmd);
     }
 }
 
-void update_ipv6_address(const char *ifname, const char *ip, const char *gw, unsigned prefix) {
+void update_ipv6_address(const char *ifname, const char *ip, const char *gw, unsigned prefix, char* metric) {
     char shell_cmd[128];
 
     (void)gw;
@@ -293,18 +294,18 @@ void update_ipv6_address(const char *ifname, const char *ip, const char *gw, uns
         ql_system(shell_cmd);
 
         //ping6 www.qq.com
-        snprintf(shell_cmd, sizeof(shell_cmd), "ip -%d route add default dev %s", 6, ifname);
+        snprintf(shell_cmd, sizeof(shell_cmd), "ip -%d route add default dev %s metric %s ", 6, ifname, metric);
         ql_system(shell_cmd);
     } else {
         snprintf(shell_cmd, sizeof(shell_cmd), "ifconfig %s %s/%d", ifname, ip, prefix);
         ql_system(shell_cmd);
 
-        snprintf(shell_cmd, sizeof(shell_cmd), "route -A inet6 add default dev %s", ifname);
+        snprintf(shell_cmd, sizeof(shell_cmd), "route -A inet6 add default dev %s metric %s ", ifname ,metric);
         ql_system(shell_cmd);
     }
 }
 
-static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, const IPV6_T *ipv6) {
+static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, const IPV6_T *ipv6, char *m) {
     char *d1, *d2;
 
     if (ipv4 && ipv4->Address) {
@@ -319,7 +320,7 @@ static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, con
             }
         }
 
-        update_ipv4_address(ifname, d1, d2, prefix);
+        update_ipv4_address(ifname, d1, d2, prefix,m);
         free(d1); free(d2);
 
         //Adding DNS
@@ -335,7 +336,7 @@ static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, con
         d1 = strdup(ipv6Str(ipv6->Address));
         d2 = strdup(ipv6Str(ipv6->Gateway));
 
-        update_ipv6_address(ifname, d1, d2, ipv6->PrefixLengthIPAddr);
+        update_ipv6_address(ifname, d1, d2, ipv6->PrefixLengthIPAddr,m);
         free(d1); free(d2);
 
         //Adding DNS
@@ -522,7 +523,7 @@ void udhcpc_start(PROFILE_T *profile) {
 #if 0
     if (profile->rawIP != 0) //mdm9x07/ec25,ec20 R2.0
     {
-        update_ip_address_by_qmi(ifname, &profile->ipv4, &profile->ipv6);
+        update_ip_address_by_qmi(ifname, &profile->ipv4, profile->ipv6, &profile->metric);
         return;
     }
 #endif
@@ -531,7 +532,7 @@ void udhcpc_start(PROFILE_T *profile) {
         goto set_ipv6;
 
     if (profile->no_dhcp || profile->request_ops == &mbim_request_ops) { //lots of mbim modem do not support DHCP
-        update_ip_address_by_qmi(ifname, &profile->ipv4, NULL);
+        update_ip_address_by_qmi(ifname, &profile->ipv4, NULL, profile->metric);
     }
     else
 /* Do DHCP using busybox tools */
@@ -580,7 +581,6 @@ void udhcpc_start(PROFILE_T *profile) {
 #else
             pthread_create(&udhcpc_thread_id, NULL, udhcpc_thread_function, (void*)strdup(udhcpc_cmd));
             pthread_join(udhcpc_thread_id, NULL);
-
             if (profile->request_ops == &atc_request_ops) {
                 profile->udhcpc_ip = 0;
                 ifc_get_addr(ifname, &profile->udhcpc_ip);
@@ -604,7 +604,7 @@ void udhcpc_start(PROFILE_T *profile) {
 
             if (!ql_netcard_ipv4_address_check(ifname, qmi2addr(profile->ipv4.Address))) {
                 //no udhcpc's default.script exist, directly set ip and dns
-                update_ip_address_by_qmi(ifname, &profile->ipv4, NULL);
+                update_ip_address_by_qmi(ifname, &profile->ipv4, NULL, profile->metric);
             }
             //Add by Demon. check default route 
             FILE *rt_fp = NULL;
@@ -655,7 +655,7 @@ set_ipv6:
             close(forward_fd);
         }
 
-        update_ip_address_by_qmi(ifname, NULL, &profile->ipv6);
+        update_ip_address_by_qmi(ifname, NULL, &profile->ipv6, profile->metric);
 
         if (profile->ipv6.DnsPrimary[0] || profile->ipv6.DnsSecondary[0]) {
             char dns1str[64], dns2str[64];

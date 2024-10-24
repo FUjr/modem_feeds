@@ -251,6 +251,7 @@ static int usage(const char *progname) {
     dbg_time("-b                                     Enable network interface bridge function (default 0)");
     dbg_time("-v                                     Verbose log mode, for debug purpose.");
     dbg_time("-d                                     Obtain the IP address and dns through qmi");
+    dbg_time("-M metric                              Specify the metric of the default route");
     dbg_time("[Examples]");
     dbg_time("Example 1: %s ", progname);
     dbg_time("Example 2: %s -s 3gnet ", progname);
@@ -902,16 +903,28 @@ static int parse_user_input(int argc, char **argv, PROFILE_T *profile) {
                     profile->kill_pdp = argv[opt++][0] - '0';
                 }
                 break;
-            case 't':
+
+            case 'M':
                 if (has_more_argv()) {
-                    profile->metric = atoi(argv[opt++]);
+                    const char *arg = argv[opt++];
+                    if (atoi(arg) > 0) {
+                        profile->metric = arg;
+                    }
+                    else {
+                        dbg_time("unknow metric '%s'", arg);
+                        return usage(argv[0]);
+                    }
                 }
                 break;
-            
+
             default:
                 return usage(argv[0]);
             break;
         }
+    }
+
+    if (!profile->metric){
+        profile->metric = "0";
     }
 
     if (profile->enable_ipv4 != 1 && profile->enable_ipv6 != 1) { // default enable IPv4

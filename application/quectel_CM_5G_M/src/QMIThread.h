@@ -194,6 +194,7 @@ typedef struct __PROFILE {
     const char *password;
     int auth;
     int iptype;
+    const char *metric;
     const char *pincode;
     char proxy[32];
     int pdp;//pdp_context
@@ -247,7 +248,6 @@ typedef struct __PROFILE {
     char old_password[64];
     int old_auth;
     int old_iptype;
-    int metric;
 
     const struct qmi_device_ops *qmi_ops;
     const struct request_ops *request_ops;
@@ -372,8 +372,8 @@ extern int debug_qmi;
 extern int qmidevice_control_fd[2];
 extern int g_donot_exit_when_modem_hangup;
 extern void update_resolv_conf(int iptype, const char *ifname, const char *dns1, const char *dns2);
-void update_ipv4_address(const char *ifname, const char *ip, const char *gw, unsigned prefix);
-void update_ipv6_address(const char *ifname, const char *ip, const char *gw, unsigned prefix);
+void update_ipv4_address(const char *ifname, const char *ip, const char *gw, unsigned prefix, char *metric);
+void update_ipv6_address(const char *ifname, const char *ip, const char *gw, unsigned prefix, char *metric);
 int reattach_driver(PROFILE_T *profile);
 extern void no_trunc_strncpy(char *dest, const char *src, size_t dest_size);
 
