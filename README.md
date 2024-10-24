@@ -1,8 +1,14 @@
 # QModem
 
+[English](README.en.md)
+
 这是一个模组管理插件，兼容 Openwrt 21及之后的版本，使用 lua 开发，因此同时兼容 QWRT/LEDE/Immortalwrt/Openwrt
 
 (使用 js luci 时请添加 luci-compat 软件包)
+
+[TOC]
+
+
 
 # 使用方法
 
@@ -23,26 +29,50 @@ make menuconfig
 
 ### 选择软件包
 
-```
-LuCI --->
-3. Applications --->
- -*- luci-app-qmodem.............................. LuCI support for QWRT Modem
+```shell
+< > luci-app-qmodem.............................. LuCI support for QWRT Modem
+[ ] Add Lua Luci Homepage                                                 
+[ ] Add PCIe Modem SUPPORT                                               
+[ ] Using Tom customized Quectel CM                                       
+[ ] Using QWRT quectel-CM-5G                                             
+[ ] Using Normal quectel-cm                                               
 < > luci-app-qmodem-hc..................................... hc-g80 sim switch
-< > luci-app-qmodem-mwan........................ Luci qwrt modem mwan support  
-<*> luci-app-qmodem-sms.......................... Luci qwrt modem sms support 
-< > luci-app-qmodem-ttl.......................... Luci qwrt modem ttl support   
+< > luci-app-qmodem-mwan........................ Luci qwrt modem mwan support
+< > luci-app-qmodem-sms.......................... Luci qwrt modem sms support
+< > luci-app-qmodem-ttl.......................... Luci qwrt modem ttl support
 ```
 
-# 鸣谢
+### 软件包介绍
 
-在模组管理插件的开发过程中，参考了以下仓库
+**luci-app-qmodem**
+LuCI 支持 QWRT Modem。该应用程序为 QWRT 路由器提供图形用户界面，使用户能够方便地管理和配置调制解调器设置。
 
+**Add Lua Luci Homepage**
+添加 Lua Luci 首页。此选项允许用户将模组信息添加到Lua LuCI 界面中首页。
 
-| 项目                                         | 参考内容             |
-| -------------------------------------------- | -------------------- |
-| https://github.com/Siriling/5G-Modem-Support | 模组列表和部分at实现 |
-| https://github.com/fujr/luci-app-4gmodem     | 沿用该项目大部分思想 |
-| https://github.com/obsy/sms_tool             | AT命令发送工具       |
+**Add PCIe Modem SUPPORT**
+添加 PCIe 调制解调器支持。此选项使系统能够识别和使用通过 PCIe 接口连接的调制解调器。
+
+**Using Tom customized Quectel CM**
+使用 Tom 定制的 Quectel CM，Tom定制的quectel-cm增加了跃点数选项，使用quectel-cm工具拨号不再只能是默认路由。
+
+**Using QWRT quectel-CM-5G**
+QWRT仓库中的 quectel-cm 的软件包名为quectel-CM-5G,这是一个兼容性选项。
+
+**Using Normal quectel-cm**
+使用普通的 quectel-cm，如果在其他仓库，不希望使用Tom定制的quectel-cm，则可选择此项。
+
+**luci-app-qmodem-hc**
+hc-g80 SIM 切换。此应用程序允许用户在 hc-g80 cpe中方便地切换不同的 SIM 卡，可配置watchdog，断网自动切卡。
+
+**luci-app-qmodem-mwan**
+Luci QWRT 调制解调器 MWAN 支持。该应用程序为多 WAN 设置提供简易界面，用户能够在多个网络之间进行负载均衡和故障转移。
+
+**luci-app-qmodem-sms**
+Luci QWRT 调制解调器 SMS 支持。此应用程序允许用户通过调制解调器发送和接收短信，提供便捷的消息通信功能。
+
+**luci-app-qmodem-ttl**
+Luci QWRT 调制解调器 TTL 支持。此选项可设置某个接口的ttl和hl。
 
 # 项目介绍
 
@@ -54,6 +84,18 @@ LuCI --->
 - **多模组支持**: 根据 slot 定位模组，模组和配置有一对一的绑定关系，即使重启或热插拔模组也不会造成模组和配置混淆。
 - **短信支持**: 长短信合并、中文短信发送
 - **多语言支持**: 开发时将语言资源分离，可以添加需要的语言
+- **IPV6支持**: 部分支持ipv6 ，测试条件 （移动卡 rm50xq qmi/rmnet/mbim 驱动，使用quectel-CM-M拨号，使用扩展前缀模式）
+
+#### [全新实现的AT工具](docs/tom_modem.cn.md)
+
+* 尽管 sendat、sms_tool 和 gl_modem_at 这三个工具在大多数情况下表现出色，能够满足大部分需求，但它们在超时机制、mhi_DUN 和短信支持方面各自存在一些小问题。如果想要同时使用所有功能，就必须内置这三个 AT 工具，这显然不够优雅，因此我参考这三个工具，实现了一个包含所有功能的at工具。
+* 支持使用 ```-t ```选项设置超时
+* 支持使用 ```-o``` 选项 选择AT、发短信、收短信、删短信功能
+* 支持 ```-b``` 选项设置波特率 
+
+#### 修改版本的quectel-cm
+
+* 默认版本的quectel-cm不支持指定默认路由的跃点数，导致会清空默认路由，对多wan用户不友好，我增加补丁支持了跃点数的选项
 
 #### 缓存机制
 
@@ -78,30 +120,26 @@ LuCI --->
 
 #### 模组信息
 
-1. 页面顶部有一个模块选择器，可以选择不同的模块
-2. 支持显示sim卡异常状态
-3. 支持显示模组基本信息，在有sim卡时会额外显示 SIM卡信息 ，在拨号成功后则会显示网络信息和小区信息
+<img src="imgs/homepage.png" style="zoom: 25%;" alt="在首页显示（Lua)" />
 
-![](imgs/modem_info.png)
+<img src="imgs/modem_info.png" style="zoom: 25%;" />
 
-#### 模组调试
+#### 模组高级设置
 
 页面顶部有一个模块选择器，可以选择不同的模块,选择后可进行拨号模式、制式偏号、IMEI设置、锁小区、锁频段等设置，当然这些功能需要模组支持
 
-![](imgs/modem_debug_lock_cell.png)
+<img src="imgs/modem_debug_lock_cell.png" style="zoom:25%;" />
 
-![](imgs/modem_debug_lock_band.png)
+<img src="imgs/modem_debug_lock_band.png" style="zoom:25%;" />
 
 #### 拨号总览
 
-![](imgs/dial_overview.png)
+<img src="imgs/dial_overview.png" style="zoom:25%;" />
 
 ##### 全局配置
 
 提供全局性的配置选项，允许用户进行统一的模组配置。
 
-- **模组扫描**：自动扫描主机上的模组设备。
-- **手动配置**：该选项关闭时，每次开机会运行模组扫描，也会根据hotplug事件增删模组。（删除模组时不会删除配置信息，但是会将模组状态设置为已禁用，增删模组都会触发拨号配置重载）
 - **重新加载拨号**：重新加载模组的配置文件，确保配置生效。
 - **拨号总开关**: 拨号总开关，启用后才会进行拨号
 
@@ -131,41 +169,74 @@ LuCI --->
 - **电话号码**：输入接收短信的电话号码。如10086、8613012345678
 - **短信内容**：中文短信会在前端使用js编码，ascii短信则在后端编码
 
-## 开发介绍和开发计划
+### Mwan配置
 
-### 开发介绍
+该页面是 **MWAN 配置** 界面，帮助用户管理多 WAN 连接，通过监控特定 IP 来确保网络的稳定性和可靠性。用户可以根据需求自定义连接的优先级和接口，从而实现负载均衡或故障转移
 
-### sms-tool_q
+1. **启用 MWAN**
 
-#### 介绍
+   - **相同源地址**: 选中此框后，路由器将在一定时间内使用相同的 WAN 端口处理来自同一源的流量。
 
- 添加了补丁以支持发送原始 pdu ，其余与原项目相同
-### luci-app
+2. **IPv4 配置**
 
-#### 坑
+   - **接口**: 选择要添加的 WAN 接口（如 `wan`、`usb0` 等），以便于配置不同的网络连接。
 
-为了给未来切换 js luci 做准备的同时兼顾lua luci的兼容性，我使用脚本写了一个rpcd的warpper来调用modem_ctrl，目前的rpcd仅有获取信息功能，无设置功能。在htdoc下实现了一个简易的首页信息展示
-#### 坑
+   - **跟踪IP**: 通过输入特定的 IP 地址或域名
 
-原来设计的扫描所有usb设备的方法在部分路由器下存在性能问题，同时 at探测功能会发送非预期的at指令，因此策略修改为：提前把模组可能的slot写入配置文件，只扫描特定slot（目前认为不需要对普通用户暴露该功能，故没做luci界面）
-#### 坑
+     **优先级**: 设置连接的优先级，范围为 1 到 255，数值越低优先级越高。
 
-led 状态的实现，目前led状态的实现相当不优雅，被集成在了modem_dial里，每次拨号状态改变时会触发led状态的修改，因此如果脚本非正常退出等情况出现时，灯会失效。灯与slot的绑定状态同样暂未考虑对用户暴露
-#### 坑
+### QModem 设置
 
-更改了配置文件名称，ttl mwan hc 暂未经测试，可能出现错误
-对于2、3号坑可以参考 ```luci/luci-app-qmodem/root/etc/uci-defaults/99-add-5g-handler``` 添加你的设备
+- **禁用自动加载/移除模组**: 关闭以下所有功能。
+- **启用 PCIe 模块扫描**: 选中后，系统会在开机时扫描 PCIe 接口。（耗时较长）
+- **启用 USB 模块扫描**: 选中后，系统会在开机时扫描 USB 接口。（耗时较长）
+- **监控设置的 USB 接口**: 系统会在开机时扫描插槽配置里的 USB 端口，同时监控usb的热插拔事件。
+- **监控设置的 PCIe 接口**: 系统会在开机时扫描插槽配置里的 PCIe 端口。
 
-### 开发计划
+##### 插槽配置
+
+该页面允许用户对每个插槽进行一些设置
+
+1. **插槽类型**
+   - 选择插槽的类型（ PCIe/USB），用于识别设备。
+2. **插槽 ID**
+   - 输入设备的唯一标识符（如 `0001:11:00.0[pcie]`），用于设备识别。
+3. **SIM 卡指示灯**
+   - 绑定插槽与相应的指示灯，以显示 SIM 卡的状态。
+4. **网络指示灯**
+   - 绑定插槽的网络状态指示灯，以便监控网络连接的状态。
+5. **启用 5G 转网络口**
+   - 某些 CPE 设备模组接口设置了网卡芯片，允许模组通过 PHY 与路由器通信，从而提高性能。启用此选项可使支持转网口功能的模组通过网络接口与主机通信。
+6. **关联的 USB**
+   - 全功能的 m.2 接口包含pcie和usb协议，配置该项可将usb端口与pcie端口关联，用户使用同时支持pcie和usb的模组时，可以使用兼容性更好的usb serial驱动进行at通信
 
 
-| 计划                                              | 进度       |
-| ------------------------------------------------- | ---------- |
-| 将后端程序与luci-app完全分离                      | 0          |
-| 修复quectel-CM乱call udhcpd和删除默认路由表的问题 | 0          |
-| 加入pcie模组支持                                  | 实验性支持 |
-| 自己实现at收发程序                                | 50%        |
-| 切换js luci                                       | 5%         |
-| 修复ipv6                                          | 5%         |
-| 优化模组扫描逻辑                                  | -100%      |
-| 模组led展示                                       | -100%      |
+
+## 开发计划
+
+
+| 计划                                              | 进度               |
+| ------------------------------------------------- | ------------------ |
+| 将后端程序与luci-app完全分离                      | 0                  |
+| 修复quectel-CM乱call udhcpd和删除默认路由表的问题 | 基本完成           |
+| 加入pcie模组支持                                  | 实验性支持         |
+| 自己实现at收发程序                                | 基本完成           |
+| 切换js luci                                       | 5%                 |
+| 修复ipv6                                          | 使用quectel-cm支持 |
+| 优化模组扫描逻辑                                  | 基本完成           |
+| 模组led展示                                       | 基本完成           |
+
+# 鸣谢
+
+在模组管理插件的开发过程中，参考了以下仓库
+
+
+| 项目                                         |       参考内容       |
+| -------------------------------------------- | :------------------: |
+| https://github.com/Siriling/5G-Modem-Support | 模组列表和部分at实现 |
+| https://github.com/fujr/luci-app-4gmodem     | 沿用该项目大部分思想 |
+| https://github.com/obsy/sms_tool             |    AT命令发送工具    |
+| https://github.com/gl-inet/gl-modem-at       |    AT命令发送工具    |
+| https://github.com/ouyangzq/sendat           |    AT命令发送工具    |
+
+# 

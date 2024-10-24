@@ -54,7 +54,3 @@ usage: <tool_name> [options]
   ```bash
   <tool_name> -d /dev/mhi_DUN -o r
   ```
-
-## 结论
-
-该工具提供了丰富的功能选项，方便用户与调制解调器进行灵活的交互。请根据需求选择合适的参数进行操作。
