@@ -24,12 +24,13 @@ s = m:section(TypedSection, "ipv4", translate("IPV4 Config"))
 s.anonymous = true
 s.addremove = true
 s.template = "cbi/tblsection"
-member_interface = s:option(DynamicList, "member_interface", translate("Interface"))
+member_interface = s:option(Value, "member_interface", translate("Interface"))
 member_interface.rmempty = true
-member_interface.datatype = "modem"
-member_interface.template = "cbi/network_netlist"
-member_interface.widget = "select"
-member_interface.description = translate("Priority determines the order of member selection, while weight determines the traffic distribution ratio among members with the same priority.")
+uci:foreach("network", "interface", function(s)
+    if s[".name"] ~= "loopback" and s[".name"] ~= "lan" then
+        member_interface:value(s[".name"])
+    end
+end)
 
 
 o = s:option(DynamicList, 'member_track_ip', translate('Track IP'))
