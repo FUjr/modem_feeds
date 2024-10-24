@@ -536,7 +536,7 @@ mhi_dial()
 qmi_dial()
 {
     cmd_line="quectel-CM"
-    [ -e "/usr/bin/quectel-CM-M" ] cmd_line="quectel-CM-M"
+    [ -e "/usr/bin/quectel-CM-M" ] && cmd_line="quectel-CM-M"
 	case $pdp_type in
 		"ip") cmd_line="$cmd_line -4" ;;
 		"ipv6") cmd_line="$cmd_line -6" ;;
@@ -564,8 +564,13 @@ qmi_dial()
         qmi_if=$(echo "$modem_netcard" | cut -d. -f1)
 		cmd_line="${cmd_line} -i ${qmi_if}"
 	fi
-    [ -e "/usr/bin/quectel-CM-M" ] && [ -n "$metric" ] && cmd_line="$cmd_line -M $metric"
-    [ -e "/usr/bin/quectel-CM-M" ] && cmd_line="$cmd_line -f $log_file" || cmd_line="$cmd_line -d -f $log_file"
+    if [ -e "/usr/bin/quectel-CM-M" ];then
+        [ -n "$metric" ] && cmd_line="$cmd_line -M $metric"
+    else
+        [ -n "$metric" ] && cmd_line="$cmd_line -d"
+    fi
+    cmd_line="$cmd_line -f $log_file"
+    m_debug "dialing $cmd_line"
     $cmd_line
     
     
