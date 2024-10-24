@@ -35,10 +35,8 @@ add_warning_message_entry()
     json_add_string  key "$key"
     json_add_string  value "$value"
     json_add_string "full_name" "$key_full_name"
-    json_add_string "type" "warnning_message"
-    if [ -n "$class" ]; then
-        json_add_string "class" "$class"
-    fi
+    json_add_string "type" "warning_message"
+    json_add_string "class" "warning"
     json_close_object
 }
 
