@@ -28,3 +28,12 @@ msgstr "mwan配置"
 
 msgid "IPV4 Config"
 msgstr "IPV4配置"
+
+msgid "Set the weight for the load balancing member. A higher weight means more traffic will be assigned to this member. The default value is 1, with a range from 1 to 255."
+msgstr "设置负载均衡成员的权重。权重越高，该成员被分配到的流量越多。默认值为1，范围为1到255。"
+
+msgid "Set the priority for the load balancing member. A higher priority value gives precedence to this member when distributing traffic. The range is from 1 to 255. 1 is the highest priority"
+msgstr "设置负载均衡成员的优先级。当分发流量时，优先级值越高，该成员越优先。范围是1到255。1是最高优先级。"
+
+msgid "Priority determines the order of member selection, while weight determines the traffic distribution ratio among members with the same priority."
+msgstr "优先级决定成员选择的顺序，而权重决定具有相同优先级的成员之间流量分配比率。"

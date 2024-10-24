@@ -17,7 +17,7 @@ judge_time.default = 5
 
 ping_dest = s:option(DynamicList, "ping_dest", translate("Ping Destination"))
 
-o = s:option(ListValue, "modem_config", translate("WWAN Interface"))
+o = s:option(ListValue, "modem_config", translate("Modem Config"))
 uci:foreach("qmodem", "modem-device",
     function(s)
         if s then

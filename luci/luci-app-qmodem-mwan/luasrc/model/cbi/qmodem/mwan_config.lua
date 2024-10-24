@@ -29,6 +29,8 @@ member_interface.rmempty = true
 member_interface.datatype = "network"
 member_interface.template = "cbi/network_netlist"
 member_interface.widget = "select"
+member_interface.description = translate("Priority determines the order of member selection, while weight determines the traffic distribution ratio among members with the same priority.")
+
 
 o = s:option(DynamicList, 'member_track_ip', translate('Track IP'))
 o.datatype = 'host'
@@ -36,12 +38,15 @@ member_priority = s:option(Value, "member_priority", translate("Priority"))
 member_priority.rmempty = true
 member_priority.datatype = "uinteger"
 member_priority.default = 1
+member_priority.description = translate("Set the priority for the load balancing member. A higher priority value gives precedence to this member when distributing traffic. The range is from 1 to 255. 1 is the highest priority")
+
 -- member_priority:depends("member_interface", "")
 
 member_weight = s:option(Value, "member_weight", translate("Weight"))
 member_weight.rmempty = true
 member_weight.datatype = "uinteger"
 member_weight.default = 1
+member_weight.description = translate("Set the weight for the load balancing member. A higher weight means more traffic will be assigned to this member. The default value is 1, with a range from 1 to 255.")
 -- member_weight:depends("member_interface", "")
 
 

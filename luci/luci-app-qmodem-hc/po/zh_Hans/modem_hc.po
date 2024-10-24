@@ -40,3 +40,6 @@ msgstr "模块配置"
 
 msgid "SIM Config"
 msgstr "SIM卡配置"
+
+msgid "Modem Config"
+msgstr "模块配置"
