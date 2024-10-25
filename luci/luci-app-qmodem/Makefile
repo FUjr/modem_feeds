@@ -22,8 +22,8 @@ LUCI_DEPENDS:=+luci-compat \
 		+kmod-usb-net-rndis \
 		+kmod-usb-net-cdc-ncm +kmod-usb-net-huawei-cdc-ncm \
 		+usbutils \
-		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_MHI:kmod-pcie_mhi \
-		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_MHI:pciutils \
+		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT:kmod-pcie_mhi \
+		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT:pciutils \
 		+PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM:quectel-CM-5G-M \
 		+PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G:quectel-CM-5G \
 		+PACKAGE_luci-app-qmodem_USING_NORMAL_QUECTEL_CM:quectel-cm \
