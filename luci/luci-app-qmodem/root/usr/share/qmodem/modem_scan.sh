@@ -14,6 +14,13 @@ get_associate_usb()
     config_foreach _get_associated_usb_by_path modem-slot
 }
 
+get_default_alias()
+{
+    target_slot=$1
+    config_load qmodem
+    config_foreach _get_default_alias_by_slot
+}
+
 _get_associated_usb_by_path()
 {
     local cfg="$1"
@@ -24,6 +31,16 @@ _get_associated_usb_by_path()
         echo \[$target_slot\]associated_usb:$associated_usb
     fi
     
+}
+
+_get_default_alias_by_slot()
+{
+    local cfg="$1"
+    config_get _get_slot $cfg slot
+    if [ "$target_slot" == "$_get_slot" ];then
+        config_get default_alias $cfg  alias
+    fi
+
 }
 
 scan()
@@ -298,11 +315,14 @@ add()
     else
     #aqcuire lock
         lock /tmp/lock/modem_add
+        get_default_alias $slot
+
         modem_count=$(uci get qmodem.main.modem_count)
         [ -z "$modem_count" ] && modem_count=0
         modem_count=$(($modem_count+1))
         uci set qmodem.main.modem_count=$modem_count
         uci set qmodem.$section_name=modem-device
+        [ -n "$default_alias" ] && uci set  qmodem.${section_name}.alias="$default_alias"
         uci commit qmodem
         lock -u /tmp/lock/modem_add
     #release lock

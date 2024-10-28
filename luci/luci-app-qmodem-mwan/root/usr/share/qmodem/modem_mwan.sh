@@ -130,8 +130,8 @@ handle_config()
     config_get track_ip $1 member_track_ip
     echo $1
     append_if $interface "$track_ip"
-    add_mwan3_member $interface $priority $weight $1
-    append_mwan3_policy_member $family $1
+    add_mwan3_member $interface $priority $weight m$interface
+    append_mwan3_policy_member $family m$interface
 }
 
 

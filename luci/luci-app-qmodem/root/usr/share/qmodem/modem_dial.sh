@@ -323,60 +323,139 @@ append_to_fw_zone()
 
 set_if()
 {
+    fw_reload_flag=0
+    dhcp_reload_flag=0
+    network_reload_flag=0
     #check if exist
+    case $manufacturer in
+        "quectel")
+            case $platform in
+                "unisoc")
+                    case $driver in
+                        "mbim")
+                            proto="none"
+                            protov6="none"
+                            ;;
+                        esac
+                    ;;
+            esac
+            ;; 
+    esac
+    if [ -z "$proto" ];then
+        proto="dhcp"
+        protov6="dhcpv6"
+    fi
+    case $pdp_type in
+        "ip")
+            env4="1"
+            env6="0"
+            ;;
+        "ipv6")
+            env4="0"
+            env6="1"
+            ;;
+        "ipv4v6")
+            env4="1"
+            env6="1"
+            ;;
+    esac
     interface=$(uci -q get network.$interface_name)
-    if [ -z "$interface" ];then
-        uci set network.${interface_name}=interface
-        uci set network.${interface_name}.modem_config="${modem_config}"
-        uci set network.${interface_name}.proto='dhcp'
-        uci set network.${interface_name}.defaultroute='1'
-        uci set network.${interface_name}.peerdns='0'
-        uci set network.${interface_name}.metric="${metric}"
-        uci add_list network.${interface_name}.dns='114.114.114.114'
-        uci add_list network.${interface_name}.dns='119.29.29.29'
-        local num=$(uci show firewall | grep "name='wan'" | wc -l)
-        local wwan_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface_name}" | wc -l)
-        if [ "$wwan_num" = "0" ]; then
-            append_to_fw_zone $num ${interface_name}
+    interfacev6=$(uci -q get network.$interface6_name)
+    if [ "$env4" -eq 1 ];then
+        if [ -z "$inetrface" ];then
+            uci set network.${interface_name}=interface
+            uci set network.${interface_name}.modem_config="${modem_config}"
+            uci set network.${interface_name}.proto="${proto}"
+            uci set network.${interface_name}.defaultroute='1'
+            uci set network.${interface_name}.peerdns='0'
+            uci set network.${interface_name}.metric="${metric}"
+            uci add_list network.${interface_name}.dns='114.114.114.114'
+            uci add_list network.${interface_name}.dns='119.29.29.29'
+            local num=$(uci show firewall | grep "name='wan'" | wc -l)
+            local wwan_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface_name}" | wc -l)
+            if [ "$wwan_num" = "0" ]; then
+                append_to_fw_zone $num ${interface_name}
+            fi
+            network_reload_flag=1
+            firewall_reload_flag=1
         fi
-        #set ipv6
-        #if pdptype contain 6
-        if [ -n "$(echo $pdp_type | grep "6")" ];then
+    else
+        if [ -n "$interface" ];then
+            uci delete network.${interface_name}
+            network_reload_flag=1
+            m_debug "delete interface $interface_name"
+        fi
+    fi
+    if [ "$env6" -eq 1 ];then
+        if [ -z "$interfacev6" ];then
             uci set network.lan.ipv6='1'
             uci set network.lan.ip6assign='64'
             uci set network.lan.ip6class="${interface6_name}"
             uci set network.${interface6_name}.modem_config="${modem_config}"
             uci set network.${interface6_name}='interface'
-            uci set network.${interface6_name}.proto='dhcpv6'
+            uci set network.${interface6_name}.proto="${protov6}"
             uci set network.${interface6_name}.ifname="@${interface_name}"
             uci set network.${interface6_name}.device="@${interface_name}"
             uci set network.${interface6_name}.metric="${metric}"
-            if [ "$ra_master" = "1" ];then
-                uci set dhcp.${interface6_name}='dhcp'
-                uci set dhcp.${interface6_name}.interface="${interface6_name}"
-                uci set dhcp.${interface6_name}.ra='relay'
-                uci set dhcp.${interface6_name}.ndp='relay'
-                uci set dhcp.${interface6_name}.master='1'
-                uci set dhcp.${interface6_name}.ignore='1'
-                uci set dhcp.lan.ra='relay'
-                uci set dhcp.lan.ndp='relay'
-                uci set dhcp.lan.dhcpv6='relay'
-                uci commit dhcp
-            elif [ "$extend_prefix" = "1" ];then
-                uci set network.${interface6_name}.extendprefix=1
-            fi
+            
             local wwan6_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface6_name}" | wc -l)
             if [ "$wwan6_num" = "0" ]; then
                 append_to_fw_zone $num ${interface6_name}
             fi
+            network_reload_flag=1
+            firewall_reload_flag=1
         fi
-        uci commit network
-        uci commit firewall
-        ifup ${interface_name}
-        m_debug "create interface $interface_name"
-
+        if [ "$ra_master" = "1" ];then
+            uci set dhcp.${interface6_name}='dhcp'
+            uci set dhcp.${interface6_name}.interface="${interface6_name}"
+            uci set dhcp.${interface6_name}.ra='relay'
+            uci set dhcp.${interface6_name}.ndp='relay'
+            uci set dhcp.${interface6_name}.master='1'
+            uci set dhcp.${interface6_name}.ignore='1'
+            uci set dhcp.lan.ra='relay'
+            uci set dhcp.lan.ndp='relay'
+            uci set dhcp.lan.dhcpv6='relay'
+            dhcp_reload_flag=1
+        elif [ "$extend_prefix" = "1" ];then
+            uci set network.${interface6_name}.extendprefix=1
+            dhcpv6=$(uci -q get dhcp.${interface6_name})
+            if [ -n "$dhcpv6" ];then
+                uci delete dhcp.${interface6_name}
+                dhcp_reload_flag=1
+            fi
+        else
+            dhcpv6=$(uci -q get dhcp.${interface6_name})
+            if [ -n "$dhcpv6" ];then
+                uci delete dhcp.${interface6_name}
+                dhcp_reload_flag=1
+            fi
+        fi
+    else
+        if [ -n "$interfacev6" ];then
+            uci delete network.${interface6_name}
+            network_reload_flag=1
+            dhcpv6=$(uci -q get dhcp.${interface6_name})
+            if [ -n "$dhcpv6" ];then
+                dhcp_reload_flag=1
+            fi
+            m_debug "delete interface $interface6_name"
+        fi
     fi
     
+    if [ "$network_reload_flag" -eq 1 ];then
+        uci commit network
+        /etc/init.d/network restart
+    fi
+    if [ "$firewall_reload_flag" -eq 1 ];then
+        uci commit firewall
+        /etc/init.d/firewall restart
+    fi
+    if [ "$dhcp_reload_flag" -eq 1 ];then
+        uci commit dhcp
+        /etc/init.d/dhcp restart
+    fi
+
+
     set_modem_netcard=$modem_netcard
     if [ -z "$set_modem_netcard" ];then
         m_debug "no netcard found"

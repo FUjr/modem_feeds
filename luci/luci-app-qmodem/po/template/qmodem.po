@@ -471,3 +471,9 @@ msgstr "已启用"
 
 msgid "DISABLED"
 msgstr "已禁用"
+
+msgid "Default Alias"
+msgstr "默认别名"
+
+msgid "After setting this option, the first module loaded into this slot will automatically be assigned this default alias."
+msgid "设置后，首次加载来此该插槽的模组会自动分配该默认别名"

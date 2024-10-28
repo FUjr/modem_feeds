@@ -39,6 +39,11 @@ for line in net:lines() do
 end
 net:close()
 
+default_alias = s:option(Value, "default_alias", translate("Default Alias"))
+default_alias.description = translate("After setting this option, the first module loaded into this slot will automatically be assigned this default alias.")
+
+
+
 associated_usb = s:option(Value, "associated_usb", translate("Associated USB"))
 associated_usb.rmempty = true
 associated_usb.description = translate("For M.2 slots with both PCIe and USB support, specify the associated USB port (for ttyUSB access)")
