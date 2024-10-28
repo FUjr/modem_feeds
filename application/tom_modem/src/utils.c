@@ -744,7 +744,12 @@ int display_sms_in_json(SMS_T **sms,int num)
             offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%d,\"content\":\"%s\"},",
                           sms[i]->sms_index, sms[i]->sender, sms[i]->timestamp, escaped_text);
     }
-    offset--;
+    
+    //if not empty msg_json,remove the last ','
+    if (offset > 10)
+    {
+        offset--;
+    }
     offset += sprintf(msg_json + offset, "]}");
     user_msg("%s\n", msg_json);
     return 0;
