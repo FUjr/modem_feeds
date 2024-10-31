@@ -144,7 +144,7 @@ msgid "Block Auto Probe/Remove"
 msgstr "禁用自动加载/移除模组"
 
 msgid "If enabled, the modem auto scan will be blocked."
-msgstr "富国开启了，自动扫描模组服务会关闭"
+msgstr "开启后自动扫描模组服务会关闭"
 
 msgid "Enable PCIE Scan"
 msgstr "启用PCIe模组扫描"
@@ -471,6 +471,9 @@ msgstr "已启用"
 
 msgid "DISABLED"
 msgstr "已禁用"
+
+msgid "TTL Config"
+msgstr "TTL配置"
 
 msgid "Default Alias"
 msgstr "默认别名"

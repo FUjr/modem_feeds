@@ -641,11 +641,11 @@ qmi_dial()
 	if [ -n "$modem_netcard" ]; then
     qmi_if=$modem_netcard
     #if is wwan* ,use the first part of the name
-    if  [ "$modem_netcard" == "wwan"* ];then
+    if  [[ "$modem_netcard" = "wwan"* ]];then
         qmi_if=$(echo "$modem_netcard" | cut -d_ -f1)
     fi
     #if is rmnet* ,use the first part of the name
-    if [ "$modem_netcard" == "rmnet"* ];then
+    if [[ "$modem_netcard" = "rmnet"* ]];then
         qmi_if=$(echo "$modem_netcard" | cut -d. -f1)
     fi
 
