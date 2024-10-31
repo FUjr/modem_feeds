@@ -639,8 +639,16 @@ qmi_dial()
 		cmd_line="$cmd_line $auth"
 	fi
 	if [ -n "$modem_netcard" ]; then
+    qmi_if=$modem_netcard
+    #if is wwan* ,use the first part of the name
+    if  [ "$modem_netcard" == "wwan"* ];then
         qmi_if=$(echo "$modem_netcard" | cut -d_ -f1)
-        qmi_if=$(echo "$qmi_if" | cut -d. -f1)
+    fi
+    #if is rmnet* ,use the first part of the name
+    if [ "$modem_netcard" == "rmnet"* ];then
+        qmi_if=$(echo "$modem_netcard" | cut -d. -f1)
+    fi
+
 		cmd_line="${cmd_line} -i ${qmi_if}"
 	fi
     if [ -e "/usr/bin/quectel-CM-M" ];then
