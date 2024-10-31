@@ -49,14 +49,20 @@ s.extedit = d.build_url("admin", "modem", "qmodem", "slot_config", "%s")
 s.sectionhead = translate("Config Name")
 slot_type = s:option(DummyValue, "type", translate("Slot Type"))
 slot_type.cfgvalue = function(t, n)
-    local name = translate(Value.cfgvalue(t, n) or "")
+    local name = translate(Value.cfgvalue(t, n) or "-")
     return name:upper()
 end
 
 slot_path = s:option(DummyValue, "slot", translate("Slot Path"))
 slot_path.cfgvalue = function(t, n)
-    local path = (Value.cfgvalue(t, n) or "")
+    local path = (Value.cfgvalue(t, n) or "-")
     return path
+end
+
+default_alias = s:option(DummyValue, "alias", translate("Default Alias"))
+default_alias.cfgvalue = function(t, n)
+    local alias = (Value.cfgvalue(t, n) or "-")
+    return alias
 end
 
 return m
