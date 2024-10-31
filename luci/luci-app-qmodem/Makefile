@@ -11,8 +11,6 @@ PKG_LICENSE:=GPLv3
 PKG_LINCESE_FILES:=LICENSE
 PKG_MAINTAINER:=Tom <fjrcn@outlook.com>
 LUCI_DEPENDS:=+luci-compat \
-		 +kmod-usb-net-rndis \
-		+kmod-usb-serial-option +kmod-usb-wdm \
 		+kmod-usb2 +kmod-usb3 \
 		+kmod-usb-serial-option +kmod-usb-serial +kmod-usb-serial-qualcomm \
 		+kmod-usb-net +kmod-usb-acm \
