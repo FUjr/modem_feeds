@@ -72,6 +72,7 @@ stop_service(){
         ip6tables -t mangle -D POSTROUTING $IPT6_POSTROUTING
     fi
     [ -f /etc/init.d/qca-nss-ecm ] && /etc/init.d/qca-nss-ecm start # disable nss offload
+}
 
 service_triggers()
 {
