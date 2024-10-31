@@ -1,3 +1,4 @@
+local uci = luci.model.uci.cursor()
 m = Map("qmodem_ttl", translate("TTL Config"))
 s = m:section(NamedSection, "global", "global", translate("Global Config"))
 
