@@ -26,13 +26,8 @@ set_if_ttl()
     IPT6="ip6tables"
     logger -t modem_ttl "Setting TTL for $device to $ttl"
     comment="modem_ttl"
-    $IPT -t mangle -A PREROUTING -i $device -j TTL --ttl-set $ttl -m comment --comment $comment
-    $IPT -t mangle -A POSTROUTING -o $device -j TTL --ttl-set $ttl -m comment --comment $comment
-    $IPT6 -t mangle -A PREROUTING -i $device -j HL --hl-set $ttl -m comment --comment $comment
-    $IPT6 -t mangle -A POSTROUTING -o $device -j HL --hl-set $ttl -m comment --comment $comment
-}
-
-stop_service(){
+    touch /etc/firewall.d/qmodem_ttl
+    chmod +x /etc/firewall.d/qmodem_ttl
     IPT_PREROUTING=$(iptables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
     IPT_POSTROUTING=$(iptables -t mangle -L POSTROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
     IPT6_PREROUTING=$(ip6tables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
@@ -49,6 +44,18 @@ stop_service(){
     if [ -n "$IPT6_POSTROUTING" ]; then
         ip6tables -t mangle -D POSTROUTING $IPT6_POSTROUTING
     fi
+    echo "$IPT -t mangle -A PREROUTING -i $device -j TTL --ttl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
+    echo "$IPT -t mangle -A POSTROUTING -o $device -j TTL --ttl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
+    echo "$IPT6 -t mangle -A PREROUTING -i $device -j HL --hl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
+    echo "$IPT6 -t mangle -A POSTROUTING -o $device -j HL --hl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
+    /etc/firewall.d/qmodem_ttl
+    chmod -x /etc/firewall.d/qmodem_ttl
+    [ -d /sys/kernel/debug/ecm/ ] && /etc/init.d/qca-nss-ecm stop # disable nss offload
+}
+
+stop_service(){
+    rm -f /etc/firewall.d/qmodem_ttl
+    /etc/init.d/firewall reload
 }
 
 service_triggers()
