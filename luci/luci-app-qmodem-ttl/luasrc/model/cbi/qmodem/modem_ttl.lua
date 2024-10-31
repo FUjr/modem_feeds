@@ -9,10 +9,10 @@ ttl.default = 64
 ttl.datatype = "uinteger"
 
 o = s:option(Value, "ifname", translate("Interface"))
-o.rmempty = ture
-o.template = "cbi/network_netlist"
-o.widget = "optional"
-o.nocreate = true
-o.unspecified = true
+uci:foreach("network", "interface", function(s)
+    if s[".name"] ~= "loopback" and s[".name"] ~= "lan" then
+        o:value(s[".name"])
+    end
+end)
 
 return m
