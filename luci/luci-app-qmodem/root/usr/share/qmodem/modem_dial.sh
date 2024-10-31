@@ -449,7 +449,6 @@ set_if()
         ifdown ${interface6_name}
         ifup ${interface_name}
         ifup ${interface6_name}
-        /etc/init.d/qmodem_ttl start
     fi
     if [ "$firewall_reload_flag" -eq 1 ];then
         uci commit firewall
