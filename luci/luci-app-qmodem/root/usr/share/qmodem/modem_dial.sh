@@ -226,6 +226,7 @@ check_dial_prepare()
         config_fullfill=1
     fi
     if [ "$config_fullfill" = "1" ] && [ "$sim_fullfill" = "1" ] && [ "$netdev_fullfill" = "1" ] ;then
+        at "$at_port" "AT+CFUN=1"
         return 1
     else
         return 0
