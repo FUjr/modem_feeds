@@ -55,8 +55,23 @@ set_if_ttl()
 
 stop_service(){
     rm -f /etc/firewall.d/qmodem_ttl
-    /etc/init.d/firewall reload
-}
+    IPT_PREROUTING=$(iptables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
+    IPT_POSTROUTING=$(iptables -t mangle -L POSTROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
+    IPT6_PREROUTING=$(ip6tables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
+    IPT6_POSTROUTING=$(ip6tables -t mangle -L POSTROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
+    if [ -n "$IPT_PREROUTING" ]; then
+        iptables -t mangle -D PREROUTING $IPT_PREROUTING
+    fi
+    if [ -n "$IPT_POSTROUTING" ]; then
+        iptables -t mangle -D POSTROUTING $IPT_POSTROUTING
+    fi
+    if [ -n "$IPT6_PREROUTING" ]; then
+        ip6tables -t mangle -D PREROUTING $IPT6_PREROUTING
+    fi
+    if [ -n "$IPT6_POSTROUTING" ]; then
+        ip6tables -t mangle -D POSTROUTING $IPT6_POSTROUTING
+    fi
+    [ -f /etc/init.d/qca-nss-ecm ] && /etc/init.d/qca-nss-ecm start # disable nss offload
 
 service_triggers()
 {
