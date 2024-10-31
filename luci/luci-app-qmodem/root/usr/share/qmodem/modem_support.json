@@ -49,6 +49,14 @@
                 "define_connect":"1",
                 "modes":["qmi","gobinet","ecm","mbim","rndis","ncm"]
             },
+            "rg500q-ea":{
+                "manufacturer_id":"2c7c",
+                "manufacturer":"quectel",
+                "platform":"qualcomm",
+                "data_interface":"usb",
+                "define_connect":"1",
+                "modes":["qmi","gobinet","ecm","mbim","rndis","ncm"]
+            },
             "rm500q-ae":{
                 "manufacturer_id":"2c7c",
                 "manufacturer":"quectel",

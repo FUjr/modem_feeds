@@ -9,8 +9,23 @@ modem_settings()
 	local board="$1"
 
 	case $board in
+	arcadyan,aw1000)
+		#usb slot
+		uci set qmodem.usb0="modem-slot"
+		uci set qmodem.usb0.slot="4-1"
+		uci set qmodem.usb0.type="usb"
+		uci set qmodem.usb0.net_led="ipq::led9"
+		uci set qmodem.usb0.sim_led="ipq::led2"
+		#pcie slot
+		uci set qmodem.pcie0="modem-slot"
+		uci set qmodem.pcie0.slot="0000:01:00.0"
+		uci set qmodem.pcie0.type="pcie"
+		uci set qmodem.pcie0.net_led="ipq::led9"
+		uci set qmodem.pcie0.sim_led="ipq::led2"
+		uci set	qmodem.pcie0.associated_usb='4-1'
+		uci commit qmodem
+		;;
 	HC,HC-G80)
-		
 		#mini pci slot
 		uci set qmodem.mini_pci="modem-slot"
 		uci set qmodem.mini_pci.slot="1-1.4"
