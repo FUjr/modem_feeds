@@ -640,7 +640,7 @@ qmi_dial()
 	fi
 	if [ -n "$modem_netcard" ]; then
         qmi_if=$(echo "$modem_netcard" | cut -d_ -f1)
-        qmi_if=$(echo "$modem_netcard" | cut -d. -f1)
+        qmi_if=$(echo "$qmi_if" | cut -d. -f1)
 		cmd_line="${cmd_line} -i ${qmi_if}"
 	fi
     if [ -e "/usr/bin/quectel-CM-M" ];then
