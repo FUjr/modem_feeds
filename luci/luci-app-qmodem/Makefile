@@ -6,13 +6,13 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=luci-app-qmodem
 LUCI_TITLE:=LuCI support for QWRT Modem
 LUCI_PKGARCH:=all
-PKG_VERSION:=2.4.4
+PKG_VERSION:=2.4.5
 PKG_LICENSE:=GPLv3
 PKG_LINCESE_FILES:=LICENSE
 PKG_MAINTAINER:=Tom <fjrcn@outlook.com>
 LUCI_DEPENDS:=+luci-compat \
 		+kmod-usb2 +kmod-usb3 \
-		+kmod-usb-serial-option +kmod-usb-serial +kmod-usb-serial-qualcomm \
+		+kmod-usb-serial +kmod-usb-serial-option  +kmod-usb-serial-qualcomm \
 		+kmod-usb-net +kmod-usb-acm \
 		+kmod-usb-wdm +kmod-usb-net-qmi-wwan \
 		+kmod-usb-net-cdc-ether \
