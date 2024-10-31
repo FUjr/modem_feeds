@@ -444,7 +444,10 @@ set_if()
     
     if [ "$network_reload_flag" -eq 1 ];then
         uci commit network
-        /etc/init.d/network restart
+        ifdown ${interface_name}
+        ifdown ${interface6_name}
+        ifup ${interface_name}
+        ifup ${interface6_name}
     fi
     if [ "$firewall_reload_flag" -eq 1 ];then
         uci commit firewall
