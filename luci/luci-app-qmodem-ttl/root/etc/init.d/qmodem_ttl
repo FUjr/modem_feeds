@@ -23,51 +23,19 @@ set_if_ttl()
     logger -t modem_ttl "Ovrewirte TTL from br-lan to $ttl"
     comment="modem_ttl"
     touch /etc/firewall.d/qmodem_ttl
-    chmod +x /etc/firewall.d/qmodem_ttl
-    IPT_PREROUTING=$(iptables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    IPT_POSTROUTING=$(iptables -t mangle -L POSTROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    IPT6_PREROUTING=$(ip6tables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    IPT6_POSTROUTING=$(ip6tables -t mangle -L POSTROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    if [ -n "$IPT_PREROUTING" ]; then
-        iptables -t mangle -D PREROUTING $IPT_PREROUTING
-    fi
-    if [ -n "$IPT_POSTROUTING" ]; then
-        iptables -t mangle -D POSTROUTING $IPT_POSTROUTING
-    fi
-    if [ -n "$IPT6_PREROUTING" ]; then
-        ip6tables -t mangle -D PREROUTING $IPT6_PREROUTING
-    fi
-    if [ -n "$IPT6_POSTROUTING" ]; then
-        ip6tables -t mangle -D POSTROUTING $IPT6_POSTROUTING
-    fi
     echo "$IPT -t mangle -A PREROUTING -i br-lan -j TTL --ttl-set $ttl -m comment --comment $comment" > /etc/firewall.d/qmodem_ttl
     echo "$IPT -t mangle -A POSTROUTING -o !br-lan -j TTL --ttl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
     echo "$IPT6 -t mangle -A PREROUTING -i br-lan -j HL --hl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
     echo "$IPT6 -t mangle -A POSTROUTING -o !br-lan -j HL --hl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
     /etc/firewall.d/qmodem_ttl
-    chmod -x /etc/firewall.d/qmodem_ttl
+    /etc/init.d/firewall restart
     [ -d /sys/kernel/debug/ecm/ ] && /etc/init.d/qca-nss-ecm stop # disable nss offload
 }
 
 stop_service(){
     rm -f /etc/firewall.d/qmodem_ttl
-    IPT_PREROUTING=$(iptables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    IPT_POSTROUTING=$(iptables -t mangle -L POSTROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    IPT6_PREROUTING=$(ip6tables -t mangle -L PREROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    IPT6_POSTROUTING=$(ip6tables -t mangle -L POSTROUTING -n --line-numbers | grep modem_ttl | awk '{print $1}')
-    if [ -n "$IPT_PREROUTING" ]; then
-        iptables -t mangle -D PREROUTING $IPT_PREROUTING
-    fi
-    if [ -n "$IPT_POSTROUTING" ]; then
-        iptables -t mangle -D POSTROUTING $IPT_POSTROUTING
-    fi
-    if [ -n "$IPT6_PREROUTING" ]; then
-        ip6tables -t mangle -D PREROUTING $IPT6_PREROUTING
-    fi
-    if [ -n "$IPT6_POSTROUTING" ]; then
-        ip6tables -t mangle -D POSTROUTING $IPT6_POSTROUTING
-    fi
     [ -f /etc/init.d/qca-nss-ecm ] && /etc/init.d/qca-nss-ecm start # disable nss offload
+    /etc/init.d/firewall restart
 }
 
 service_triggers()
