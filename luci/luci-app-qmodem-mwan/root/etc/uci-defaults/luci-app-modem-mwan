@@ -1,6 +1,7 @@
 #!/bin/sh
 
 uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@qmodem_mwan[-1]
 	add ucitrack qmodem_mwan
 	set ucitrack.@qmodem_mwan[-1].init=qmodem_mwan
 	commit ucitrack

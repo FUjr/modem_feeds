@@ -9,6 +9,7 @@ uci -q batch << EOF
 	commit firewall
 EOF
 uci -q batch <<-EOF >/dev/null
+    delete ucitrack.@qmodem_ttl[-1]
 	add ucitrack qmodem_ttl
 	set ucitrack.@qmodem_ttl[-1].init=qmodem_ttl
 	commit ucitrack

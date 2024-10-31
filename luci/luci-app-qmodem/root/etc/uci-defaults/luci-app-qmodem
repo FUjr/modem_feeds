@@ -6,6 +6,7 @@
 
 uci -q batch <<-EOF >/dev/null
 	delete ucitrack.@qmodem[-1]
+	delete ucitrack.@qmodem[-1]
 	add ucitrack qmodem
 	set ucitrack.@qmodem[-1].init=qmodem_network
 	add ucitrack qmodem
