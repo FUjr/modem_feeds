@@ -23,10 +23,8 @@ set_if_ttl()
     logger -t modem_ttl "Ovrewirte TTL from br-lan to $ttl"
     comment="modem_ttl"
     touch /etc/firewall.d/qmodem_ttl
-    echo "$IPT -t mangle -A PREROUTING -i br-lan -j TTL --ttl-set $ttl -m comment --comment $comment" > /etc/firewall.d/qmodem_ttl
-    echo "$IPT -t mangle -A POSTROUTING -o !br-lan -j TTL --ttl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
-    echo "$IPT6 -t mangle -A PREROUTING -i br-lan -j HL --hl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
-    echo "$IPT6 -t mangle -A POSTROUTING -o !br-lan -j HL --hl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
+    echo "$IPT -t mangle -A POSTROUTING -j TTL --ttl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
+    echo "$IPT6 -t mangle -A POSTROUTING -j HL --hl-set $ttl -m comment --comment $comment" >> /etc/firewall.d/qmodem_ttl
     /etc/firewall.d/qmodem_ttl
     /etc/init.d/firewall restart
     [ -d /sys/kernel/debug/ecm/ ] && /etc/init.d/qca-nss-ecm stop # disable nss offload
