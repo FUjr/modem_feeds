@@ -16,6 +16,7 @@ modem_settings()
 		uci set qmodem.usb0.type="usb"
 		uci set qmodem.usb0.net_led="ipq::led9"
 		uci set qmodem.usb0.sim_led="ipq::led2"
+		uci set qmodem.usb0.alias="wwan0"
 		#pcie slot
 		uci set qmodem.pcie0="modem-slot"
 		uci set qmodem.pcie0.slot="0000:01:00.0"
@@ -23,6 +24,7 @@ modem_settings()
 		uci set qmodem.pcie0.net_led="ipq::led9"
 		uci set qmodem.pcie0.sim_led="ipq::led2"
 		uci set	qmodem.pcie0.associated_usb='4-1'
+		uci set qmodem.pcie0.alias="wwan1"
 		uci commit qmodem
 		;;
 	HC,HC-G80)
