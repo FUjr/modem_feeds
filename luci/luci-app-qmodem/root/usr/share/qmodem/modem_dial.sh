@@ -656,7 +656,7 @@ qmi_dial()
 		cmd_line="${cmd_line} -i ${qmi_if}"
 	fi
     if [ -e "/usr/bin/quectel-CM-M" ];then
-        [ -n "$metric" ] && cmd_line="$cmd_line -M $metric"
+        [ -n "$metric" ] && cmd_line="$cmd_line -d -M $metric"
     else
         [ -n "$metric" ] && cmd_line="$cmd_line -d"
     fi
