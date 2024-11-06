@@ -1,8 +1,8 @@
 TARGET = tom_modem
 
-CFLAGS = -Wall  -Ipdu_lib
+CFLAGS ?= -Wall  -Iextlib
 
-SRCS = main.c utils.c pdu_lib/pdu.c pdu_lib/ucs2_to_utf8.c
+SRCS = main.c utils.c extlib/pdu.c extlib/ucs2_to_utf8.c
 
 OBJS = $(SRCS:.c=.o)
 
@@ -19,6 +19,8 @@ clean:
 .PHONY:clean
 clean:
 	rm -rf *.o *.*~ *~ *.swap $(all)
+	rm -rf $(TARGET)
+	rm -rf extlib/*.o
 depend:
 	$(CC) $(CFLAGS) -MM $(SRCS) > .depend
 

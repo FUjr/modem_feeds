@@ -1,27 +1,8 @@
-#include "modem_types.h"
+
 #include "main.h"
-#include "utils.h"
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <termios.h>
-#include <signal.h>
-#include <sys/select.h>
-#include <errno.h>
 
-FILE *fdi;             // file descriptor for input
-FILE *fdo;             // file descriptor for output
-int tty_fd;            // file descriptor for tty device
-
+FDS_T s_fds;
 PROFILE_T s_profile;   // global profile     
-char *self_name; // program name
-void _timeout(int signo)
-{
-    err_msg("Exit with Signal %d", signo);
-    kill(getpid(), SIGINT);
-}
 
 int parse_user_input(int argc, char *argv[], PROFILE_T *profile)
 {
@@ -34,8 +15,8 @@ int parse_user_input(int argc, char *argv[], PROFILE_T *profile)
         option = match_option(argv[opt]);
         if (option == -1)
         {
-            usage();
-            return -1;
+            usage(argv[0]);
+            return INVALID_PARAM;
         }
         opt++;
         switch (option)
@@ -43,72 +24,72 @@ int parse_user_input(int argc, char *argv[], PROFILE_T *profile)
         case AT_CMD:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->at_cmd = argv[opt++];
             break;
         case TTY_DEV:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->tty_dev = argv[opt++];
             break;
         case BAUD_RATE:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->baud_rate = atoi(argv[opt++]);
             break;
         case DATA_BITS:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->data_bits = atoi(argv[opt++]);
             break;
         case PARITY:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->parity = argv[opt++];
             break;
         case STOP_BITS:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->stop_bits = atoi(argv[opt++]);
             break;
         case FLOW_CONTROL:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->flow_control = argv[opt++];
             break;
         case TIMEOUT:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->timeout = atoi(argv[opt++]);
             break;
         case OPERATION:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->op = match_operation(argv[opt++]);
             break;
@@ -118,16 +99,16 @@ int parse_user_input(int argc, char *argv[], PROFILE_T *profile)
         case SMS_PDU:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->sms_pdu = argv[opt++];
             break;
         case SMS_INDEX:
             if (!has_more_argv())
             {
-                usage();
-                return -1;
+                usage(argv[0]);
+                return INVALID_PARAM;
             }
             profile->sms_index = atoi(argv[opt++]);
             break;
@@ -153,53 +134,57 @@ int parse_user_input(int argc, char *argv[], PROFILE_T *profile)
     {
         profile->op = AT_OP;
     }
-  
+    return SUCCESS;
 }
-
-int run_op(PROFILE_T *profile)
+int run_op(PROFILE_T *profile,FDS_T *fds)
 {
     switch (profile->op)
     {
     case AT_OP:
-        at(profile);
-        break;
+        return at(profile,fds);
     case SMS_READ_OP:
-        sms_read(profile);
-        break;
+        return sms_read(profile,fds);
     case SMS_SEND_OP:
-        sms_send(profile);
-        break;
+        return sms_send(profile,fds);
     case SMS_DELETE_OP:
-        sms_delete(profile);
-        break;
+        return sms_delete(profile,fds);
     default:
         err_msg("Invalid operation");
-        break;
     }
+    return UNKNOWN_ERROR;
+}
+static void clean_up()
+{
+    if (tcsetattr(s_fds.tty_fd, TCSANOW, &s_fds.old_termios) != 0)
+    {
+        err_msg("Error restoring old tty attributes");
+        return;
+    }
+    dbg_msg("Clean up success");
+    tcflush(s_fds.tty_fd, TCIOFLUSH);
+    if (s_fds.tty_fd >= 0)
+        close(s_fds.tty_fd);
 }
 
 int main(int argc, char *argv[])
 {
-    int ret;
-    // init
-    self_name = argv[0];
     PROFILE_T *profile = &s_profile;
+    FDS_T *fds = &s_fds;
     parse_user_input(argc, argv, profile);
     dump_profile();
-    signal(SIGALRM, _timeout);
-
     // try open tty devices
-    if (open_tty_device(profile))
+    if (tty_open_device(profile,fds))
     {
         err_msg("Failed to open tty device");
-        return -1;
+        return COMM_ERROR;
     }
-    if (run_op(profile))
+    atexit(clean_up);
+    if (run_op(profile,fds))
     {
         err_msg("Failed to run operation %d", profile->op);
-        return -1;
+        kill(getpid(), SIGINT); 
     }
     
     dbg_msg("Exit");
-    return 0;
+    return SUCCESS;
 }

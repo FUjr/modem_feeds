@@ -2,8 +2,8 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:= tom_modem
-PKG_RELEASE:=beta-1
-PKG_VERSION:=0.9.1
+PKG_RELEASE:=beta-2
+PKG_VERSION:=0.9.2
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -11,6 +11,12 @@ define Package/$(PKG_NAME)
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=Fujr Modem Communite Tool
+endef
+
+define Package/$(PKG_NAME)/config
+	config PACKAGE_$(PKG_NAME)_EARLY_RETURN
+		bool "Early return"
+		default y
 endef
 
 define Package/$(PKG_NAME)/description
@@ -23,6 +29,9 @@ define Build/Prepare
 endef
 
 define Build/Compile
+	ifdef CONFIG_PACKAGE_$(PKG_NAME)_EARLY_RETURN
+		TARGET_CFLAGS+=-DEARLY_RETURN
+	else
 	$(MAKE) -C $(PKG_BUILD_DIR) \
 		$(TARGET_CONFIGURE_OPTS) CFLAGS="$(TARGET_CFLAGS)"
 endef

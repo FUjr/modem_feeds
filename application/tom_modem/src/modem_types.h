@@ -1,7 +1,9 @@
 
 #ifndef _MODEM_TYPES_H_
 #define _MODEM_TYPES_H_
-
+#include <stdio.h>
+#include <termios.h>
+#include <time.h>
 //options
 #define AT_CMD_S 'c'
 #define TTY_DEV_S 'd'
@@ -80,18 +82,35 @@ typedef struct _PROFILE {
     int sms_index;
 } PROFILE_T;
 
+
+typedef struct _FDS {
+    int tty_fd;
+    struct termios old_termios;
+    FILE *fdi;
+    FILE *fdo;
+} FDS_T;
+
 typedef struct _SMS {
     int sms_index;
     int sms_lenght;
     int ref_number;
     int segment_number;
-    int timestamp;
+    time_t timestamp;
     int total_segments;
     int type;
     char *sender;
     char *sms_text;
     char *sms_pdu;
 } SMS_T;
+
+enum ERROR_CODES {
+    COMM_ERROR = -1,
+    SUCCESS = 0,
+    KEYWORD_NOT_MATCH,
+    TIMEOUT_WAITING_NEWLINE,
+    INVALID_PARAM,
+    UNKNOWN_ERROR,
+};
 
 enum SMS_CHARSET {
     SMS_CHARSET_7BIT,
@@ -121,5 +140,5 @@ enum OPERATIONS {
     SMS_DELETE_OP
 };
 
-
+char *self_name; // program name
 #endif

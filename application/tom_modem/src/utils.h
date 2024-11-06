@@ -1,17 +1,20 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdlib.h>
+#include <termios.h>
+#include <signal.h>
+#include <sys/select.h>
+#include <errno.h>
 #include "modem_types.h"
-#include "main.h"
+#include "extlib/pdu.h"
+#include "time.h"
 
 extern PROFILE_T s_profile;
-extern FILE *fdi;             // file descriptor for input
-extern FILE *fdo;             // file descriptor for output
-extern int tty_fd;            // file descriptor for tty device
-extern struct termios oldtio; // old tty setting
-
-
+extern FDS_T s_fds;
 
 #define dbg_msg(fmt, args...) do { \
     if (s_profile.debug) { \
@@ -51,9 +54,17 @@ int match_option(char *option_name);
 
 int match_operation(char *operation_name);
 
-int open_tty_device(PROFILE_T *profile);
 
-static int set_tty_device(PROFILE_T *profile);
+int decode_pdu(SMS_T *sms);
 
-static void clean_up();
+
+int tty_read_keyword(FILE *fdi, char *output, int len, char *key_word, int soft_timeout);
+
+int tty_read(FILE *fdi, char *output, int len, int soft_timeout);
+
+int dump_sms(SMS_T *sms);
+
+int destroy_sms(SMS_T *sms);
+
+int display_sms_in_json(SMS_T **sms,int num);
 #endif
