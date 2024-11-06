@@ -2,7 +2,7 @@ TARGET = tom_modem
 
 CFLAGS ?= -Wall  -Iextlib
 
-SRCS = main.c utils.c extlib/pdu.c extlib/ucs2_to_utf8.c
+SRCS = main.c utils.c operations.c ttydevice.c extlib/pdu.c extlib/ucs2_to_utf8.c
 
 OBJS = $(SRCS:.c=.o)
 

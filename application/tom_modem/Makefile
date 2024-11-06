@@ -28,10 +28,9 @@ define Build/Prepare
 	$(CP) src/* $(PKG_BUILD_DIR)/
 endef
 
+
 define Build/Compile
-	ifdef CONFIG_PACKAGE_$(PKG_NAME)_EARLY_RETURN
-		TARGET_CFLAGS+=-DEARLY_RETURN
-	else
+	
 	$(MAKE) -C $(PKG_BUILD_DIR) \
 		$(TARGET_CONFIGURE_OPTS) CFLAGS="$(TARGET_CFLAGS)"
 endef
