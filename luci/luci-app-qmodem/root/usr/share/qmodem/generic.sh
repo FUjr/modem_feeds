@@ -242,6 +242,7 @@ get_connect_status()
     at_cmd="AT+CGACT?"
     expect="+CGACT:"
     result=`at  $at_port $at_cmd | grep $expect|tr '\r' '\n'`
+    connect_status="No"
     for pdp_index in `echo  "$result" | tr -d "\r" | awk -F'[,:]' '$3 == 1 {print $2}'`; do
         at_cmd="AT+CGPADDR=%s"
         at_cmd=$(printf "$at_cmd" "$pdp_index")
