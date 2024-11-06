@@ -223,7 +223,7 @@ validate_at_port()
         [ ! -e "$dev_path" ] && continue
         res=$(fastat $dev_path "ATI")
         [ -z "$res" ] && continue
-        [ "$res" == *"No"* ] && [ "$res" == *"failed"* ] && continue #for sms_tools No response from modem
+        [[ "$res" != *"OK"* ]] && continue
         valid_at_port="$at_port"
         [ -z "$valid_at_ports" ] && valid_at_ports="$valid_at_port" || valid_at_ports="$valid_at_ports $valid_at_port"
     done
