@@ -238,11 +238,16 @@ get_rat()
 #return raw data
 get_connect_status()
 {
-    at_cmd="AT+CGPADDR=1"
-    [ "$define_connect" == "3" ] && at_cmd="AT+CGPADDR=3"
-    expect="+CGPADDR:"
-    result=$(at  $at_port $at_cmd | grep $expect)
-    if [ -n "$result" ];then
+    #get active pdp context
+    at_cmd="AT+CGACT?"
+    expect="+CGACT:"
+    result=`at  $at_port $at_cmd | grep $expect|tr '\r' '\n'`
+    for pdp_index in `echo  "$result" | tr -d "\r" | awk -F'[,:]' '$3 == 1 {print $2}'`; do
+        at_cmd="AT+CGPADDR=%s"
+        at_cmd=$(printf "$at_cmd" "$pdp_index")
+        expect="+CGPADDR:"
+        result=$(at  $at_port $at_cmd | grep $expect)
+        if [ -n "$result" ];then
             ipv6=$(echo $result | grep -oE "\b([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b")
             ipv4=$(echo $result | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
             disallow_ipv4="0.0.0.0"
@@ -250,13 +255,19 @@ get_connect_status()
             if [ "$ipv4" == "$disallow_ipv4" ];then
                 ipv4=""
             fi
-    fi
-    if [ -n "$ipv4" ] || [ -n "$ipv6" ];then
-        connect_status="Yes"
-    else
-        connect_status="No"
-    fi
-    add_plain_info_entry "connect_status" "$connect_status" "Connect Status"
+        fi
+        if [ -n "$ipv4" ] || [ -n "$ipv6" ];then
+            connect_status="Yes"
+            return_flag=1
+        else
+            connect_status="No"
+        fi
+        add_plain_info_entry "connect_status" "$connect_status" "Connect Status"
+        if [ "$return_flag" -eq 1 ];then
+            return
+        fi
+    done
+    
 }
 
 #获取移远模组信息
