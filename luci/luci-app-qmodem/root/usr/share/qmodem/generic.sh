@@ -258,16 +258,12 @@ get_connect_status()
         fi
         if [ -n "$ipv4" ] || [ -n "$ipv6" ];then
             connect_status="Yes"
-            return_flag=1
+            break
         else
             connect_status="No"
         fi
-        add_plain_info_entry "connect_status" "$connect_status" "Connect Status"
-        if [ "$return_flag" -eq 1 ];then
-            return
-        fi
     done
-    
+    add_plain_info_entry "connect_status" "$connect_status" "Connect Status"
 }
 
 #获取移远模组信息
