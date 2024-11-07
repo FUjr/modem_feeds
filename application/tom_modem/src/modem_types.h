@@ -140,5 +140,4 @@ enum OPERATIONS {
     SMS_DELETE_OP
 };
 
-char *self_name; // program name
 #endif
