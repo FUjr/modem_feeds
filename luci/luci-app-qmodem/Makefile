@@ -46,7 +46,7 @@ define Package/luci-app-qmodem/config
 
 	config PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
 		bool "Using Tom customized Quectel CM"
-		default n
+		default y
 
 	config PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G
 		bool "Using QWRT quectel-CM-5G"
