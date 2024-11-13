@@ -832,6 +832,40 @@
 		
 	}
 
+	
+	class RebootModem extends ModemConfig {
+		constructor(cfg_id){
+			super(cfg_id,"<%:Reboot Modem%>");
+			this.config_name = "reboot_caps";
+			this.get_action = "get_reboot_caps";
+			this.set_action = "do_reboot";
+			this.get_config();
+			
+		}
+
+		cb_get(){
+			this.render();
+		}
+
+		render(){
+			var soft_reboot_caps = this.config.soft_reboot_caps;
+			var hard_reboot_caps = this.config.hard_reboot_caps;
+			if (soft_reboot_caps) {
+				this.soft_reboot_btn = this.createBTN("<%:Soft Reboot%>",() => {
+					this.set_config('{"mothod":"soft"}');
+				});
+				this.fieldset.appendChild(this.soft_reboot_btn);
+			}
+			if (hard_reboot_caps) {
+				this.hard_reboot_btn = this.createBTN("<%:Hard Reboot%>",() => {
+					this.set_config('{"method":"hard"}');
+				});
+				this.fieldset.appendChild(this.hard_reboot_btn);
+			}
+		}
+	}
+	
+
 	class Select_Modem {
 		constructor(){
 			this.modem_selector = document.getElementById('modem_selector');
@@ -902,7 +936,8 @@
 				"RatPrefer": {"class": RatPrefer, "name":"<%:Rat Prefer%>"},
 				"IMEI": {"class": IMEI, "name": "<%:Set IMEI%>"},
 				"NeighborCell": {"class": NeighborCell, "name": "<%:Neighbor Cell%>"},
-				"LockBand": {"class": Lockband, "name":"<%:Lock Band%>"}
+				"LockBand": {"class": Lockband, "name":"<%:Lock Band%>"},
+				"RebootModem": {"class": RebootModem, "name":"<%:Reboot Modem%>"}
 			}
 		constructor(){
 			super();

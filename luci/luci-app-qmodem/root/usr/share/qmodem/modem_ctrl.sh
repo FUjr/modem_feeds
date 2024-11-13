@@ -7,6 +7,8 @@ sms_at_port=$(uci get qmodem.$config_section.sms_at_port)
 vendor=$(uci get qmodem.$config_section.manufacturer)
 platform=$(uci get qmodem.$config_section.platform)
 define_connect=$(uci get qmodem.$config_section.define_connect)
+modem_path=$(uci get qmodem.$config_section.path)
+modem_slot=$(basename $modem_path)
 [ -z "$define_connect" ] && {
     define_connect="1"
 }
@@ -128,6 +130,22 @@ case $method in
     "get_sms")
         get_sms 10 /tmp/cache_sms_$2
         exit
+        ;;
+    "get_reboot_caps")
+        get_reboot_caps
+        exit
+        ;;
+    "do_reboot")
+        reboot_method=$(echo $3 |jq -r '.method')
+        echo $3 > /tmp/555/reboot
+        case $reboot_method in
+            "hard")
+                hard_reboot
+                ;;
+            "soft")
+                soft_reboot
+                ;;
+        esac
         ;;
     "send_sms")
         cmd_json=$3

@@ -56,5 +56,13 @@ for line in usb_slots:lines() do
     end
     
 end
+
+pwr_gpio = s:option(Value, "gpio", translate("Power GPIO"))
+pwr_gpio.rmempty = true
+
+gpio_down = s:option(Value,"gpio_down",translate("GPIO Down Value"))
+
+
+gpio_up = s:option(Value,"gpio_up",translate("GPIO Up Value"))
 usb_slots:close()
 return m

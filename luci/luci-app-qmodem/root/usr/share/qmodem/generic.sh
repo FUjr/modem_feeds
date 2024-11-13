@@ -295,3 +295,51 @@ get_info()
     return
 
 }
+
+soft_reboot()
+{
+    at_command="AT+CFUN=1,1"
+    echo "at $at_port $at_command" > /tmp/555/value
+}
+
+hard_reboot()
+{
+    #get power_gpio_pin
+    source /lib/functions.sh
+    config_load qmodem
+    config_foreach get_gpio_by_slot modem-slot
+    gpio="/sys/class/gpio/$gpio/value"
+    [ ! -f "$gpio" ] || [ -z "$gpio_up" ] || [ -z "$gpio_down" ] && {
+        soft_reboot
+        m_debug "gpio not found, failback to soft reboot"
+        return
+    }
+    echo $gpio_down > $gpio
+    sleep 1
+    echo $gpio_up > $gpio
+    
+}
+
+get_gpio_by_slot()
+{
+    local cfg="$1"
+    config_get slot "$cfg" slot
+    if [ "$modem_slot" = "$slot" ];then
+        config_get gpio "$cfg" gpio
+        config_get gpio_up "$cfg" gpio_up
+        config_get gpio_down "$cfg" gpio_down
+    fi
+}
+
+get_reboot_caps()
+{
+    source /lib/functions.sh
+    config_load qmodem
+    config_foreach get_gpio_by_slot modem-slot
+    json_init
+    json_add_object "reboot_caps"
+    json_add_int "soft_reboot_caps" "1"
+    [ -n "$gpio" ] && [ -n "$gpio_up" ] && [ -n "$gpio_down" ] && json_add_int "hard_reboot_caps" "1"
+    json_close_object
+    json_dump
+}
