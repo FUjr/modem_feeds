@@ -109,7 +109,7 @@ scan_pcie()
         for netdev in $pcie_netdev; do
             netdev_path=$(readlink -f "/sys/class/net/$netdev/device/")
             [ -z "$netdev_path" ] && continue
-            [ -z "$(echo $netdev_path | grep pcie)" ] && continue
+            [ -z "$(echo $netdev_path | grep pci)" ] && continue
             pcie_slot=$(basename $(dirname $netdev_path))
             [ "$pcie_slot" == "net" ] && continue
             m_debug "netdev_path: $netdev_path pcie slot: $pcie_slot"
