@@ -10,18 +10,18 @@ modem_settings()
 
 	case $board in
 	HC,HC-G80)
-		add_ipv4_config "1_1_1"
-		add_ipv4_config "1_1_4"
-		add_ipv4_config "2_1"
+		add_ipv4_config "1_1_1" 2 1
+		add_ipv4_config "1_1_4" 2 1
+		add_ipv4_config "2_1" 1 1
 		uci commit qmodem_mwan
 		;;
 	huasifei,ws3006)
-		add_ipv4_config "5g0"
-		add_ipv4_config "5g1"
-		add_ipv4_config "4g0"
-		add_ipv4_config "4g1"
-		add_ipv4_config "4g2"
-		add_ipv4_config "4g3"
+		add_ipv4_config "5g0"  1 230
+		add_ipv4_config "5g1" 1 230
+		add_ipv4_config "4g0" 20 1
+		add_ipv4_config "4g1" 20 1
+		add_ipv4_config "4g2" 20 1
+		add_ipv4_config "4g3" 20 1
 		uci commit qmodem_mwan
 		;;
 	
@@ -34,8 +34,8 @@ add_ipv4_config(){
 	cfg=$(uci add qmodem_mwan ipv4)
 uci batch<<-EOF >/dev/null
 set qmodem_mwan.$cfg.member_interface=$interface_name
-set qmodem_mwan.$cfg.member_priority=2
-set qmodem_mwan.$cfg.member_weight=1
+set qmodem_mwan.$cfg.member_priority=$2
+set qmodem_mwan.$cfg.member_weight=$3
 add_list qmodem_mwan.$cfg.member_track_ip='test.ustc.edu.cn'
 add_list qmodem_mwan.$cfg.member_track_ip='cip.cc'
 add_list qmodem_mwan.$cfg.member_track_ip='208.67.220.220'
