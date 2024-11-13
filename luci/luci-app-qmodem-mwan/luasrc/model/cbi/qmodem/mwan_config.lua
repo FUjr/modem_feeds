@@ -37,7 +37,7 @@ o = s:option(DynamicList, 'member_track_ip', translate('Track IP'))
 o.datatype = 'host'
 member_priority = s:option(Value, "member_priority", translate("Priority"))
 member_priority.rmempty = true
-member_priority.datatype = "uinteger"
+member_priority.datatype = "range(1, 255)"
 member_priority.default = 1
 member_priority.description = translate("Set the priority for the load balancing member. A higher priority value gives precedence to this member when distributing traffic. The range is from 1 to 255. 1 is the highest priority")
 
@@ -45,7 +45,7 @@ member_priority.description = translate("Set the priority for the load balancing
 
 member_weight = s:option(Value, "member_weight", translate("Weight"))
 member_weight.rmempty = true
-member_weight.datatype = "uinteger"
+member_weight.datatype = "range(1, 255)"
 member_weight.default = 1
 member_weight.description = translate("Set the weight for the load balancing member. A higher weight means more traffic will be assigned to this member. The default value is 1, with a range from 1 to 255.")
 -- member_weight:depends("member_interface", "")
