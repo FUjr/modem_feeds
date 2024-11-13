@@ -866,6 +866,121 @@
 		
 	}
 	
+	class AtDebug extends ModemConfig {
+		constructor(cfg_id){
+			super(cfg_id,"<%:AT Debug%>");
+			this.config_name = "at_cfg";
+			this.get_action = "get_at_cfg";
+			this.set_action = "send_at";
+			this.at_port=null;
+			this.last_choice_cmd = null;
+			this.get_config();
+			this.render();
+		}
+
+		render(){
+			this.at_input = this.createInput("at",this.config);
+			this.textarea = document.createElement('textarea');
+			this.textarea.style.width = "100%";
+			this.textarea.style.height = "600px";
+			this.textarea.readOnly = true;
+			this.at_btn = this.createBTN("<%:Submit%>",() => {
+				let payload = {
+					"at": this.at_input.value,
+					"port": this.at_port
+				}
+				this.set_config(JSON.stringify(payload));
+				//append input to textarea
+				this.textarea.value += "INPUT>> " + this.at_input.value + "\n";
+			});
+			this.at_port_selector = this.createDroplist();
+			this.cmd_prompt = this.createDroplist();
+			this.fieldset.appendChild(this.at_port_selector);
+			this.fieldset.appendChild(this.cmd_prompt);
+			this.fieldset.appendChild(this.at_input);
+			this.fieldset.appendChild(this.at_btn);
+			this.fieldset.appendChild(this.textarea);
+			this.at_port_selector.addEventListener('change',(event) => {
+				this.at_port = event.target.value;
+			});
+			this.cmd_prompt.addEventListener('change',(event) => {
+				this.at_input.value = event.target.value;
+			});
+		}
+
+		cb_get(){
+			//clear ports
+			while (this.at_port_selector.firstChild) {
+				this.at_port_selector.removeChild(this.at_port_selector.firstChild);
+			}
+			var ports=this.config.ports;
+			var valid_ports=this.config.valid_ports;
+			var using_port=this.config.using_port;
+			var cmds = this.config.cmds;
+			for (let port of ports) {
+				let select;
+				let displayport = port;
+				if (valid_ports.includes(port) == false) {
+					displayport += "<%:(invalid)%>";
+				}
+				else{
+					displayport += "<%:(valid)%>";
+				}
+				if (port == using_port) {
+					displayport += "<%:(using)%>";
+					select = true;
+				}
+				
+				var option = document.createElement('option');
+				option.value = port;
+				option.innerHTML = displayport;
+				if (select) {
+					option.selected = true;
+					this.at_port = port;
+				}
+				this.at_port_selector.appendChild(option);
+			}
+			//clear cmds
+			while (this.cmd_prompt.firstChild) {
+				this.cmd_prompt.removeChild(this.cmd_prompt.firstChild);
+			}
+			for (let cmd of cmds) {
+				let select;
+				let name = cmd.name;
+				let value = cmd.value;
+				if (this.last_choice_cmd == cmd.value) {
+					select = true;
+				}
+				
+				if (this.last_choice_cmd == null) {
+					select = true;
+				}
+				
+				var option = document.createElement('option');
+				option.value = value;
+				option.innerHTML = name;
+				if (select) {
+					option.selected = true;
+					this.last_choice_cmd = value;
+					this.at_input.value = value;
+				}
+				this.cmd_prompt.appendChild(option);
+			}
+			
+		}
+
+		cb_set(){
+			//append response to textarea
+			this.textarea.value += this.config.res + "<<END\n";
+
+		}
+
+		update(){
+			this.get_config();
+		}
+		
+	}
+	
 	class Select_Modem {
 		constructor(){
 			this.modem_selector = document.getElementById('modem_selector');
@@ -934,7 +1049,8 @@
 				"IMEI": {"class": IMEI, "name": "<%:Set IMEI%>"},
 				"NeighborCell": {"class": NeighborCell, "name": "<%:Neighbor Cell%>"},
 				"LockBand": {"class": Lockband, "name":"<%:Lock Band%>"},
-				"RebootModem": {"class": RebootModem, "name":"<%:Reboot Modem%>"}
+				"RebootModem": {"class": RebootModem, "name":"<%:Reboot Modem%>"},
+				"AtDebug": {"class": AtDebug, "name":"<%:AT Debug%>"}
 			}
 		constructor(){
 			super();

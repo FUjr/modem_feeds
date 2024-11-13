@@ -504,3 +504,15 @@ msgstr "GPIO 开启值"
 
 msgid "Default Metric"
 msgstr "默认跃点"
+
+msgid "AT Debug"
+msgstr "AT 调试"
+
+msgid "(using)"
+msgstr "(使用中)"
+
+msgid "valid"
+msgstr "有效"
+
+msgid "invalid"
+msgstr "无效"

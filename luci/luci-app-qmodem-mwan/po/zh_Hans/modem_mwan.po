@@ -24,7 +24,7 @@ msgid "Weight"
 msgstr "成员权重"
 
 msgid "Mwan Config"
-msgstr "mwan配置"
+msgstr "多WAN配置"
 
 msgid "IPV4 Config"
 msgstr "IPV4配置"

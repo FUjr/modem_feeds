@@ -62,12 +62,54 @@ get_sms(){
     fi
 }
 
+get_at_cfg(){
+    json_add_object at_cfg
+    json_add_array ports
+    ports=$(uci get qmodem.$config_section.ports)
+    for port in $ports; do
+        json_add_string "" "$port"
+    done
+    json_close_array
+    json_add_array valid_ports
+    v_ports=$(uci get qmodem.$config_section.valid_at_ports)
+    for port in $v_ports; do
+        json_add_string "" "$port"
+    done
+    json_close_array
+    json_add_string using_port $(uci get qmodem.$config_section.at_port)
+    json_add_array cmds
+    general_cmd=$(jq -rc '.general[]|to_entries' /usr/share/qmodem/at_commands.json)
+    
+    platform_cmd=$(jq -rc ".${vendor}.${platform}[]|to_entries" /usr/share/qmodem/at_commands.json)
+    
+    [ -z "$platform_cmd" ] && platform_cmd=$(jq -rc ".$vendor.general[]|to_entries" /usr/share/qmodem/at_commands.json)
+    cmds=$(echo -e "$general_cmd\n$platform_cmd")
+    IFS=$'\n'
+    for cmd in $cmds; do
+        json_add_object cmd
+        cmd_name="$(echo $cmd | jq -r '.[0].key')"
+        cmd_value="$(echo $cmd | jq -r '.[0].value')"
+        json_add_string "name" "$cmd_name"
+        json_add_string "value" "$cmd_value"
+        json_close_object
+    done
+    json_close_array  
+    json_close_object  
+    json_dump
+    unset IFS
+}
+
 
 #会初始化一个json对象 命令执行结果会保存在json对象中
 json_init
 json_add_object result
 json_close_object
 case $method in
+    "get_at_cfg")
+        get_at_cfg
+        exit
+        ;;
+
     "clear_dial_log")
         json_select result
         log_file="/var/run/qmodem/${config_section}_dir/dial_log"
@@ -103,6 +145,19 @@ case $method in
         ;;
     "get_neighborcell")
         get_neighborcell
+        ;;
+    "send_at")
+        cmd=$(echo "$3" | jq -r '.at')
+        port=$(echo "$3" | jq -r '.port')
+        res=$(at $port $cmd)
+        json_add_object at_cfg
+        if [ "$?" == 0 ]; then
+            json_add_string status "1"
+            json_add_string cmd "at $port $cmd"
+            json_add_string "res" "$res"
+        else
+            json_add_string status "0"
+        fi
         ;;
     "set_neighborcell")
         set_neighborcell $3
