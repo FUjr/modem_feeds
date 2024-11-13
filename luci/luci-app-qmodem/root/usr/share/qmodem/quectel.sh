@@ -305,10 +305,13 @@ get_temperature()
     local line=1
     QTEMP=$(at ${at_port} ${at_command} | grep "+QTEMP:")
     for line in $( echo -e "$QTEMP" ); do
-        temp=$(echo $line | grep -o "[0-9]\{1,3\}")
-        if [ -n "$temp" ]; then
-            break
-        fi
+        templine=$(echo $line | grep -o "[0-9]\{1,3\}")
+        for tmp in $(echo $templine); do
+            [ "$tmp" -gt 0 ] && [ "$tmp" -lt 255 ] && temp=$tmp
+            if [ -n "$temp" ]; then
+                break
+            fi
+        done
     done
 	if [ -n "$temp" ]; then
 		temp="${temp}$(printf "\xc2\xb0")C"
