@@ -299,7 +299,7 @@ get_info()
 soft_reboot()
 {
     at_command="AT+CFUN=1,1"
-    echo "at $at_port $at_command" > /tmp/555/value
+    at $at_port $at_command
 }
 
 hard_reboot()
