@@ -1589,9 +1589,9 @@ cell_info()
         add_plain_info_entry "ARFCN" "$nr_arfcn" "Absolute Radio-Frequency Channel Number"
         add_plain_info_entry "Band" "$nr_band" "Band"
         add_plain_info_entry "DL Bandwidth" "$nr_dl_bandwidth" "DL Bandwidth"
-        add_bar_info_entry "RSRP" "$nr_rsrp" "Reference Signal Received Power" -187 -29 Dbm
-        add_bar_info_entry "RSRQ" "$nr_rsrq" "Reference Signal Received Quality" -43 20 Dbm
-        add_bar_info_entry "SINR" "$nr_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 DB
+        add_bar_info_entry "RSRP" "$nr_rsrp" "Reference Signal Received Power" -187 -29 dBm
+        add_bar_info_entry "RSRQ" "$nr_rsrq" "Reference Signal Received Quality" -43 20 dBm
+        add_bar_info_entry "SINR" "$nr_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 dB
         add_plain_info_entry "RxLev" "$nr_rxlev" "Received Signal Level"
         add_plain_info_entry "SCS" "$nr_scs" "SCS"
         add_plain_info_entry "Srxlev" "$nr_srxlev" "Serving Cell Receive Level"
@@ -1610,10 +1610,10 @@ cell_info()
         add_plain_info_entry "UL Bandwidth" "$endc_lte_ul_bandwidth" "UL Bandwidth"
         add_plain_info_entry "DL Bandwidth" "$endc_lte_dl_bandwidth" "DL Bandwidth"
         add_plain_info_entry "TAC" "$endc_lte_tac" "Tracking area code of cell servedby neighbor Enb"
-        add_bar_info_entry "RSRP" "$endc_lte_rsrp" "Reference Signal Received Power" -140 -44 Dbm
-        add_bar_info_entry "RSRQ" "$endc_lte_rsrq" "Reference Signal Received Quality" -20 20 Dbm
-        add_bar_info_entry "RSSI" "$endc_lte_rssi" "Received Signal Strength Indicator" -140 -44 Dbm
-        add_bar_info_entry "SINR" "$endc_lte_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 DB
+        add_bar_info_entry "RSRP" "$endc_lte_rsrp" "Reference Signal Received Power" -140 -44 dBm
+        add_bar_info_entry "RSRQ" "$endc_lte_rsrq" "Reference Signal Received Quality" -20 20 dBm
+        add_bar_info_entry "RSSI" "$endc_lte_rssi" "Received Signal Strength Indicator" -140 -44 dBm
+        add_bar_info_entry "SINR" "$endc_lte_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 dB
         add_plain_info_entry "RxLev" "$endc_lte_rxlev" "Received Signal Level"
         add_plain_info_entry "RSSNR" "$endc_lte_rssnr" "Radio Signal Strength Noise Ratio"
         add_plain_info_entry "CQI" "$endc_lte_cql" "Channel Quality Indicator"
@@ -1626,9 +1626,9 @@ cell_info()
         add_plain_info_entry "ARFCN" "$endc_nr_arfcn" "Absolute Radio-Frequency Channel Number"
         add_plain_info_entry "Band" "$endc_nr_band" "Band"
         add_plain_info_entry "DL Bandwidth" "$endc_nr_dl_bandwidth" "DL Bandwidth"
-        add_bar_info_entry "RSRP" "$endc_nr_rsrp" "Reference Signal Received Power" -187 -29 Dbm
-        add_bar_info_entry "RSRQ" "$endc_nr_rsrq" "Reference Signal Received Quality" -43 20 Dbm
-        add_bar_info_entry "SINR" "$endc_nr_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 DB
+        add_bar_info_entry "RSRP" "$endc_nr_rsrp" "Reference Signal Received Power" -187 -29 dBm
+        add_bar_info_entry "RSRQ" "$endc_nr_rsrq" "Reference Signal Received Quality" -43 20 dBm
+        add_bar_info_entry "SINR" "$endc_nr_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 dB
         add_plain_info_entry "SCS" "$endc_nr_scs" "SCS"
         ;;
     "LTE Mode")
@@ -1643,9 +1643,9 @@ cell_info()
         add_plain_info_entry "UL Bandwidth" "$lte_ul_bandwidth" "UL Bandwidth"
         add_plain_info_entry "DL Bandwidth" "$lte_dl_bandwidth" "DL Bandwidth"
         add_plain_info_entry "TAC" "$lte_tac" "Tracking area code of cell servedby neighbor Enb"
-        add_bar_info_entry "RSRQ" "$lte_rsrq" "Reference Signal Received Quality" -20 20 Dbm 
-        add_bar_info_entry "RSSI" "$lte_rssi" "Received Signal Strength Indicator" -140 -44 Dbm
-        add_bar_info_entry "SINR" "$lte_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 DB
+        add_bar_info_entry "RSRQ" "$lte_rsrq" "Reference Signal Received Quality" -20 20 dBm 
+        add_bar_info_entry "RSSI" "$lte_rssi" "Received Signal Strength Indicator" -140 -44 dBm
+        add_bar_info_entry "SINR" "$lte_sinr" "Signal to Interference plus Noise Ratio Bandwidth" -23 40 dB
         add_plain_info_entry "RxLev" "$lte_rxlev" "Received Signal Level"
         add_plain_info_entry "RSSNR" "$lte_rssnr" "Radio Signal Strength Noise Ratio"
         add_plain_info_entry "CQI" "$lte_cql" "Channel Quality Indicator"
@@ -1662,7 +1662,7 @@ cell_info()
         add_plain_info_entry "PSC" "$wcdma_psc" "Primary Scrambling Code"
         add_plain_info_entry "RAC" "$wcdma_rac" "Routing Area Code"
         add_plain_info_entry "Band" "$wcdma_band" "Band"
-        add_bar_info_entry "RSCP" "$wcdma_rscp" "Received Signal Code Power" -120 -25 Dbm
+        add_bar_info_entry "RSCP" "$wcdma_rscp" "Received Signal Code Power" -120 -25 dBm
         add_plain_info_entry "Ec/Io" "$wcdma_ecio" "Ec/Io"
         add_plain_info_entry "Ec/No" "$wcdma_ecno" "Ec/No"
         add_plain_info_entry "Physical Channel" "$wcdma_phych" "Physical Channel"
