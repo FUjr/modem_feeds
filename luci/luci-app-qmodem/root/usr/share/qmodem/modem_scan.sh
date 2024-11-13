@@ -21,6 +21,13 @@ get_default_alias()
     config_foreach _get_default_alias_by_slot
 }
 
+get_default_metric()
+{
+    target_slot=$1
+    config_load qmodem
+    config_foreach _get_default_metric_by_slot
+}
+
 _get_associated_usb_by_path()
 {
     local cfg="$1"
@@ -39,6 +46,16 @@ _get_default_alias_by_slot()
     config_get _get_slot $cfg slot
     if [ "$target_slot" == "$_get_slot" ];then
         config_get default_alias $cfg  alias
+    fi
+
+}
+
+_get_default_metric_by_slot()
+{
+    local cfg="$1"
+    config_get _get_slot $cfg slot
+    if [ "$target_slot" == "$_get_slot" ];then
+        config_get default_metric $cfg  default_metric
     fi
 
 }
@@ -315,8 +332,10 @@ add()
     else
     #aqcuire lock
         lock /tmp/lock/modem_add
+        unset default_alias
+        unset default_metric
         get_default_alias $slot
-
+        get_default_metric $slot
         modem_count=$(uci get qmodem.main.modem_count)
         [ -z "$modem_count" ] && modem_count=0
         modem_count=$(($modem_count+1))
@@ -327,6 +346,7 @@ add()
         lock -u /tmp/lock/modem_add
     #release lock
         metric=$(($modem_count+10))
+        [ -n "$default_metric" ] && metric=$default_metric
         uci batch << EOF
 set qmodem.$section_name.path="$modem_path"
 set qmodem.$section_name.data_interface="$slot_type"
