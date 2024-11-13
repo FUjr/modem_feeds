@@ -233,6 +233,13 @@
                 "define_connect":"1",
                 "modes":["qmi","gobinet","mbim"]
             },
+            "rm500q-ae":{
+                "manufacturer":"quectel",
+                "platform":"qualcomm",
+                "data_interface":"pcie",
+                "define_connect":"1",
+                "modes":["qmi","gobinet","mbim"]
+            },
             "rg500q-ea":{
                 "manufacturer":"quectel",
                 "platform":"qualcomm",
