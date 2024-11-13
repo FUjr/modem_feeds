@@ -483,3 +483,21 @@ msgstr "设置后，首次加载来此该插槽的模组会自动分配该默认
 
 msgid "Modem"
 msgstr "移动网络"
+
+msgid "Reboot Modem"
+msgstr "重启模组"
+
+msgid "Soft Reboot"
+msgstr "软重启"
+
+msgid "Hard Reboot"
+msgstr "硬重启"
+
+msgid "Power GPIO"
+msgstr "电源 GPIO"
+
+msgid "GPIO Down Value"
+msgstr "GPIO 关闭值"
+
+msgid "GPIO Up Value"
+msgstr "GPIO 开启值"

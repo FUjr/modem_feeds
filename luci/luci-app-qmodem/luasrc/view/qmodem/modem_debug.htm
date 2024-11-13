@@ -832,7 +832,6 @@
 		
 	}
 
-	
 	class RebootModem extends ModemConfig {
 		constructor(cfg_id){
 			super(cfg_id,"<%:Reboot Modem%>");
@@ -840,32 +839,33 @@
 			this.get_action = "get_reboot_caps";
 			this.set_action = "do_reboot";
 			this.get_config();
-			
-		}
-
-		cb_get(){
 			this.render();
 		}
 
+		cb_get(){
+			this.soft_reboot_btn.disabled = !this.config.soft_reboot_caps;
+			this.hard_reboot_btn.disabled = !this.config.hard_reboot_caps;
+		}
+
+
 		render(){
-			var soft_reboot_caps = this.config.soft_reboot_caps;
-			var hard_reboot_caps = this.config.hard_reboot_caps;
-			if (soft_reboot_caps) {
-				this.soft_reboot_btn = this.createBTN("<%:Soft Reboot%>",() => {
+			this.soft_reboot_btn = this.createBTN("<%:Soft Reboot%>",() => {
 					this.set_config('{"mothod":"soft"}');
 				});
-				this.fieldset.appendChild(this.soft_reboot_btn);
+			this.hard_reboot_btn = this.createBTN("<%:Hard Reboot%>",() => {
+				this.set_config('{"method":"hard"}');
+			});
+			this.fieldset.appendChild(this.soft_reboot_btn);
+			this.fieldset.appendChild(document.createElement("br"));
+			this.fieldset.appendChild(this.hard_reboot_btn);
 			}
-			if (hard_reboot_caps) {
-				this.hard_reboot_btn = this.createBTN("<%:Hard Reboot%>",() => {
-					this.set_config('{"method":"hard"}');
-				});
-				this.fieldset.appendChild(this.hard_reboot_btn);
-			}
+		update(){
+			this.get_config();
 		}
+		
+		
 	}
 	
-
 	class Select_Modem {
 		constructor(){
 			this.modem_selector = document.getElementById('modem_selector');
@@ -896,10 +896,7 @@
 					new_cfg_list.push({ "value": value, "name": name });
 				}
 				if (JSON.stringify(new_cfg_list) != JSON.stringify(this.modem_cfg_list)) {
-					console.log(this.modem_cfg_list)
-					console.log(new_cfg_list)
 					this.cfg_options = new_cfg_list;
-					console.log("update_cfg_list")
 				}
 			});
 		}
@@ -951,6 +948,7 @@
 		update_cfg_id(cfg_id){
 			for (let key in this.class_map) {
 				this.class_map[key].cfg_id = cfg_id;
+				this.class_map[key].get_config();
 			}
 			//check if all datatab not selected
 			for (let tab of this.datatabs) {
@@ -982,7 +980,6 @@
 		}
 
 		switch_tab(target){
-			
 			target.className = "cbi-tab";
 			target.style.display = "";
 			var datatab = target.getAttribute("data-tab");
