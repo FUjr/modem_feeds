@@ -501,3 +501,6 @@ msgstr "GPIO 关闭值"
 
 msgid "GPIO Up Value"
 msgstr "GPIO 开启值"
+
+msgid "Default Metric"
+msgstr "默认跃点"

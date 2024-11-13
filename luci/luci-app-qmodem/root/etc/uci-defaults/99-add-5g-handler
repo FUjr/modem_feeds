@@ -60,9 +60,9 @@ modem_settings()
 	add_slot_cfg "4g2" "1-1.4" "usb" "4g2" "green:5g1" "green:5g1" "" "m2_reset_1" "1" "0" "21"
 	#mini pci slot
 	#(slot 2)
-	add_slot_cfg "4g1" "1-1.2" "usb" "4g1" "green:5g2" "green:5g2" "" "m2_reset_2" "1" "0" "22"
+	add_slot_cfg "4g1" "1-1.2" "usb" "4g1" "green:5g2" "green:5g2" "" "" "" "" "22"
 	#(slot 1)
-	add_slot_cfg "4g0" "1-1.3" "usb" "4g0" "green:5g1" "green:5g1" "" "m2_reset_1" "1" "0" "23"
+	add_slot_cfg "4g0" "1-1.3" "usb" "4g0" "green:5g1" "green:5g1" "" "" "" "" "23"
 	uci commit qmodem
 		;;
 	cyber,cyber3588-aib)
