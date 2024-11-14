@@ -78,27 +78,23 @@ get_at_cfg(){
     json_close_array
     json_add_string using_port $(uci get qmodem.$config_section.at_port)
     json_add_array cmds
-    general_cmd=$(jq -rc '.general[]|to_entries' /usr/share/qmodem/at_commands.json)
-    
-    platform_cmd=$(jq -rc ".${vendor}.${platform}[]|to_entries" /usr/share/qmodem/at_commands.json)
-    
-    [ -z "$platform_cmd" ] && platform_cmd=$(jq -rc ".$vendor.general[]|to_entries" /usr/share/qmodem/at_commands.json)
+    general_cmd=$(jq -rc '.general[]|to_entries| .[] | @sh "key=\(.key) value=\(.value)"' /usr/share/qmodem/at_commands.json)
+    platform_cmd=$(jq -rc ".${vendor}.${platform}[]|to_entries| .[] | @sh \"key=\(.key) value=\(.value)\"" /usr/share/qmodem/at_commands.json)
+    [ -z "$platform_cmd" ] && platform_cmd=$(jq -rc ".$vendor.general[]|to_entries| .[] | @sh \"key=\(.key) value=\(.value)\"" /usr/share/qmodem/at_commands.json)
     cmds=$(echo -e "$general_cmd\n$platform_cmd")
     IFS=$'\n'
     for cmd in $cmds; do
         json_add_object cmd
-        cmd_name="$(echo $cmd | jq -r '.[0].key')"
-        cmd_value="$(echo $cmd | jq -r '.[0].value')"
-        json_add_string "name" "$cmd_name"
-        json_add_string "value" "$cmd_value"
+        eval $cmd
+        json_add_string "name" "$key"
+        json_add_string "value" "$value"
         json_close_object
     done
-    json_close_array  
-    json_close_object  
+    json_close_array
+    json_close_object
     json_dump
     unset IFS
 }
-
 
 #会初始化一个json对象 命令执行结果会保存在json对象中
 json_init
