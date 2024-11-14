@@ -516,3 +516,15 @@ msgstr "有效"
 
 msgid "invalid"
 msgstr "无效"
+
+msgid "Send"
+msgstr "发送"
+
+msgid "Clear"
+msgstr "清除"
+
+msgid "Select Port"
+msgstr "选择端口"
+
+msgid "Input AT Command"
+msgstr "输入AT命令"
