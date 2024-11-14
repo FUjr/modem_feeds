@@ -339,7 +339,11 @@ get_reboot_caps()
     json_init
     json_add_object "reboot_caps"
     json_add_int "soft_reboot_caps" "1"
-    [ -n "$gpio" ] && [ -n "$gpio_up" ] && [ -n "$gpio_down" ] && json_add_int "hard_reboot_caps" "1"
+    if [ -n "$gpio" ] && [ -n "$gpio_up" ] && [ -n "$gpio_down" ];then
+         json_add_int "hard_reboot_caps" "1" 
+    else
+        json_add_int "hard_reboot_caps" "0"
+    fi
     json_close_object
     json_dump
 }
