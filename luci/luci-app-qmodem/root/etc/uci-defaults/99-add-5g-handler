@@ -90,7 +90,7 @@ add_usb_slot_cfg()
 	gpio_down=$8
 	default_metric=$9
 	uci set qmodem.${cfg}=modem-slot
-	[ -n "$cfg_type" ] && uci set qmodem.${cfg}.type=usb
+	uci set qmodem.${cfg}.type=usb
 	[ -n "$cfg_slot" ] && uci set qmodem.${cfg}.slot=${cfg_slot}
 	[ -n "$net_led" ] && uci set qmodem.${cfg}.net_led=${net_led}
 	[ -n "$alias" ] && uci set qmodem.${cfg}.alias=${alias}
@@ -116,7 +116,7 @@ add_pcie_slot_cfg()
 	gpio_down=${9}
 	default_metric=${10}
 	uci set qmodem.${cfg}=modem-slot
-	[ -n "$cfg_type" ] && uci set qmodem.${cfg}.type=pcie
+	uci set qmodem.${cfg}.type=pcie
 	[ -n "$cfg_slot" ] && uci set qmodem.${cfg}.slot=${cfg_slot}
 	[ -n "$net_led" ] && uci set qmodem.${cfg}.net_led=${net_led}
 	[ -n "$alias" ] && uci set qmodem.${cfg}.alias=${alias}
