@@ -378,6 +378,7 @@ set_if()
             uci set network.${interface_name}.metric="${metric}"
             uci add_list network.${interface_name}.dns='114.114.114.114'
             uci add_list network.${interface_name}.dns='119.29.29.29'
+            uci add_list network.${interface_name}.dns='8.8.8.8'
             local num=$(uci show firewall | grep "name='wan'" | wc -l)
             local wwan_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface_name}" | wc -l)
             if [ "$wwan_num" = "0" ]; then
@@ -491,9 +492,6 @@ set_if()
         if [ "$env4" -eq 1 ];then
             uci set network.${interface_name}.proto="${proto}"
             uci set network.${interface_name}.metric="${metric}"
-            uci add_list network.${interface_name}.dns='114.114.114.114'
-            uci add_list network.${interface_name}.dns='119.29.29.29'
-            uci add_list network.${interface_name}.dns='8.8.8.8'
         fi
         if [ "$env6" -eq 1 ];then
             uci set network.${interface6_name}.proto="${protov6}"
