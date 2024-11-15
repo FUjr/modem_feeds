@@ -328,6 +328,8 @@ set_if()
     dhcp_reload_flag=0
     network_reload_flag=0
     #check if exist
+    proto="dhcp"
+    protov6="dhcpv6"
     case $manufacturer in
         "quectel")
             case $platform in
@@ -341,11 +343,15 @@ set_if()
                     ;;
             esac
             ;; 
+        "fibocom")
+            case $platform in
+                "mediatek")
+                    proto="static"
+                    protov6="static"
+                    ;;
+                esac
+            ;;
     esac
-    if [ -z "$proto" ];then
-        proto="dhcp"
-        protov6="dhcpv6"
-    fi
     case $pdp_type in
         "ip")
             env4="1"
@@ -379,6 +385,7 @@ set_if()
             fi
             network_reload_flag=1
             firewall_reload_flag=1
+            m_debug "create interface $interface_name with proto $proto and metric $metric"
         fi
     else
         if [ -n "$interface" ];then
@@ -405,6 +412,7 @@ set_if()
             fi
             network_reload_flag=1
             firewall_reload_flag=1
+            m_debug "create interface $interface6_name with proto $protov6 and metric $metric"
         fi
         if [ "$ra_master" = "1" ];then
             uci set dhcp.${interface6_name}='dhcp'
@@ -472,11 +480,25 @@ set_if()
     set_led "net" $modem_config $set_modem_netcard
     origin_netcard=$(uci -q get network.$interface_name.ifname)
     origin_device=$(uci -q get network.$interface_name.device)
-    if [ "$origin_netcard" == "$set_modem_netcard" ] && [ "$origin_device" == "$set_modem_netcard" ];then
+    origin_metric=$(uci -q get network.$interface_name.metric)
+    origin_proto=$(uci -q get network.$interface_name.proto)
+    if [ "$origin_netcard" == "$set_modem_netcard" ] && [ "$origin_device" == "$set_modem_netcard" ] && [ "$origin_metric" == "$metric" ] && [ "$origin_proto" == "$proto" ];then
         m_debug "interface $interface_name already set to $set_modem_netcard"
     else
         uci set network.${interface_name}.ifname="${set_modem_netcard}"
         uci set network.${interface_name}.device="${set_modem_netcard}"
+        uci set network.${interface_name}.modem_config="${modem_config}"
+        if [ "$env4" -eq 1 ];then
+            uci set network.${interface_name}.proto="${proto}"
+            uci set network.${interface_name}.metric="${metric}"
+            uci add_list network.${interface_name}.dns='114.114.114.114'
+            uci add_list network.${interface_name}.dns='119.29.29.29'
+            uci add_list network.${interface_name}.dns='8.8.8.8'
+        fi
+        if [ "$env6" -eq 1 ];then
+            uci set network.${interface6_name}.proto="${protov6}"
+            uci set network.${interface6_name}.metric="${metric}"
+        fi
         uci commit network
         ifup ${interface_name}
         m_debug "set interface $interface_name to $set_modem_netcard"
