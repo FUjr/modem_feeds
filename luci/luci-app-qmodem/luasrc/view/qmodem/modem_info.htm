@@ -10,7 +10,7 @@
 
     
     .cbi-progressbar {
-	border: 1px solid var(--border-color-high,var(--progressbarColor));
+	border: 1px solid var(--border-color-high,var(--progressbarColor,var(--background-color)));
 	border-radius: 3px;
 	position: relative;
 	min-width: 170px;
@@ -20,7 +20,7 @@
     }
 
     .cbi-progressbar > div {
-        background: var(--primary-color-medium,var(--progressbar));
+        background: var(--progressbar, var(--primary, var(--primary-color-medium)));
         height: 100%;
         transition: width .25s ease-in;
         width: 0%;
