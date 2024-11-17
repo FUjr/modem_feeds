@@ -325,6 +325,21 @@
                     "ncm"
                 ]
             },
+            "fm160-na": {
+                "manufacturer_id": "2cb7",
+                "manufacturer": "fibocom",
+                "platform": "qualcomm",
+                "data_interface": "usb",
+                "define_connect": "1",
+                "modes": [
+                    "qmi",
+                    "gobinet",
+                    "ecm",
+                    "mbim",
+                    "rndis",
+                    "ncm"
+                ]
+            },
             "nl678": {
                 "manufacturer_id": "2cb7",
                 "manufacturer": "fibocom",
