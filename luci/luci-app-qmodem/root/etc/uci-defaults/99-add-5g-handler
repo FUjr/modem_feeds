@@ -75,6 +75,10 @@ modem_settings()
 		add_pcie_slot_cfg "5g_pcie0" "0001:11:00.0" "5g_pcie0" "blue:status" "green:status" "8-1" "" "" "" "10"
 		uci commit qmodem
 		;;
+	mt7981,stx1170-gsw)
+		add_usb_slot_cfg "5g_usb0" "2-1" "5g_usb0" "" "" "" "" "" "10"
+		uci commit qmodem
+		;;
 	esac
 }
 
