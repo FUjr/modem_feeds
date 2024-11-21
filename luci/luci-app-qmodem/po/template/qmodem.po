@@ -483,3 +483,60 @@ msgstr ""
 
 msgid "Modem"
 msgstr ""
+
+msgid "Reboot Modem"
+msgstr ""
+
+msgid "Soft Reboot"
+msgstr ""
+
+msgid "Hard Reboot"
+msgstr ""
+
+msgid "Power GPIO"
+msgstr ""
+
+msgid "GPIO Down Value"
+msgstr ""
+
+msgid "GPIO Up Value"
+msgstr ""
+
+msgid "Default Metric"
+msgstr ""
+
+msgid "AT Debug"
+msgstr ""
+
+msgid "(using)"
+msgstr ""
+
+msgid "(valid)"
+msgstr ""
+
+msgid "(invalid)"
+msgstr ""
+
+msgid "(Not belong to this modem)"
+msgstr ""
+
+msgid "Send"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Select Port"
+msgstr ""
+
+msgid "Input AT Command"
+msgstr ""
+
+msgid "AT Command"
+msgstr ""
+
+msgid "Double Click or Right Click to Edit"
+msgstr ""
+
+msgid "Lost focus to save"
+msgstr ""

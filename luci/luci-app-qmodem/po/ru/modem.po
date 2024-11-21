@@ -1,263 +1,542 @@
-msgid "Modem Information"
-msgstr "Информация о модеме"
+#controller/qmodem.lua
+msgid "QModem"
+msgstr ""
+
+msgid "QModem Information"
+msgstr ""
 
 msgid "Dial Overview"
-msgstr "Обзор набора"
+msgstr ""
 
-msgid "Modem Debug"
-msgstr "Отладка модема"
+msgid "Advance Modem Settings"
+msgstr ""
 
+msgid "QModem Setting"
+msgstr ""
 
-msgid "Mwan Config"
-msgstr "Настройка Mwan"
+# model/cbi/dial_config.lua
+msgid "Modem Configuration"
+msgstr ""
 
-msgid "TTL Config"
-msgstr "Настройка TTL"
+msgid "General Settings"
+msgstr ""
 
-msgid "Plugin Config"
-msgstr "Настройка плагина"
+msgid "Advanced Settings"
+msgstr ""
 
-msgid "Modem Name"
-msgstr "Название модема"
+msgid "Enable Dial"
+msgstr ""
 
-
-msgid "Base Information"
-msgstr "Основная информация"
-
-msgid "Производитель"
-msgstr "Производитель"
-
-
-msgid "Ревизия"
-msgstr "Ревизия"
-
+msgid "Modem Alias"
+msgstr ""
 
 msgid "AT Port"
-msgstr "AT Порт"
+msgstr ""
+
+msgid "SMS AT Port"
+msgstr ""
+
+msgid "RA Master"
+msgstr ""
+
+msgid "Caution: Enabling this option will make it the IPV6 RA Master, and only one interface can be configured as such."
+msgstr ""
+
+msgid "Extend Prefix"
+msgstr ""
+
+msgid "Once checking, the prefix will be apply to lan zone"
+msgstr ""
+
+msgid "PDP Type"
+msgstr ""
+
+msgid "Auto Choose"
+msgstr ""
+
+msgid "China Mobile"
+msgstr ""
+
+msgid "China Unicom"
+msgstr ""
+
+msigd "China Telecom"
+msgstr ""
+
+msgid "China Broadcast"
+msgstr ""
+
+msgid "Skytone"
+msgstr ""
+
+msgid "Authentication Type"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "PAP"
+msgstr ""
+
+msgid "CHAP"
+msgstr ""
+
+msgid "PAP/CHAP (both)"
+msgstr ""
+
+msgid "PAP/CHAP Username"
+msgstr ""
+
+msgid "PAP/CHAP Password"
+msgstr ""
+
+msgid "PIN Code"
+msgstr ""
+
+msgid "If the PIN code is not set, leave it blank."
+msgstr ""
+
+msgid "If solt 2 config is not set,will use slot 1 config."
+msgstr ""
+
+msgid "The metric value is used to determine the priority of the route. The smaller the value, the higher the priority. Cannot duplicate."
+msgstr ""
+
+#odel/cbi/dial_overview.lua
+msgid "Dial Overview"
+msgstr ""
+
+msgid "Global Config"
+msgstr ""
+
+msgid "Enable Dial"
+msgstr ""
+
+msgid "(Global)"
+msgstr ""
+
+msgid "Restart Dial Service"
+msgstr ""
+
+msgid "Config List"
+msgstr ""
+
+msgid "Modem Model"
+msgstr ""
+
+msgid "Modem Alias"
+msgstr ""
+
+msgid "Modem Status"
+msgstr ""
+
+msgid "Remove Modem"
+msgstr ""
+
+# model/cbi/settings.lua
+msgid "QModem Settings"
+msgstr ""
+
+msgid "Modem Probe setting"
+msgstr ""
+
+msgid "Block Auto Probe/Remove"
+msgstr ""
+
+msgid "If enabled, the modem auto scan will be blocked."
+msgstr ""
+
+msgid "Enable PCIE Scan"
+msgstr ""
+
+msgid "Once enabled, the PCIe ports will be scanned on every boot."
+msgstr ""
+
+msgid "Enable USB Scan"
+msgstr ""
+
+msgid "Once enabled, the USB ports will be scanned on every boot."
+msgstr ""
+
+msgid "Try Preset USB Port"
+msgstr ""
+
+msgid "Attempt to use pre-configured USB settings from the cpe vendor."
+msgstr ""
+
+msgid "Try Preset PCIE Port"
+msgstr ""
+
+msgid "Attempt to use pre-configured PCIE settings from the cpe vendor."
+msgstr ""
+
+msgid "Scan ALL Manually"
+msgstr ""
+
+msgid "Scan PCIE Manually"
+msgstr ""
+
+msgid "Scan USB Manually"
+msgstr ""
+
+msgid "Modem Slot Config List"
+msgstr ""
+
+msgid "Slot Type"
+msgstr ""
+
+msgid "Slot Path"
+msgstr ""
+
+msgid "Config Name"
+msgstr ""
+
+# model/cbi/slot_config.lua
+msgid "Slot Configuration"
+msgstr ""
+
+msgid "Slot Type"
+msgstr ""
+
+msgid "Slot ID"
+msgstr ""
+
+msgid "SIM LED"
+msgstr ""
+
+msgid "NET LED"
+msgstr ""
+
+msgid "Enable 5G Ethernet"
+msgstr ""
+
+msgid "For 5G modules using the Ethernet PHY connection, please specify the network interface name. (e.g., eth0, eth1)"
+msgstr ""
+
+msgid "Associated USB"
+msgstr ""
+
+msgid "For M.2 slots with both PCIe and USB support, specify the associated USB port (for ttyUSB access)"
+msgstr ""
+
+# view/qmodem/dial_overview.htm
+msgid "Connected"
+msgstr ""
+
+msgid "Disconnected"
+msgstr ""
+
+msgid "Unknown"
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "Modem Status"
+msgstr ""
+
+msgid "Modem Log"
+msgstr ""
+
+# view/qmodem/modem_debug.htm
+msgid "Lock Band"
+msgstr ""
+
+msgid "Select All"
+msgstr ""
+
+msgid "Submit"
+msgstr ""
+
+msgid "Rat Prefer"
+msgstr ""
+
+msgid "Current Mode"
+msgstr ""
+
+msgid "Setting"
+msgstr ""
+
+msgid "Dial Mode"
+msgstr ""
+
+msgid "Neighbor Cell"
+msgstr ""
+
+msgid "Lock Cell Setting"
+msgstr ""
+
+msgid "RAT"
+msgstr ""
+
+msgid "PCI"
+msgstr ""
+
+msgid "ARFCN"
+msgstr ""
+
+msgid "TAC"
+msgstr ""
+
+msgid "Band"
+msgstr ""
+
+msgid "SCS"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Set IMEI"
+msgstr ""
+
+msgid "Modem Name"
+msgstr ""
+
+msgid "Warning!"
+msgstr ""
+
+# root/usr/share/qmodem/fibocom.sh
+msgid "Voltage"
+msgstr ""
 
 msgid "Temperature"
-msgstr "Температура"
+msgstr ""
+
+msgid "Manufacturer"
+msgstr ""
+
+msgid "SIM Status"
+msgstr ""
+
+msgid "Internet Service Provider"
+msgstr ""
+
+msgid "SIM Slot"
+msgstr ""
+
+msgid "SIM Number"
+msgstr ""
+
+msgid "International Mobile Equipment Identity"
+msgstr ""
+
+msgid "International Mobile Subscriber Identity"
+msgstr ""
+
+msgid "Integrate Circuit Card Identity"
+msgstr ""
+
+msgid "Network Type"
+msgstr ""
+
+msgid "Channel Quality Indicator for Uplink"
+msgstr ""
+
+msgid "Channel Quality Indicator for Downlink"
+msgstr ""
+
+msgid "Access Maximum Bit Rate for Uplink"
+msgstr ""
+
+msgid "Access Maximum Bit Rate for Downlink"
+msgstr ""
+
+msgid "Transmit Rate"
+msgstr ""
+
+msgid "Receive Rate"
+msgstr ""
 
 
-msgid "Voltage"
-msgstr "Напряжение"
+msgid "Network Mode"
+msgstr ""
+
+msgid "Mobile Country Code"
+msgstr ""
+
+msgid "Mobile Network Code"
+msgstr ""
+
+msgid "Duplex Mode"
+msgstr ""
+
+msgid "Physical Cell ID"
+msgstr ""
+
+msgid "Tracking area code of cell servedby neighbor Enb"
+msgstr ""
+
+msgid "Absolute Radio-Frequency Channel Number"
+msgstr ""
+
+msgid "Band"
+msgstr ""
+
+msgid "Reference Signal Received Power"
+msgstr ""
+
+msgid "Reference Signal Received Quality"
+msgstr ""
+
+msgid "Signal to Interference plus Noise Ratio Bandwidth"
+msgstr ""
+
+msgid "Received Signal Level"
+msgstr ""
+
+msgid "SCS"
+msgstr ""
+
+msgid "Serving Cell Receive Level"
+msgstr ""
+
+msgid "E-UTRA Absolute Radio Frequency Channel Number"
+msgstr ""
+
+msgid "Freq band indicator"
+msgstr ""
+
+msgid "UL Bandwidth"
+msgstr ""
+
+msgid "DL Bandwidth"
+msgstr ""
+
+msgid "Received Signal Strength Indicator"
+msgstr ""
+
+msgid "Radio Signal Strength Noise Ratio"
+msgstr ""
+
+msgid "Channel Quality Indicator"
+msgstr ""
+
+msgid "TX Power"
+msgstr ""
+
+msgid "ocation Area Code"
+msgstr ""
+
+msgid "Speech Code"
+msgstr ""
+
+msgid "Ec/No"
+msgstr ""
+
+msgid "Ec/Io"
+msgstr ""
+
+msgid "Spreading Factor"
+msgstr ""
+
+msgid "Compression Mode"
+msgstr ""
+
+msgid "RxLev"
+msgstr ""
+
+# root/usr/share/qmodem/generic.sh
+msgid " "SIM Error,Error code:" 
+msgstr ""
+
+msgid "warning"
+msgstr ""
 
 
 msgid "Connect Status"
-msgstr "Статус подключения"
-
-msgid "Yes"
-msgstr "Да"
-
-msgid "SIM Information"
-msgstr "Информация о SIM"
-
-msgid "SIM Status"
-msgstr "Статус SIM"
-
-msgid "ready"
-msgstr "готово"
-
-msgid "Internet Service Provider"
-msgstr "Интернет-провайдер"
-
-msgid "SIM Slot"
-msgstr "Слот SIM"
-
-msgid "International Mobile Equipment Identity"
-msgstr "Международный идентификатор мобильного оборудования"
-
-msgid "Международный идентификатор абонента мобильной связи"
-msgstr "Международный идентификатор абонента мобильной связи"
-
-
-msgid "Integrate Circuit Card Identity"
-msgstr "Идентификатор интегральной схемы карты"
-
-
-msgid "Network Information"
-msgstr "Информация о сети"
-
-msgid "Network Type"
-msgstr "Тип сети"
-
-msgid "TDD NR5G"
-msgstr "TDD NR5G"
-
-msgid "Channel Quality Indicator for Uplink"
-msgstr "Индикатор качества канала для передачи"
-
-msgid "Channel Quality Indicator for Downlink"
-msgstr "Индикатор качества канала для приема"
-
-msgid "Access Maximum Bit Rate for Uplink"
-msgstr "Максимальная скорость передачи данных для передачи"
-
-msgid "Access Maximum Bit Rate for Downlink"
-msgstr "Максимальная скорость передачи данных для приема"
-
-msgid "Transmit Rate"
-msgstr "Скорость передачи"
-
-
-msgid "Receive Rate"
-msgstr "Скорость приема"
-
+msgstr ""
 
 msgid "Cell Information"
-msgstr "Информация о ячейке"
+msgstr ""
 
-msgid "Режим сети"
-msgstr "Режим сети"
+msgid "Base Information"
+msgstr ""
 
+msgid "Network Information"
+msgstr ""
 
-msgid "Мобильный код страны"
-msgstr "Мобильный код страны"
+msgid "SIM Information"
+msgstr ""
 
+# modem_state
+msgid "ENABLED"
+msgstr ""
 
-msgid "Мобильный код сети"
-msgstr "Мобильный код сети"
+msgid "DISABLED"
+msgstr ""
 
+msgid "TTL Config"
+msgstr ""
 
-msgid "Duplex Mode"
-msgstr "Режим дуплекса"
+msgid "Default Alias"
+msgstr ""
 
-msgid "TDD"
-msgstr "TDD"
+msgid "After setting this option, the first module loaded into this slot will automatically be assigned this default alias."
+msgstr ""
 
-msgid "ID ячейки"
-msgstr "ID ячейки"
+msgid "Modem"
+msgstr ""
 
-msgid "Physical Cell ID"
-msgstr "Физический ID ячейки"
+msgid "Reboot Modem"
+msgstr ""
 
-msgid "Tracking area code of cell servedby neighbor Enb"
-msgstr "Код зоны отслеживания ячейки, обслуживаемой соседним Enb"
+msgid "Soft Reboot"
+msgstr ""
 
+msgid "Hard Reboot"
+msgstr ""
 
-msgid "Absolute Radio-Frequency Channel Number"
-msgstr "Абсолютный номер радиочастотного канала"
+msgid "Power GPIO"
+msgstr ""
 
+msgid "GPIO Down Value"
+msgstr ""
 
-msgid "Диапазон"
-msgstr "Диапазон"
+msgid "GPIO Up Value"
+msgstr ""
 
-msgid "DL Bandwidth"
-msgstr "Ширина полосы пропускания DL"
+msgid "Default Metric"
+msgstr ""
 
+msgid "AT Debug"
+msgstr ""
 
-msgid "Reference Signal Received Power"
-msgstr "Мощность принятого опорного сигнала"
+msgid "(using)"
+msgstr ""
 
-msgid "Reference Signal Received Quality"
-msgstr "Качество принятого опорного сигнала"
+msgid "(valid)"
+msgstr ""
 
-msgid "Signal to Interference plus Noise Ratio Bandwidth"
-msgstr "Отношение сигнал/шум плюс полоса пропускания помех"
+msgid "(invalid)"
+msgstr ""
 
-msgid "Serving Cell Receive Level"
-msgstr "Уровень приема обслуживающей ячейки"
+msgid "(Not belong to this modem)"
+msgstr ""
 
-msgid "Check and add modem dialing configurations"
-msgstr "Проверьте и добавьте конфигурации набора модема"
+msgid "Send"
+msgstr ""
 
-msgid "Global Config"
-msgstr "Глобальная конфигурация"
+msgid "Clear"
+msgstr ""
 
-msgid "Enable Dial"
-msgstr "Включить набор"
+msgid "Select Port"
+msgstr ""
 
-msgid "Enable dial configurations"
-msgstr "Включить конфигурации набора"
+msgid "Input AT Command"
+msgstr ""
 
-msgid "Reload Dial Configurations"
-msgstr "Перезагрузить конфигурации набора"
+msgid "AT Command"
+msgstr ""
 
-msgid "Manually Reload dial configurations When the dial configuration fails to take effect"
-msgstr "Вручную перезагрузите конфигурации набора, когда конфигурация набора не вступает в силу"
+msgid "Double Click or Right Click to Edit"
+msgstr ""
 
-msgid "Config List"
-msgstr "Список конфигураций"
-
-msgid "enable_dial"
-msgstr "включить_набор"
-
-msgid "Remarks"
-msgstr "Замечания"
-
-msgid "Mobile Network"
-msgstr "Мобильная сеть"
-
-msgid "Dial Tool"
-msgstr "Инструмент набора"
-
-msgid "Тип PDP"
-msgstr "Тип PDP"
-
-msgid "Network Bridge"
-msgstr "Сетевой мост"
-
-
-msgid "Auto Choose"
-msgstr "Автовыбор"
-
-
-msgid "Modem Name"
-msgstr "Название модема"
-
-msgid "Dial Mode"
-msgstr "Режим набора"
-
-msgid "Rat Prefer"
-msgstr "Предпочтительный Rat"
-
-msgid "Set IMEI"
-msgstr "Установить IMEI"
-
-msgid "Neighbor Cell"
-msgstr "Соседняя ячейка"
-
-msgid "Lock Band"
-msgstr "Заблокировать диапазон"
-
-msgid "Dial Mode"
-msgstr "Режим набора"
-
-msgid "Current Mode"
-msgstr "Текущий режим"
-
-msgid "Plugin Config"
-msgstr "Настройка плагина"
-
-msgid "Check and modify the plugin configuration"
-msgstr "Проверьте и измените конфигурацию плагина"
-
-msgid "Global Config"
-msgstr "Глобальная конфигурация"
-
-msgid "Modem Scan"
-msgstr "Сканирование модема"
-
-msgid "The automatic configuration modem is triggered only at modem startup, otherwise, manual scanning is necessary"
-msgstr "Автоматическая конфигурация модема запускается только при запуске модема, в противном случае необходимо ручное сканирование"
-
-msgid "Manual Configuration"
-msgstr "Ручная конфигурация"
-
-msgid "Enable the manual configuration of modem information (After enable, the automatic scanning and configuration function for modem information will be disabled)"
-msgstr "Включите ручную конфигурацию информации о модеме (после включения функция автоматического сканирования и конфигурации информации о модеме будет отключена)"
-
-msgid "Modem Config"
-msgstr "Конфигурация модема"
-
-msgid "Удалить"
-msgstr "Удалить"
-
-msgid "Сеть"
-msgstr "Сеть"
-
-msgid "Modem Name"
-msgstr "Название модема"
-
-msgid "AT Port"
-msgstr "AT Порт"
+msgid "Lost focus to save"
+msgstr ""

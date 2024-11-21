@@ -219,6 +219,9 @@ msgstr "关联的USB"
 msgid "For M.2 slots with both PCIe and USB support, specify the associated USB port (for ttyUSB access)"
 msgstr "如果M.2接口同时提供pcie和usb，请关联usb（用于使用usb tty接口）"
 
+msgid "The first module loaded into this slot will automatically be assigned this default metric."
+msgstr "该插槽加载的第一个模块将会自动分配该默认的跃点。"
+
 # view/qmodem/dial_overview.htm
 msgid "Connected"
 msgstr "已连接"
@@ -511,11 +514,14 @@ msgstr "AT 调试"
 msgid "(using)"
 msgstr "(使用中)"
 
-msgid "valid"
-msgstr "有效"
+msgid "(valid)"
+msgstr "(有效)"
 
-msgid "invalid"
-msgstr "无效"
+msgid "(invalid)"
+msgstr "(无效)"
+
+msgid "(Not belong to this modem)"
+msgstr "(不属于此模组)"
 
 msgid "Send"
 msgstr "发送"
@@ -528,3 +534,12 @@ msgstr "选择端口"
 
 msgid "Input AT Command"
 msgstr "输入AT命令"
+
+msgid "AT Command"
+msgstr "AT 命令"
+
+msgid "Double Click or Right Click to Edit"
+msgstr "双击或右键编辑"
+
+msgid "Lost focus to save"
+msgstr "失去焦点保存"

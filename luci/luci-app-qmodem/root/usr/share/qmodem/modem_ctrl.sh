@@ -64,6 +64,15 @@ get_sms(){
 
 get_at_cfg(){
     json_add_object at_cfg
+    duns=$(ls /dev/mhi_DUN*)
+    ttys=$(ls /dev/ttyUSB*)
+    ttyacms=$(ls /dev/ttyACM*)
+    all_ttys="$duns $ttys $ttyacms"
+    json_add_array other_ttys
+    for tty in $all_ttys; do
+        [ -n "$tty" ] && json_add_string "" "$tty"
+    done
+    json_close_array
     json_add_array ports
     ports=$(uci get qmodem.$config_section.ports)
     for port in $ports; do

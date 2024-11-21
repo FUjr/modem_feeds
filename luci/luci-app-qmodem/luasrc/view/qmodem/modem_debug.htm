@@ -60,11 +60,12 @@
 			return fieldset;
 		}
 
-		createInput(name,value){
+		createInput(name,value,hint){
 			var input = document.createElement('input');
 			input.type = "text";
 			input.name = name;
 			input.value = value;
+			input.placeholder = hint;
 			return input;
 		}
 
@@ -130,14 +131,98 @@
 				datalist.appendChild(option);
 			}
 
-			// 返回包含输入框和 datalist 的文档片段
-			var fragment = document.createDocumentFragment();
-			fragment.appendChild(input);
-			fragment.appendChild(datalist);
-
 			return { input, datalist }; // 返回包含输入框和 datalist 的对象
 		}
-		
+
+		createDroplistWithInput(name, hint, dict) {
+			var input = this.createInput("","",hint);
+			var selector = this.createDroplist(dict);
+			var prevous_selected = "";
+			input.style.display = "none";
+			// add event to selector
+			selector.addEventListener('change', function(event) {
+				if (event.target.value.length == 0){
+					input.style.display = "";
+					selector.style.display = "none";
+					input.value = prevous_selected;
+					input.focus();
+				}
+				else {
+					input.style.display = "none";
+					selector.style.display = "";
+					prevous_selected = event.target.value;
+				}
+			});
+
+			// add event listener to seletor : right click or long press or double click: show input
+			selector.addEventListener('contextmenu', function(event) {
+				event.preventDefault();
+				input.style.display = "";
+				selector.style.display = "none";
+				input.value = prevous_selected;
+				input.focus();
+			});
+			// add event listener to seletor : hover: show tooltip
+			selector.addEventListener('mouseover', function(event) {
+				selector.title = "<%:Double Click or Right Click to Edit%>";
+			});
+			selector.addEventListener('dblclick', function(event) {
+				input.style.display = "";
+				selector.style.display = "none";
+				input.value = prevous_selected;
+				input.focus();
+			});
+			// add event listener to input : hover: show tooltip
+			input.addEventListener('mouseover', function(event) {
+				input.title = "<%:Lost focus to save%>";
+			});
+			input.addEventListener('blur', function(event) {
+				if (event.target.value.length > 0) {
+					//clear user input option
+					for (let option of selector.options) {
+						if (option.type == "userInput") {
+							selector.removeChild(option);
+						}
+					}
+					for (let option of selector.options) {
+						if (option.value == event.target.value) {
+							selector.value = event.target.value;
+							selector.dispatchEvent(new Event('change'));
+							return;
+						}
+					}
+					var option = document.createElement('option');
+					option.value = event.target.value;
+					option.innerHTML = event.target.value;
+					option.type = "userInput";
+					selector.appendChild(option);
+					selector.value = event.target.value;
+					selector.dispatchEvent(new Event('change'));
+				}
+				else {
+					if (prevous_selected){
+						selector.value = prevous_selected;
+						selector.dispatchEvent(new Event('change'));
+					}
+					else{
+						//select first not null option
+						for (let option of selector.options) {
+							if (option.value.length > 0) {
+								selector.value = option.value;
+								selector.dispatchEvent(new Event('change'));
+								return;
+							}
+						}
+						selector.dispatchEvent(new Event('change'));
+					}
+					
+				}
+			})
+
+			return { input, selector };
+
+		}
+
 		createTD(innerHTML){
 			var td = document.createElement('td');
 			td.classList.add("cbi-section-table-cell");
@@ -164,6 +249,13 @@
 			tr.classList.add("cbi-section-table-row");
 			tr.classList.add("tr");
 			return tr;
+		}
+
+		createDescription(innerHTML){
+			var div = document.createElement('div');
+			div.classList.add("cbi-section-descr");
+			div.innerHTML = innerHTML;
+			return div;
 		}
 
 		createTRHeader(){
@@ -920,7 +1012,7 @@
 				}
 				this.set_config(JSON.stringify(payload));
 				//append input to textarea
-				this.textarea.value += "INPUT>> " + this.at_input + "\n";
+				this.textarea.value += this.at_port +  " >> " + this.at_input + "\n";
 			});
 			this.clear_btn = this.createBTN("<%:Clear%>",() => {
 				this.textarea.value = "";
@@ -929,56 +1021,96 @@
 				this.cmd_prompt.value = "";
 				this.at_port_selector.value = "";
 			});
-			//this.at_port_selector = this.createDroplist();
-			var { input, datalist } = this.createInputWithDatalist("select_port","<%:Select Port%>" );
-			this.at_port_selector=input;
-			this.at_port_selector_datalist = datalist;
-			var { input, datalist } = this.createInputWithDatalist("cmd_prompt","<%:Input AT Command%>" );
-			//this.cmd_prompt = this.createDroplist();
-			this.cmd_prompt = input;
-			this.cmd_prompt_datalist = datalist;
-			this.fieldset.appendChild(this.at_port_selector);
-			this.fieldset.appendChild(this.at_port_selector_datalist);
-			//add br
-			this.fieldset.appendChild(document.createElement("br"));
-			
-			this.fieldset.appendChild(this.cmd_prompt);
-			this.fieldset.appendChild(this.cmd_prompt_datalist);
-			this.fieldset.appendChild(document.createElement("br"));
-			this.fieldset.appendChild(this.at_btn);
-			this.fieldset.appendChild(this.clear_input_btn);
-			this.fieldset.appendChild(this.textarea);
-			this.fieldset.appendChild(this.clear_btn);
-			this.at_port_selector.addEventListener('change',(event) => {
-				this.at_port = event.target.value;
+			var { input , selector } = this.createDroplistWithInput("at_port_selector","<%:Select Port%>" );
+			selector.addEventListener("change",(event) => {
+				this.at_port =  event.target.value;
 			});
-			this.cmd_prompt.addEventListener('change',(event) => {
+			this.at_port_selector = selector;
+			this.at_port_input = input;
+			var { input , selector } = this.createDroplistWithInput("cmd_prompt","<%:Input AT Command%>" );
+			selector.addEventListener('change',(event) => {
 				this.at_input = event.target.value;
 			});
+			this.cmd_prompt = input;
+			this.cmd_prompt_selector = selector;
+			
+			var table = this.createTable();
+			this.fieldset.appendChild(table);
+
+
+			var tr,td_l,td_r;
+			tr = this.createTR();
+			td_l = this.createTD("<%:AT Port%>:");
+			td_r = this.createTD();
+			td_r.appendChild(this.at_port_selector);
+			td_r.appendChild(this.at_port_input);
+			tr.appendChild(td_l);
+			tr.appendChild(td_r);
+			table.appendChild(tr);
+			
+			tr = this.createTR();
+			td_l = this.createTD("<%:AT Command%>:");
+			td_r = this.createTD();
+			td_r.appendChild(this.cmd_prompt_selector);
+			td_r.appendChild(this.cmd_prompt);
+			tr.appendChild(td_l);
+			tr.appendChild(td_r);
+			table.appendChild(tr);
+			tr = this.createTR();
+			td_l = this.createTD();
+			td_l.appendChild(this.at_btn);
+			tr.appendChild(td_l);
+			table.appendChild(tr);
+			this.fieldset.appendChild(table);
+			this.fieldset.appendChild(this.textarea);
+			this.fieldset.appendChild(this.clear_btn);
 		}
 
 		cb_get(){
 			//clear ports
-			while (this.at_port_selector_datalist.firstChild) {
-				this.at_port_selector_datalist.removeChild(this.at_port_selector_datalist.firstChild);
+			while (this.at_port_selector.firstChild) {
+				this.at_port_selector.removeChild(this.at_port_selector.firstChild);
 			}
+			//clear cmds
+			while (this.cmd_prompt_selector.firstChild) {
+				this.cmd_prompt_selector.removeChild(this.cmd_prompt_selector.firstChild);
+			}
+
+			//empty option
+			var empty_option1=document.createElement("option");
+			empty_option1.value = "";
+			empty_option1.innerHTML = "<%:-- custom ---%>";
+			var empty_option2=document.createElement("option");
+			empty_option2.value = "";
+			empty_option2.innerHTML = "<%:-- custom ---%>";
+			this.cmd_prompt_selector.appendChild(empty_option1);
+			this.at_port_selector.appendChild(empty_option2);
 			var ports=this.config.ports;
+			var other_ttys=this.config.other_ttys;
 			var valid_ports=this.config.valid_ports;
 			var using_port=this.config.using_port;
 			var cmds = this.config.cmds;
-			for (let port of ports) {
+			//append empty option to at_port_selector
+			
+			for (let port of other_ttys) {
 				let select;
 				let displayport = port;
-				if (valid_ports.includes(port) == false) {
-					displayport += "<%:(invalid)%>";
+				if (ports.includes(port) == false) {
+					displayport += "<%:(Not belong to this modem)%>";
 				}
 				else{
-					displayport += "<%:(valid)%>";
+					if (valid_ports.includes(port) == false) {
+						displayport += "<%:(invalid)%>";
+					}
+					else{
+						displayport += "<%:(valid)%>";
+					}
+					if (port == using_port) {
+						displayport += "<%:(using)%>";
+						select = true;
+					}
 				}
-				if (port == using_port) {
-					displayport += "<%:(using)%>";
-					select = true;
-				}
+				
 				
 				var option = document.createElement('option');
 				option.value = port;
@@ -987,18 +1119,19 @@
 					option.selected = true;
 					this.at_port = port;
 				}
-				this.at_port_selector_datalist.appendChild(option);
+				this.at_port_selector.appendChild(option);
 			}
-			//clear cmds
-			while (this.cmd_prompt_datalist.firstChild) {
-				this.cmd_prompt_datalist.removeChild(this.cmd_prompt_datalist.firstChild);
-			}
+			
+			
 			for (let cmd of cmds) {
 				var option = document.createElement('option');
 				option.value = cmd.value;
 				option.innerHTML = cmd.name;
-				this.cmd_prompt_datalist.appendChild(option);
+				this.cmd_prompt_selector.appendChild(option);
 			}
+			this.cmd_prompt_selector.dispatchEvent(new Event('change'));
+			this.at_port_selector.dispatchEvent(new Event('change'));
+			
 			
 		}
 		
@@ -1011,7 +1144,7 @@
 
 		cb_set(){
 			//append response to textarea
-			this.textarea.value += this.config.res + "<<END\n";
+			this.textarea.value += this.config.res + "<<EOF\n";
 
 		}
 		

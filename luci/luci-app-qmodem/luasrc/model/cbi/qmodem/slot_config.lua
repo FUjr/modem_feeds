@@ -59,7 +59,7 @@ end
 
 default_metric = s:option(Value, "default_metric", translate("Default Metric"))
 default_metric.rmempty = true
-default_metric.description = translate("After setting this option, the first module loaded into this slot will automatically be assigned this default metric.")
+default_metric.description = translate("The first module loaded into this slot will automatically be assigned this default metric.")
 default_metric.datatype = "range(1, 255)"
 
 pwr_gpio = s:option(Value, "gpio", translate("Power GPIO"))
