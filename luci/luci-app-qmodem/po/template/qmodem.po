@@ -60,7 +60,7 @@ msgstr ""
 msgid "China Unicom"
 msgstr ""
 
-msigd "China Telecom"
+msgid "China Telecom"
 msgstr ""
 
 msgid "China Broadcast"
@@ -370,7 +370,7 @@ msgstr ""
 msgid "Physical Cell ID"
 msgstr ""
 
-msgid "Tracking area code of cell servedby neighbor Enb"
+msgid "Tracking area code of cell served by neighbor Enb"
 msgstr ""
 
 msgid "Absolute Radio-Frequency Channel Number"
@@ -421,7 +421,7 @@ msgstr ""
 msgid "TX Power"
 msgstr ""
 
-msgid "ocation Area Code"
+msgid "Location Area Code"
 msgstr ""
 
 msgid "Speech Code"
@@ -443,7 +443,7 @@ msgid "RxLev"
 msgstr ""
 
 # root/usr/share/qmodem/generic.sh
-msgid " "SIM Error,Error code:" 
+msgid "SIM Error,Error code:" 
 msgstr ""
 
 msgid "warning"
@@ -539,4 +539,10 @@ msgid "Double Click or Right Click to Edit"
 msgstr ""
 
 msgid "Lost focus to save"
+msgstr ""
+
+msgid "Clear AT Port"
+msgstr ""
+
+msgid "Clear AT Command"
 msgstr ""

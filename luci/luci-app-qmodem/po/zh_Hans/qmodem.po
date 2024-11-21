@@ -60,7 +60,7 @@ msgstr "中国移动"
 msgid "China Unicom"
 msgstr "中国联通"
 
-msigd "China Telecom"
+msgid "China Telecom"
 msgstr "中国电信"
 
 msgid "China Broadcast"
@@ -373,7 +373,7 @@ msgstr "双工模式"
 msgid "Physical Cell ID"
 msgstr "物理小区 ID（PCI）"
 
-msgid "Tracking area code of cell servedby neighbor Enb"
+msgid "Tracking area code of cell served by neighbor Enb"
 msgstr "邻近 eNB 服务的小区跟踪区代码（TAC）"
 
 msgid "Absolute Radio-Frequency Channel Number"
@@ -424,7 +424,7 @@ msgstr "信道质量指示器(CQI)"
 msgid "TX Power"
 msgstr "发射功率"
 
-msgid "ocation Area Code"
+msgid "Location Area Code"
 msgstr "位置区域代码"
 
 msgid "Speech Code"
@@ -446,7 +446,7 @@ msgid "RxLev"
 msgstr "接收电平"
 
 # root/usr/share/qmodem/generic.sh
-msgid " "SIM Error,Error code:" 
+msgid "SIM Error,Error code:" 
 msgstr "SIM 错误，错误代码："
 
 msgid "warning"
@@ -543,3 +543,9 @@ msgstr "双击或右键编辑"
 
 msgid "Lost focus to save"
 msgstr "失去焦点保存"
+
+msgid "Clear AT Port"
+msgstr "清空AT端口"
+
+msgid "Clear AT Command"
+msgstr "清空AT命令"

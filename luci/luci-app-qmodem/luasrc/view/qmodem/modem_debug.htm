@@ -72,6 +72,7 @@
 		createBTN(name,cb){
 			var btn = document.createElement('input');
 			btn.type = "button";
+			btn.classList.add("cbi-button");
 			btn.value = name;
 			btn.addEventListener('click',cb);
 			return btn;
@@ -138,18 +139,27 @@
 			var input = this.createInput("","",hint);
 			var selector = this.createDroplist(dict);
 			var prevous_selected = "";
+			var input_tips = "<%:Lost focus to save%>";
+			var selector_tips = "<%:Double Click or Right Click to Edit%>";
+			var input_descr = this.createDescription(input_tips);
+			var selector_descr = this.createDescription(selector_tips);
 			input.style.display = "none";
+			input_descr.style.display = "none";
 			// add event to selector
 			selector.addEventListener('change', function(event) {
 				if (event.target.value.length == 0){
 					input.style.display = "";
 					selector.style.display = "none";
+					input_descr.style.display = "";
+					selector_descr.style.display = "none";
 					input.value = prevous_selected;
 					input.focus();
 				}
 				else {
 					input.style.display = "none";
 					selector.style.display = "";
+					input_descr.style.display = "none";
+					selector_descr.style.display = "";
 					prevous_selected = event.target.value;
 				}
 			});
@@ -159,22 +169,26 @@
 				event.preventDefault();
 				input.style.display = "";
 				selector.style.display = "none";
+				input_descr.style.display = "";
+				selector_descr.style.display = "none";
 				input.value = prevous_selected;
 				input.focus();
 			});
 			// add event listener to seletor : hover: show tooltip
 			selector.addEventListener('mouseover', function(event) {
-				selector.title = "<%:Double Click or Right Click to Edit%>";
+				selector.title = selector_tips;
 			});
 			selector.addEventListener('dblclick', function(event) {
 				input.style.display = "";
 				selector.style.display = "none";
+				input_descr.style.display = "";
+				selector_descr.style.display = "none";
 				input.value = prevous_selected;
 				input.focus();
 			});
 			// add event listener to input : hover: show tooltip
 			input.addEventListener('mouseover', function(event) {
-				input.title = "<%:Lost focus to save%>";
+				input.title = input_tips;
 			});
 			input.addEventListener('blur', function(event) {
 				if (event.target.value.length > 0) {
@@ -218,6 +232,9 @@
 					
 				}
 			})
+
+			input.descr = input_descr;
+			selector.descr = selector_descr;
 
 			return { input, selector };
 
@@ -1012,14 +1029,18 @@
 				}
 				this.set_config(JSON.stringify(payload));
 				//append input to textarea
-				this.textarea.value += this.at_port +  " >> " + this.at_input + "\n";
+				this.textarea.value += this.at_input +  " >> " + this.at_port + "\n";
 			});
 			this.clear_btn = this.createBTN("<%:Clear%>",() => {
 				this.textarea.value = "";
 			});
-			this.clear_input_btn = this.createBTN("<%:Clear%>",() => {
-				this.cmd_prompt.value = "";
+			this.clear_port_btn = this.createBTN("<%:Clear AT Port%>",() => {
 				this.at_port_selector.value = "";
+				this.at_port_selector.dispatchEvent(new Event('change'));
+			});
+			this.clear_cmd_btn = this.createBTN("<%:Clear AT Command%>",() => {
+				this.cmd_prompt_selector.value = "";
+				this.cmd_prompt_selector.dispatchEvent(new Event('change'));
 			});
 			var { input , selector } = this.createDroplistWithInput("at_port_selector","<%:Select Port%>" );
 			selector.addEventListener("change",(event) => {
@@ -1037,13 +1058,15 @@
 			var table = this.createTable();
 			this.fieldset.appendChild(table);
 
-
 			var tr,td_l,td_r;
 			tr = this.createTR();
 			td_l = this.createTD("<%:AT Port%>:");
 			td_r = this.createTD();
 			td_r.appendChild(this.at_port_selector);
+			td_r.appendChild(this.at_port_selector.descr);
 			td_r.appendChild(this.at_port_input);
+			td_r.appendChild(this.at_port_input.descr);
+			
 			tr.appendChild(td_l);
 			tr.appendChild(td_r);
 			table.appendChild(tr);
@@ -1053,12 +1076,16 @@
 			td_r = this.createTD();
 			td_r.appendChild(this.cmd_prompt_selector);
 			td_r.appendChild(this.cmd_prompt);
+			td_r.appendChild(this.cmd_prompt.descr);
+			td_r.appendChild(this.cmd_prompt_selector.descr);
 			tr.appendChild(td_l);
 			tr.appendChild(td_r);
 			table.appendChild(tr);
 			tr = this.createTR();
 			td_l = this.createTD();
 			td_l.appendChild(this.at_btn);
+			td_l.appendChild(this.clear_port_btn);
+			td_l.appendChild(this.clear_cmd_btn);
 			tr.appendChild(td_l);
 			table.appendChild(tr);
 			this.fieldset.appendChild(table);

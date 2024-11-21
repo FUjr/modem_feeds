@@ -1254,7 +1254,7 @@ cell_info()
         add_plain_info_entry "Duplex Mode" "$nr_duplex_mode" "Duplex Mode"
         add_plain_info_entry "Cell ID" "$nr_cell_id" "Cell ID"
         add_plain_info_entry "Physical Cell ID" "$nr_physical_cell_id" "Physical Cell ID"
-        add_plain_info_entry "TAC" "$nr_tac" "Tracking area code of cell servedby neighbor Enb"
+        add_plain_info_entry "TAC" "$nr_tac" "Tracking area code of cell served by neighbor Enb"
         add_plain_info_entry "ARFCN" "$nr_arfcn" "Absolute Radio-Frequency Channel Number"
         add_plain_info_entry "Band" "$nr_band" "Band"
         add_plain_info_entry "DL Bandwidth" "$nr_dl_bandwidth" "DL Bandwidth"
@@ -1277,7 +1277,7 @@ cell_info()
         add_plain_info_entry "Band" "$endc_lte_band" "Band"
         add_plain_info_entry "UL Bandwidth" "$endc_lte_ul_bandwidth" "UL Bandwidth"
         add_plain_info_entry "DL Bandwidth" "$endc_lte_dl_bandwidth" "DL Bandwidth"
-        add_plain_info_entry "TAC" "$endc_lte_tac" "Tracking area code of cell servedby neighbor Enb"
+        add_plain_info_entry "TAC" "$endc_lte_tac" "Tracking area code of cell served by neighbor Enb"
         add_bar_info_entry "RSRP" "$endc_lte_rsrp" "Reference Signal Received Power" -140 -44 dBm
         add_bar_info_entry "RSRQ" "$endc_lte_rsrq" "Reference Signal Received Quality" -20 20 dBm
         add_bar_info_entry "RSSI" "$endc_lte_rssi" "Received Signal Strength Indicator" -140 -44 dBm
@@ -1311,7 +1311,7 @@ cell_info()
         add_plain_info_entry "Band" "$lte_band" "Band"
         add_plain_info_entry "UL Bandwidth" "$lte_ul_bandwidth" "UL Bandwidth"
         add_plain_info_entry "DL Bandwidth" "$lte_dl_bandwidth" "DL Bandwidth"
-        add_plain_info_entry "TAC" "$lte_tac" "Tracking area code of cell servedby neighbor Enb"
+        add_plain_info_entry "TAC" "$lte_tac" "Tracking area code of cell served by neighbor Enb"
         add_bar_info_entry "RSRP" "$lte_rsrp" "Reference Signal Received Power" -140 -44 dBm
         add_bar_info_entry "RSRQ" "$lte_rsrq" "Reference Signal Received Quality" -20 20 dBm
         add_bar_info_entry "RSSI" "$lte_rssi" "Received Signal Strength Indicator" -140 -44 dBm
