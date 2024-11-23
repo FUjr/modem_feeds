@@ -319,7 +319,6 @@
 				this.cb_set = (data) => {
 					this.get_config();
 				}
-				this.get_config();
 			}
 
 			set lock(config){
@@ -639,8 +638,6 @@
 			this.cb_set = (data) => {
 				this.get_config();
 			}
-			this.get_config();
-			
 		}
 
 		render(){
@@ -729,9 +726,7 @@
 			this.get_action = "get_neighborcell";
 			this.set_action = "set_neighborcell";
 			this.task = null;
-			this.init_nc_table();
-			this.get_config();
-			
+			this.init_nc_table();			
 		}
 		
 		pause(){
@@ -944,7 +939,6 @@
 			this.config_name = "imei";
 			this.get_action = "get_imei";
 			this.set_action = "set_imei";
-			this.get_config();
 			this.render();
 		}
 
@@ -977,7 +971,6 @@
 			this.config_name = "reboot_caps";
 			this.get_action = "get_reboot_caps";
 			this.set_action = "do_reboot";
-			this.get_config();
 			this.render();
 		}
 
@@ -1013,7 +1006,6 @@
 			this.set_action = "send_at";
 			this.at_port=null;
 			this.last_choice_cmd = null;
-			this.get_config();
 			this.render();
 		}
 
