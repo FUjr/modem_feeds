@@ -376,6 +376,7 @@ set_if()
             uci set network.${interface_name}.defaultroute='1'
             uci set network.${interface_name}.peerdns='0'
             uci set network.${interface_name}.metric="${metric}"
+            uci del network.${interface_name}.dns
             uci add_list network.${interface_name}.dns='114.114.114.114'
             uci add_list network.${interface_name}.dns='119.29.29.29'
             uci add_list network.${interface_name}.dns='8.8.8.8'
