@@ -17,6 +17,7 @@ start_service() {
     config_get enable global enable_mwan 0
     if [ "$enable" -eq 0 ]; then
         stop_service
+        return
     fi
     start_mwan3 ipv4
 }
