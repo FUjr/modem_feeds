@@ -15,7 +15,7 @@ start_service() {
     logger -t modem_mwan "start qmodem_mwan"
 	config_load qmodem_mwan
     config_get enable global enable_mwan 0
-    if [ "$enable" = "0" ]; then
+    if [ "$enable" -eq 0 ]; then
         stop_service
     fi
     start_mwan3 ipv4
@@ -23,6 +23,7 @@ start_service() {
 
 stop_service() {
     /usr/share/qmodem/modem_mwan.sh ipv4 stop
+    /etc/init.d/mwan3 stop
 }
 
 service_triggers() {
