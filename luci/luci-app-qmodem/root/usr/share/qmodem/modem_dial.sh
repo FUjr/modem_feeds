@@ -575,8 +575,7 @@ dial(){
 
 wwan_hang()
 {
-    #kill quectel-CM
-    killall quectel-CM
+    m_debug "wwan_hang"
 }
 
 
