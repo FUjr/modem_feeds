@@ -12,7 +12,6 @@ s.addremove = false
 o = s:option(Flag, "enable_dial", translate("Enable Dial")..translate("(Global)"))
 o.rmempty = false
 
-
 o = s:option(Button, "reload_dial", translate("Restart Dial Service"))
 o.inputstyle = "apply"
 o.write = function()
@@ -28,6 +27,13 @@ s.extedit = d.build_url("admin", "modem", "qmodem", "dial_config", "%s")
 o = s:option(Flag, "enable_dial", translate("Enable Dial"))
 o.width = "5%"
 o.rmempty = false
+
+restart_btn = s:option(Button, "_redial", translate("ReDial"))
+restart_btn.inputstyle = "remove"
+function restart_btn.write(self, section)
+    sys.call("/etc/init.d/qmodem_network redial "..section.." > /dev/null 2>&1")
+    luci.http.redirect(d.build_url("admin", "modem", "qmodem", "dial_overview"))
+end
 
 o = s:option(DummyValue, "name", translate("Modem Model"))
 o.cfgvalue = function(t, n)
@@ -80,6 +86,8 @@ function remove_btn.write(self, section)
 end
 -- 添加模块拨号日志
 m:append(Template("qmodem/dial_overview"))
-
+m.on_after_commit = function(self)
+    sys.call("/etc/init.d/qmodem_network reload  > /dev/null 2>&1")
+end
 
 return m

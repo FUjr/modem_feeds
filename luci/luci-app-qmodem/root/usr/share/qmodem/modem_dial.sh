@@ -683,7 +683,7 @@ qmi_dial()
     fi
     cmd_line="$cmd_line -f $log_file"
     m_debug "dialing $cmd_line"
-    $cmd_line
+    exec $cmd_line
     
     
 }

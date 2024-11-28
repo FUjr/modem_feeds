@@ -130,6 +130,9 @@ msgstr "模组别名"
 msgid "Modem Status"
 msgstr "模组状态"
 
+msgid "ReDial"
+msgstr "重拨"
+
 msgid "Remove Modem"
 msgstr "移除模组"
 

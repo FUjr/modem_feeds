@@ -37,6 +37,7 @@ reload_service()
 {
     force_stop=0
     mkdir -p $MODEM_RUNDIR
+    sleep 1
     update_modem
 }
 
@@ -49,7 +50,7 @@ update_modem(){
 
 dial()
 {
-    _dial $1
+    rc_procd _dial $1
 }
 
 hang()
@@ -79,9 +80,9 @@ _update_modem()
     fi
     data=$(_procd_ubus_call list | jq -r  ".$service.instances.modem_$1")
     [ "$data" == "null" ] && current_status=0 || current_status=1
-    logger -t qmodem_network "current:$current_status;target:$target "
+    logger -t qmodem_network "cfg:$1 current:$current_status;target:$target "
     if [ "$current_status" != "$target" ];then
-        [ "$target" -eq 1 ] && _dial $1 || _hang $1
+        [ "$target" -eq 1 ] && dial $1 || hang $1
         logger -t qmodem_network "update modem cfg: $1 dial:$target"
     fi
 }
