@@ -401,8 +401,8 @@ set_if()
             uci set network.lan.ipv6='1'
             uci set network.lan.ip6assign='64'
             uci set network.lan.ip6class="${interface6_name}"
-            uci set network.${interface6_name}.modem_config="${modem_config}"
             uci set network.${interface6_name}='interface'
+            uci set network.${interface6_name}.modem_config="${modem_config}"
             uci set network.${interface6_name}.proto="${protov6}"
             uci set network.${interface6_name}.ifname="@${interface_name}"
             uci set network.${interface6_name}.device="@${interface_name}"
@@ -455,18 +455,19 @@ set_if()
     
     if [ "$network_reload_flag" -eq 1 ];then
         uci commit network
-        ifdown ${interface_name}
-        ifdown ${interface6_name}
         ifup ${interface_name}
         ifup ${interface6_name}
+        m_debug "network reload"
     fi
     if [ "$firewall_reload_flag" -eq 1 ];then
         uci commit firewall
         /etc/init.d/firewall restart
+        m_debug "firewall reload"
     fi
     if [ "$dhcp_reload_flag" -eq 1 ];then
         uci commit dhcp
         /etc/init.d/dhcp restart
+        m_debug "dhcp reload"
     fi
 
 
@@ -520,17 +521,17 @@ flush_if()
     set_led "net" $modem_config
     set_led "sim" $modem_config 0
     m_debug "delete interface $interface_name"
+    uci commit network
+    uci commit dhcp
 }
 
 flush_ip_cb()
 {
     local network_cfg=$1
-    
+    local bind_modem_config
     config_get bind_modem_config "$network_cfg" modem_config
     if [ "$remove_target" = "$bind_modem_config" ];then
         uci delete network.$network_cfg
-        uci commit network
-        uci commit dhcp
     fi
     
 }
