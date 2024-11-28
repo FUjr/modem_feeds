@@ -16,7 +16,7 @@ o.rmempty = false
 o = s:option(Button, "reload_dial", translate("Restart Dial Service"))
 o.inputstyle = "apply"
 o.write = function()
-    sys.call("/etc/init.d/qmodem_network reload  > /dev/null 2>&1")
+    sys.call("/etc/init.d/qmodem_network restart  > /dev/null 2>&1")
     luci.http.redirect(d.build_url("admin", "modem", "qmodem", "dial_overview"))
 end
 
