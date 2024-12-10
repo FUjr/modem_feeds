@@ -173,6 +173,8 @@ scan_pcie_slot_interfaces()
             [ -z "$interface_driver" ] && continue
             case $interface_driver in
                 option|\
+                cdc_acm|\
+                usbserial_generic|\
                 usbserial)
                     ttyUSB_device=$(ls "$assoc_usb_path/$interface/" | grep ttyUSB)
                     ttyACM_device=$(ls "$assoc_usb_path/$interface/" | grep ttyACM)
@@ -207,6 +209,8 @@ scan_usb_slot_interfaces()
         [ -z "$interface_driver" ] && continue
         case $interface_driver in
             option|\
+            cdc_acm|\
+            usbserial_generic|\
             usbserial)
                 ttyUSB_device=$(ls "$slot_path/$interface/" | grep ttyUSB)
                 ttyACM_device=$(ls "$slot_path/$interface/" | grep ttyACM)
