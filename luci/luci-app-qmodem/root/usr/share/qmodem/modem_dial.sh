@@ -347,7 +347,7 @@ set_if()
             case $platform in
                 "mediatek")
                     proto="static"
-                    protov6="static"
+                    protov6="dhcpv6"
                     ;;
                 esac
             ;;
