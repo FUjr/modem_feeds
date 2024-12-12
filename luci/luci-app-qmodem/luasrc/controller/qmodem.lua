@@ -108,7 +108,7 @@ function getOverviews()
 	local logs={}
 	uci:foreach("qmodem", "modem-device", function (modem_device)
 		section_name = modem_device[".name"]
-		modem_name = modem_device["name"]
+		modem_name = modem_device["name"] or luci.i18n.translate("Unknown")
 		alias = modem_device["alias"]
 		modem_state = modem_device["state"]
 		if modem_state == "disabled" then
@@ -117,7 +117,7 @@ function getOverviews()
 --模组信息部分
 		cmd = modem_ctrl.."base_info "..section_name
 		result = shell(cmd)
-		json_result = json.parse(result)
+		json_result = json.parse(result) or "{}"
 		modem_info = json_result["modem_info"]
 		tmp_info = {}
 		if alias then
