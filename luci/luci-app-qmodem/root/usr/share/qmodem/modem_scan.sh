@@ -4,6 +4,7 @@ action=$1
 config=$2
 slot_type=$3
 modem_support=$(cat /usr/share/qmodem/modem_support.json)
+debug_subject="modem_scan"
 source /lib/functions.sh
 source /usr/share/qmodem/modem_util.sh
 
@@ -270,6 +271,7 @@ match_config()
 
     modem_config=$(echo $modem_support | jq '.modem_support."'$slot_type'"."'$name'"')
     [ "$modem_config" == "null"  ] && return
+    [ -z "$modem_config"  ] && return
     modem_name=$name
     manufacturer=$(echo $modem_config | jq -r ".manufacturer")
     platform=$(echo $modem_config | jq -r ".platform")
@@ -281,11 +283,13 @@ get_modem_model()
 {
     local at_port=$1
     cgmm=$(at $at_port "AT+CGMM")
+    sleep 1
     cgmm_1=$(at $at_port "AT+CGMM?")
     name_1=$(echo -e "$cgmm" |grep "+CGMM: " | awk -F': ' '{print $2}')
     name_2=$(echo -e "$cgmm_1" |grep "+CGMM: " | awk -F'"' '{print $2} '| cut -d ' ' -f 1)
     name_3=$(echo -e "$cgmm" | sed -n '2p')
     modem_name=""
+
     [ -n "$name_1" ] && match_config "$name_1"
     [ -n "$name_2" ] && [ -z "$modem_name" ] && match_config "$name_2"
     [ -n "$name_3" ] && [ -z "$modem_name" ] && match_config "$name_3"
@@ -313,34 +317,40 @@ add()
             modem_path="/sys/bus/pci/devices/$slot/"
             ;;
     esac
+    #if no netdev return
     [ -z "$net_devices" ] && lock -u /tmp/lock/modem_add_$slot && return
-    for at_port in $valid_at_ports; do
-        get_modem_model "/dev/$at_port"
-        echo "modem_name:$modem_name"
-        [ $? -eq 0 ] && break
+    for trys in $(seq 1 3);do
+        for at_port in $valid_at_ports; do
+            m_debug "try at port $at_port;time $trys"
+            get_modem_model "/dev/$at_port"
+            [ $? -eq 0 ] && break || modem_name=""
+        done
+        [ -n "$modem_name" ] && break
+        sleep 1
     done
     [ -z "$modem_name" ] && lock -u /tmp/lock/modem_add_$slot && return
     m_debug  "add modem $modem_name slot $slot slot_type $slot_type"
     if [ -n "$is_exist" ]; then
         #network at_port state name 不变，则不需要重启网络
-        orig_network=$(uci get qmodem.$section_name.network)
-        orig_at_port=$(uci get qmodem.$section_name.at_port)
-        orig_state=$(uci get qmodem.$section_name.state)
-        orig_name=$(uci get qmodem.$section_name.name)
-        uci del qmodem.$section_name.modes
-        uci del qmodem.$section_name.valid_at_ports
-        uci del qmodem.$section_name.tty_devices
-        uci del qmodem.$section_name.net_devices
-        uci del qmodem.$section_name.ports
-        uci set qmodem.$section_name.state="enabled"
+        orig_network=$(uci -q get qmodem.$section_name.network)
+        orig_at_port=$(uci -q get qmodem.$section_name.at_port)
+        orig_state=$(uci -q get qmodem.$section_name.state)
+        orig_name=$(uci -q get qmodem.$section_name.name)
+        uci -q del qmodem.$section_name.modes
+        uci -q del qmodem.$section_name.valid_at_ports
+        uci -q del qmodem.$section_name.tty_devices
+        uci -q del qmodem.$section_name.net_devices
+        uci -q del qmodem.$section_name.ports
+        uci -q set qmodem.$section_name.state="enabled"
     else
+    
     #aqcuire lock
         lock /tmp/lock/modem_add
         unset default_alias
         unset default_metric
         get_default_alias $slot
         get_default_metric $slot
-        modem_count=$(uci get qmodem.main.modem_count)
+        modem_count=$(uci -q get qmodem.main.modem_count)
         [ -z "$modem_count" ] && modem_count=0
         modem_count=$(($modem_count+1))
         uci set qmodem.main.modem_count=$modem_count
@@ -389,10 +399,10 @@ remove()
 {
     section_name=$1
     m_debug  "remove $section_name"
-    is_exist=$(uci get qmodem.$section_name)
+    is_exist=$(uci -q get qmodem.$section_name)
     [ -z "$is_exist" ] && return
     lock /tmp/lock/modem_remove
-    modem_count=$(uci get qmodem.main.modem_count)
+    modem_count=$(uci -q get qmodem.main.modem_count)
     [ -z "$modem_count" ] && modem_count=0
     modem_count=$(($modem_count-1))
     uci set qmodem.main.modem_count=$modem_count
