@@ -377,13 +377,15 @@ set_if()
             uci set network.${interface_name}.modem_config="${modem_config}"
             uci set network.${interface_name}.proto="${proto}"
             uci set network.${interface_name}.defaultroute='1'
-            uci set network.${interface_name}.peerdns='0'
             uci set network.${interface_name}.metric="${metric}"
             uci del network.${interface_name}.dns
             if [ -n "$dns_list" ];then
+                uci set network.${interface_name}.peerdns='0'
                 for dns in $dns_list;do
                     uci add_list network.${interface_name}.dns="${dns}"
                 done
+            else
+                uci del network.${interface_name}.peerdns
             fi
             local num=$(uci show firewall | grep "name='wan'" | wc -l)
             local wwan_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface_name}" | wc -l)
