@@ -62,6 +62,7 @@ update_sim_slot()
 			#电平高表示SIM卡在卡槽1，电平低表示SIM卡在卡槽2
 			debug "update_sim_slot:sim_slot=$sim_slot"
 			;;
+		ailf,gs2410|\
 		huasifei,ws3006)
 			sim_pin="/sys/class/gpio/dual_sim/value"
 			#电平高则都在卡槽1，电平低则需要使用at查询
