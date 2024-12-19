@@ -47,6 +47,7 @@ modem_settings()
 		uci set qmodem.m2_u3.ethernet_5g="cpewan0"
 		uci commit qmodem
 		;;
+	ailf,gs2410|\
 	huasifei,ws3006)
 		#m2 usb3.0 
 		#(slot 2)

@@ -15,13 +15,22 @@ modem_settings()
 		add_ipv4_config "2_1" 1 1
 		uci commit qmodem_mwan
 		;;
+	ailf,gs2410)
+		add_ipv4_config "5g0"  1 1
+		add_ipv4_config "5g1" 1 1
+		add_ipv4_config "4g0" 30 1
+		add_ipv4_config "4g1" 30 1
+		add_ipv4_config "4g2" 30 1
+		add_ipv4_config "4g3" 30 1
+		uci commit qmodem_mwan
+		;;
 	huasifei,ws3006)
-		add_ipv4_config "5g0"  1 230
-		add_ipv4_config "5g1" 1 230
-		add_ipv4_config "4g0" 20 1
-		add_ipv4_config "4g1" 20 1
-		add_ipv4_config "4g2" 20 1
-		add_ipv4_config "4g3" 20 1
+		add_ipv4_config "5g0"  10 1
+		add_ipv4_config "5g1" 10 1
+		add_ipv4_config "4g0" 10 1
+		add_ipv4_config "4g1" 10 1
+		add_ipv4_config "4g2" 10 1
+		add_ipv4_config "4g3" 10 1
 		uci commit qmodem_mwan
 		;;
 	
@@ -36,10 +45,9 @@ uci batch<<-EOF >/dev/null
 set qmodem_mwan.$cfg.member_interface=$interface_name
 set qmodem_mwan.$cfg.member_priority=$2
 set qmodem_mwan.$cfg.member_weight=$3
-add_list qmodem_mwan.$cfg.member_track_ip='test.ustc.edu.cn'
-add_list qmodem_mwan.$cfg.member_track_ip='cip.cc'
-add_list qmodem_mwan.$cfg.member_track_ip='208.67.220.220'
-add_list qmodem_mwan.$cfg.member_track_ip='208.67.222.222'
+add_list qmodem_mwan.$cfg.member_track_ip='119.29.29.29'
+add_list qmodem_mwan.$cfg.member_track_ip='taobao.com'
+add_list qmodem_mwan.$cfg.member_track_ip='baidu.com'
 EOF
 }
 
