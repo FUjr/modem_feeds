@@ -28,6 +28,10 @@ sms_at_port = s:taboption("general",Value, "sms_at_port", translate("SMS AT Port
 sms_at_port.rmempty = true
 valid_at_ports = uci:get("qmodem",arg[1],"valid_at_ports")
 avalible_ports = uci:get("qmodem",arg[1],"ports")
+
+dns_list = s:taboption("general", DynamicList, "dns_list", translate("DNS"))
+dns_list.description = translate("If the DNS server is not set, it will use the DNS server leased by the operator.")
+
 if valid_at_ports == nil then
     valid_at_ports = {}
 end
@@ -52,6 +56,14 @@ end
 
 at_port.placeholder = translate("Not null")
 at_port.rmempty = false
+
+bridge_mode = s:taboption("advanced", Flag, "en_bridge", translate("Bridge Mode"))
+bridge_mode.description = translate("Caution: Only avalible for quectel sdx 5G Modem.")
+bridge_mode.default = "0"
+
+do_not_add_dns = s:taboption("advanced", Flag, "do_not_add_dns", translate("Do Not modify resolv.conf"))
+do_not_add_dns.description = translate("quectel-CM will append the DNS server to the resolv.conf file by default.if you do not want to modify the resolv.conf file, please check this option.")
+do_not_add_dns.default = "0"
 
 ra_master = s:taboption("advanced", Flag, "ra_master", translate("RA Master"))
 ra_master.description = translate("Caution: Enabling this option will make it the IPV6 RA Master, and only one interface can be configured as such.")
@@ -144,6 +156,7 @@ pincode.description = translate("If the PIN code is not set, leave it blank.")
 metric = s:taboption("advanced", Value, "metric", translate("Metric"))
 metric.description = translate("The metric value is used to determine the priority of the route. The smaller the value, the higher the priority. Cannot duplicate.")
 metric.default = "10"
+
 
 
 return m

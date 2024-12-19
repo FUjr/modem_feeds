@@ -148,6 +148,9 @@ update_config()
     config_get define_connect $modem_config define_connect
     config_get ra_master $modem_config ra_master
     config_get extend_prefix $modem_config extend_prefix
+    config_get en_bridge $modem_config en_bridge
+    config_get do_not_add_dns $modem_config do_not_add_dns
+    config_get dns_list $modem_config dns_list
     config_get global_dial main enable_dial
     # config_get ethernet_5g u$modem_config ethernet 转往口获取命令更新，待测试
     config_foreach get_associate_ethernet_by_path modem-slot
@@ -377,9 +380,11 @@ set_if()
             uci set network.${interface_name}.peerdns='0'
             uci set network.${interface_name}.metric="${metric}"
             uci del network.${interface_name}.dns
-            uci add_list network.${interface_name}.dns='114.114.114.114'
-            uci add_list network.${interface_name}.dns='119.29.29.29'
-            uci add_list network.${interface_name}.dns='8.8.8.8'
+            if [ -n "$dns_list" ];then
+                for dns in $dns_list;do
+                    uci add_list network.${interface_name}.dns="${dns}"
+                done
+            fi
             local num=$(uci show firewall | grep "name='wan'" | wc -l)
             local wwan_num=$(uci -q get firewall.@zone[$num].network | grep -w "${interface_name}" | wc -l)
             if [ "$wwan_num" = "0" ]; then
@@ -539,7 +544,7 @@ flush_ip_cb()
 
 dial(){
     update_config
-    m_debug "modem_path=$modem_path,driver=$driver,interface=$interface_name,at_port=$at_port,using_sim_slot:$sim_slot"
+    m_debug "modem_path=$modem_path,driver=$driver,interface=$interface_name,at_port=$at_port,using_sim_slot:$sim_slot,dns_list:$dns_list"
     while [ "$dial_prepare" != 1 ] ; do
         sleep 5
         update_config
@@ -673,13 +678,18 @@ qmi_dial()
     if [[ "$modem_netcard" = "rmnet"* ]];then
         qmi_if=$(echo "$modem_netcard" | cut -d. -f1)
     fi
-
 		cmd_line="${cmd_line} -i ${qmi_if}"
 	fi
+    if [ "$en_bridge" = "1" ];then
+        cmd_line="${cmd_line} -b"
+    fi
+    if [ "$do_not_add_dns" = "1" ];then
+        cmd_line="${cmd_line} -D"
+    fi
     if [ -e "/usr/bin/quectel-CM-M" ];then
         [ -n "$metric" ] && cmd_line="$cmd_line -d -M $metric"
     else
-        [ -n "$metric" ] && cmd_line="$cmd_line -d"
+        [ -n "$metric" ] && cmd_line="$cmd_line"
     fi
     cmd_line="$cmd_line -f $log_file"
     m_debug "dialing $cmd_line"
