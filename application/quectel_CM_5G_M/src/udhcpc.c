@@ -305,7 +305,7 @@ void update_ipv6_address(const char *ifname, const char *ip, const char *gw, uns
     }
 }
 
-static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, const IPV6_T *ipv6, char *m) {
+static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, const IPV6_T *ipv6, PROFILE_T *profile) {
     char *d1, *d2;
 
     if (ipv4 && ipv4->Address) {
@@ -320,11 +320,11 @@ static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, con
             }
         }
 
-        update_ipv4_address(ifname, d1, d2, prefix,m);
+        update_ipv4_address(ifname, d1, d2, prefix,profile->metric);
         free(d1); free(d2);
 
         //Adding DNS
-        if (ipv4->DnsPrimary) {
+        if (ipv4->DnsPrimary && !profile->no_dns) {
             d1 = strdup(ipv4Str(ipv4->DnsPrimary));
             d2 = strdup(ipv4Str(ipv4->DnsSecondary ? ipv4->DnsSecondary : ipv4->DnsPrimary));
             update_resolv_conf(4, ifname, d1, d2);
@@ -336,11 +336,11 @@ static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, con
         d1 = strdup(ipv6Str(ipv6->Address));
         d2 = strdup(ipv6Str(ipv6->Gateway));
 
-        update_ipv6_address(ifname, d1, d2, ipv6->PrefixLengthIPAddr,m);
+        update_ipv6_address(ifname, d1, d2, ipv6->PrefixLengthIPAddr,profile->metric);
         free(d1); free(d2);
 
         //Adding DNS
-        if (ipv6->DnsPrimary[0]) {
+        if (ipv6->DnsPrimary[0]  && !profile->no_dns) {
             d1 = strdup(ipv6Str(ipv6->DnsPrimary));
             d2 = strdup(ipv6Str(ipv6->DnsSecondary[0] ? ipv6->DnsSecondary : ipv6->DnsPrimary));
             update_resolv_conf(6, ifname, d1, d2);
@@ -523,7 +523,7 @@ void udhcpc_start(PROFILE_T *profile) {
 #if 0
     if (profile->rawIP != 0) //mdm9x07/ec25,ec20 R2.0
     {
-        update_ip_address_by_qmi(ifname, &profile->ipv4, profile->ipv6, &profile->metric);
+        update_ip_address_by_qmi(ifname, &profile->ipv4, profile->ipv6, profile);
         return;
     }
 #endif
@@ -532,7 +532,7 @@ void udhcpc_start(PROFILE_T *profile) {
         goto set_ipv6;
 
     if (profile->no_dhcp || profile->request_ops == &mbim_request_ops) { //lots of mbim modem do not support DHCP
-        update_ip_address_by_qmi(ifname, &profile->ipv4, NULL, profile->metric);
+        update_ip_address_by_qmi(ifname, &profile->ipv4, NULL, profile);
     }
     else
 /* Do DHCP using busybox tools */
@@ -604,7 +604,7 @@ void udhcpc_start(PROFILE_T *profile) {
 
             if (!ql_netcard_ipv4_address_check(ifname, qmi2addr(profile->ipv4.Address))) {
                 //no udhcpc's default.script exist, directly set ip and dns
-                update_ip_address_by_qmi(ifname, &profile->ipv4, NULL, profile->metric);
+                update_ip_address_by_qmi(ifname, &profile->ipv4, NULL, profile);
             }
             //Add by Demon. check default route 
             FILE *rt_fp = NULL;
@@ -655,7 +655,7 @@ set_ipv6:
             close(forward_fd);
         }
 
-        update_ip_address_by_qmi(ifname, NULL, &profile->ipv6, profile->metric);
+        update_ip_address_by_qmi(ifname, NULL, &profile->ipv6, profile);
 
         if (profile->ipv6.DnsPrimary[0] || profile->ipv6.DnsSecondary[0]) {
             char dns1str[64], dns2str[64];
@@ -667,8 +667,8 @@ set_ipv6:
             if (profile->ipv6.DnsSecondary[0]) {
                 strcpy(dns2str, ipv6Str(profile->ipv6.DnsSecondary));
             }
-
-            update_resolv_conf(6, ifname, profile->ipv6.DnsPrimary[0] ? dns1str : NULL,
+            if (!profile->no_dns)
+                update_resolv_conf(6, ifname, profile->ipv6.DnsPrimary[0] ? dns1str : NULL,
                                profile->ipv6.DnsSecondary[0] != '\0' ? dns2str : NULL);
         }
 

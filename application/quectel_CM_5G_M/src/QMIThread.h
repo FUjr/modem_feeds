@@ -203,6 +203,7 @@ typedef struct __PROFILE {
     bool enable_ipv4;
     bool enable_ipv6;
     bool no_dhcp;
+    bool no_dns;
     const char *logfile;
     const char *usblogfile;
     char expect_adapter[32];

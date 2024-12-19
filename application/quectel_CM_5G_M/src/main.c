@@ -251,6 +251,7 @@ static int usage(const char *progname) {
     dbg_time("-b                                     Enable network interface bridge function (default 0)");
     dbg_time("-v                                     Verbose log mode, for debug purpose.");
     dbg_time("-d                                     Obtain the IP address and dns through qmi");
+    dbg_time("-D                                     Do not Append DNS servers to /etc/resolv.conf");
     dbg_time("-M metric                              Specify the metric of the default route");
     dbg_time("[Examples]");
     dbg_time("Example 1: %s ", progname);
@@ -916,6 +917,10 @@ static int parse_user_input(int argc, char **argv, PROFILE_T *profile) {
                     }
                 }
                 break;
+            
+            case 'D':
+                profile->no_dns = 1;
+            break;
 
             default:
                 return usage(argv[0]);
