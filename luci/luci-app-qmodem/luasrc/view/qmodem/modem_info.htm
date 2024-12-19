@@ -7,7 +7,9 @@
 
 	}
     
-
+    .table {
+        display: table;
+    }
     
     .compat-progressbar {
 	border: 1px solid var(--border-color-high,var(--progressbarColor,var(--background-color)));
@@ -79,6 +81,7 @@ class LuciTable{
             //init table
             var table = document.createElement('table');
             var tbody = document.createElement('tbody');
+            tbody.style.width = "100%";
             table.className="table"
             //save
             this.fieldset = fieldset;
@@ -146,6 +149,7 @@ class LuciTable{
                     row.className = "tr"
                     let cell_left = document.createElement('td');
                     cell_left.classList.add("td")
+                    cell_left.classList.add("left")
                     cell_left.setAttribute("width","33%")
                     let cell_right = document.createElement('td');
                     cell_right.classList.add("td")
