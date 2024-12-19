@@ -355,10 +355,10 @@ msgid "Access Maximum Bit Rate for Downlink"
 msgstr "下行链路最大比特率"
 
 msgid "Transmit Rate"
-msgstr "传输速率"
+msgstr "发送速率"
 
 msgid "Receive Rate"
-msgstr "发送速率"
+msgstr "接收速率"
 
 
 msgid "Network Mode"

@@ -347,3 +347,16 @@ get_reboot_caps()
     json_close_object
     json_dump
 }
+
+rate_convert()
+{
+    local rate=$1
+    rate_units="bps Kbps Mbps Gbps"
+    for i in $(seq 0 3); do
+        if [ $rate -lt 1024 ]; then
+            break
+        fi
+        rate=$(($rate / 1024))
+    done
+    echo "$rate `echo $rate_units | cut -d ' ' -f $(($i+1))`"
+}
