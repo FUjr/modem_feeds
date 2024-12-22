@@ -13,7 +13,7 @@ function index()
     if not nixio.fs.access("/etc/config/qmodem") then
         return
     end
-	entry({"admin", "modem"}, firstchild(), luci.i18n.translate("Modem"), 50).dependent = true
+	entry({"admin", "modem"}, firstchild(), _("Modem"), 25).dependent=false
 	entry({"admin", "modem", "qmodem"}, alias("admin", "modem", "qmodem", "modem_info"), luci.i18n.translate("QModem"), 100).dependent = true
 	--模块信息
 	entry({"admin", "modem", "qmodem", "modem_info"}, template("qmodem/modem_info"), luci.i18n.translate("QModem Information"),2).leaf = true
