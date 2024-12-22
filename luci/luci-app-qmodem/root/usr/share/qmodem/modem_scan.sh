@@ -254,6 +254,7 @@ validate_at_port()
 match_config()
 {
     local name=$(echo $1 | sed 's/\r//g' | tr 'A-Z' 'a-z')
+    [[ "$name" = *"nl668"* ]] && name="nl668"
     [[ "$name" = *"nl678"* ]] && name="nl678"
 
 	[[ "$name" = *"em120k"* ]] && name="em120k"

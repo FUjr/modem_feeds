@@ -340,6 +340,18 @@
                     "ncm"
                 ]
             },
+            "nl668": {
+                "manufacturer_id": "1508",
+                "manufacturer": "fibocom",
+                "platform": "lte",
+                "data_interface": "usb",
+                "define_connect": "1",
+                "modes": [
+                    "ecm",
+                    "rndis",
+                    "ncm"
+                ]
+            },
             "nl678": {
                 "manufacturer_id": "2cb7",
                 "manufacturer": "fibocom",
