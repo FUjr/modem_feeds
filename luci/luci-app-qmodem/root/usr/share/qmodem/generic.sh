@@ -371,3 +371,22 @@ rate_convert()
     fi
     echo "$rate `echo $rate_units | cut -d ' ' -f $(($i+1))`"
 }
+
+get_modem_disabled_features()
+{
+    . /lib/functions.sh
+    config_load qmodem 
+    config_list_foreach $config_section disabled_features _add_disabled_features
+}
+
+get_global_disabled_features()
+{
+    . /lib/functions.sh
+    config_load qmodem 
+    config_list_foreach main disabled_features _add_disabled_features
+}
+
+_add_disabled_features()
+{
+    json_add_string "" "$1"
+}

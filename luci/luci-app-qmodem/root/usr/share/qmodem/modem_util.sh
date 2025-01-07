@@ -11,6 +11,7 @@ at()
 	tom_modem -d $at_port -o a -c "$atcmd"
 }
 
+
 fastat()
 {
     local at_port=$1

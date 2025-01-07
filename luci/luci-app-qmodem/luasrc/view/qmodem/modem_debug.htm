@@ -341,8 +341,8 @@
 
 			createCheckbox(band_class,band_name,band_id){
 				let checkbox = document.createElement('input');
+				checkbox.classList = ["cbi-input-checkbox"];
 				checkbox.type = "checkbox";
-				checkbox.className = "cbi-input-checkbox";
 				checkbox.value = band_id;
 				checkbox.setAttribute("display-band",band_name);
 				checkbox.addEventListener("change",() => {
@@ -453,8 +453,11 @@
 						let display_value = this.checkboxes[band_class][checkbox].getAttribute("display-band");
 						let span = document.createElement('span');
 						span.innerHTML = display_value;
-						td.appendChild(this.checkboxes[band_class][checkbox]);
-						td.appendChild(span);
+						let band_container=document.createElement('span');
+						band_container.classList.add("band-container");
+						band_container.appendChild(this.checkboxes[band_class][checkbox]);
+						band_container.appendChild(span);
+						td.appendChild(band_container);
 					}
 				}
 
@@ -1245,30 +1248,50 @@
 			this.cbi_map = document.querySelector('.cbi-map');
 			this.class_map = {};
 			this.datatabs = [];
-			this.create_tabmenu();
+			this.disabled_features = [];
+			this.hotplug_elements = [];
+			//this.create_tabmenu();
 			
 		}
 
 		update_cfg_id(cfg_id){
-			for (let key in this.class_map) {
-				this.class_map[key].cfg_id = cfg_id;
-				this.class_map[key].get_config();
-			}
-			//check if all datatab not selected
-			for (let tab of this.datatabs) {
-				if (tab.className == "cbi-tab") {
-					this.switch_tab(tab);
-					return;
+			XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "modem_ctrl")%>', { "cfg": cfg_id , "action" : "get_disabled_features"}, (x, data) => {
+				//clear class_map
+				
+				this.disabled_features = data.disabled_features ? data.disabled_features : [];
+				//delete tabmenu
+				for (let element of this.hotplug_elements){
+					element.parentNode.removeChild(element);
 				}
-			}
-			this.switch_tab(this.datatabs[0]);
+
+				this.class_map = {};
+				this.datatabs = [];
+				this.hotplug_elements = [];
+				this.create_tabmenu();
+				for (let key in this.class_map) {
+					this.class_map[key].cfg_id = cfg_id;
+					this.class_map[key].get_config();
+				}
+				//check if all datatab not selected
+				for (let tab of this.datatabs) {
+					if (tab.className == "cbi-tab") {
+						this.switch_tab(tab);
+						return;
+					}
+				}
+				this.switch_tab(this.datatabs[0]);
+				});
 		}
 
 		create_tabmenu(){
 			//add support function to tabmenu
 			var tabmenu = document.createElement('ul');
+			this.hotplug_elements.push(tabmenu);
 			tabmenu.className = "cbi-tabmenu";
 			for (let key in this.functions) {
+				if (this.disabled_features.includes(key)) {
+					continue;
+				}
 				var li = document.createElement('li');
 				li.className = "cbi-tab-disabled";
 				li.innerHTML = this.functions[key].name;
@@ -1280,7 +1303,6 @@
 				this.datatabs.push(li);
 			}
 			this.cbi_map.appendChild(tabmenu);
-			this.tabmenu = tabmenu;
 		}
 
 		switch_tab(target){
@@ -1295,6 +1317,7 @@
 
 			if (this.class_map[datatab] == undefined) {
 				this.class_map[datatab] = new this.functions[datatab].class(this.cfg_id);
+				this.hotplug_elements.push(this.class_map[datatab].fieldset);
 			}
 			for (let key in this.class_map) {
 				this.class_map[key].hide();
@@ -1314,6 +1337,13 @@
 <style>
 	.cbi-tabmenu li {
 		padding: 0.5rem;
+	}
+
+	.band-container {
+		display: flex;
+		margin-top: 1rem;
+		align-items: center;
+		width: 15%;
 	}
 </style>
 <div class="cbi-map">

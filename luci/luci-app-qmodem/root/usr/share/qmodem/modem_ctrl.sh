@@ -15,10 +15,13 @@ modem_slot=$(basename $modem_path)
 
 case $vendor in
     "quectel")
-        . /usr/share/qmodem/quectel.sh
+        . /usr/share/qmodem/vendor/quectel.sh
         ;;
     "fibocom")
-        . /usr/share/qmodem/fibocom.sh
+        . /usr/share/qmodem/vendor/fibocom.sh
+        ;;
+    "sierra")
+        . /usr/share/qmodem/vendor/sierra.sh
         ;;
     *)
         . /usr/share/qmodem/generic.sh
@@ -254,6 +257,14 @@ case $method in
         done
         json_close_object
         rm -rf /tmp/cache_sms_$2
+        ;;
+    "get_disabled_features")
+        json_add_array disabled_features
+        #从vendor文件中读取对vendor禁用的功能
+        vendor_get_disabled_features
+        get_modem_disabled_features
+        get_global_disabled_features
+        json_close_array
         ;;
 esac
 json_dump

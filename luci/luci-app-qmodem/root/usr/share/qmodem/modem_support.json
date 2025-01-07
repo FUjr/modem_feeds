@@ -458,6 +458,17 @@
                     "rndis",
                     "ncm"
                 ]
+            },
+            "em9190": {
+                "manufacturer_id": "1199",
+                "manufacturer": "sierra",
+                "platform": "qualcomm",
+                "data_interface": "usb",
+                "define_connect": "1",
+                "modes": [
+                    "mbim",
+                    "rmnet"
+                ]
             }
         },
         "pcie": {
