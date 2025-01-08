@@ -145,6 +145,8 @@
 			var selector_descr = this.createDescription(selector_tips);
 			input.style.display = "none";
 			input_descr.style.display = "none";
+			selector.style.width = "100%";
+			selector.style.minWidth = "auto";
 			// add event to selector
 			selector.addEventListener('change', function(event) {
 				if (event.target.value.length == 0){
@@ -1057,6 +1059,7 @@
 			tr = this.createTR();
 			td_l = this.createTD("<%:AT Port%>:");
 			td_r = this.createTD();
+			td_r.style.width = "70%";
 			td_r.appendChild(this.at_port_selector);
 			td_r.appendChild(this.at_port_selector.descr);
 			td_r.appendChild(this.at_port_input);
