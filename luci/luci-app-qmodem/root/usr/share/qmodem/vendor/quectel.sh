@@ -909,24 +909,24 @@ set_lockband()
 
 get_neighborcell_qualcomm(){
     local at_command='AT+QENG="neighbourcell"'
-    nr_lock_check="AT+QNWLOCK=\"common\/5g\""
-    lte_lock_check="AT+QNWLOCK=\"common\/4g\""
+    nr_lock_check="AT+QNWLOCK=\"common/5g\""
+    lte_lock_check="AT+QNWLOCK=\"common/4g\""
     lte_status=$(at $at_port $lte_lock_check | grep "+QNWLOCK:")
-    lte_lock_status=$(echo $lte_status | awk -F',' '{print $2}')
-    lte_lock_freq=$(echo $lte_status | awk -F',' '{print $3}')
-    lte_lock_pci=$(echo $lte_status | awk -F',' '{print $4}')
+    lte_lock_status=$(echo $lte_status | awk -F',' '{print $2}' | sed 's/\r//g')
+    lte_lock_freq=$(echo $lte_status | awk -F',' '{print $3}' | sed 's/\r//g')
+    lte_lock_pci=$(echo $lte_status | awk -F',' '{print $4}' | sed 's/\r//g')
     nr_status=$(at $at_port $nr_lock_check | grep "+QNWLOCK:")
-    nr_lock_status=$(echo $nr_status | awk -F',' '{print $2}')
-    nr_lock_pci=$(echo $nr_status | awk -F',' '{print $3}')
-    nr_lock_freq=$(echo $nr_status | awk -F',' '{print $4}')
-    nr_lock_scs=$(echo $nr_status | awk -F',' '{print $5}')
-    nr_lock_band=$(echo $nr_status | awk -F',' '{print $6}')
-    if [ "$lte_lock_status" = "1" ]; then
+    nr_lock_status=$(echo $nr_status | awk -F',' '{print $2}' | sed 's/\r//g')
+    nr_lock_pci=$(echo $nr_status | awk -F',' '{print $2}' | sed 's/\r//g')
+    nr_lock_freq=$(echo $nr_status | awk -F',' '{print $3}' | sed 's/\r//g')
+    nr_lock_scs=$(echo $nr_status | awk -F',' '{print $4}' | sed 's/\r//g')
+    nr_lock_band=$(echo $nr_status | awk -F',' '{print $5}' | sed 's/\r//g')
+    if [ "$lte_lock_status" != "0" ]; then
         lte_lock_status="locked"
     else
         lte_lock_status=""
     fi
-    if [ "$nr_lock_status" = "1" ]; then
+    if [ "$nr_lock_status" != "0" ]; then
         nr_lock_status="locked"
     else
         nr_lock_status=""
@@ -1244,12 +1244,12 @@ lockcell_qualcomm(){
     if [ -z "$pci" ] && [ -z "$arfcn" ]; then
         unlock4g="AT+QNWLOCK=\"common/4g\",0"
         unlocknr="AT+QNWLOCK=\"common/5g\",0"
-        res1=$(at $1 $unlocknr)
-        res2=$(at $1 $unlock4g)
+        res1=$(at $at_port $unlocknr)
+        res2=$(at $at_port $unlock4g)
         res=$res1,$res2
     else
         lock4g="AT+QNWLOCK=\"common/4g\",1,$arfcn,$pci"
-        locknr="AT+QNWLOCK=\"common/5g\",1,$pci,$arfcn,$scs,$band"
+        locknr="AT+QNWLOCK=\"common/5g\",$pci,$arfcn,$(get_scs $scs),$band"
         if [ $rat = "1" ]; then
             res=$(at $at_port $locknr)
         else
