@@ -736,7 +736,7 @@ class ModemSMS {
         for ( let msg of msgs){
             let part,total,index,reference,sender,timestamp,content;
             if (msg.reference){
-                reference = msg.reference;
+                reference = `${msg.reference}.${msg.sender}`;
                 if (reference in reference_table){
                     reference_table[reference].push(msg);
                 }
