@@ -40,7 +40,8 @@ usage: <tool_name> [options]
   设置超时时间，默认值为 3 秒。
 - `-o, --operation <operation>`指定操作类型，支持的操作有：
 
-  - `at` (a) 无-o参数默认为at
+  - `at` (a) 无-o参数默认为at，命令为tom_modem -d /dev/mhi_DUN  -o b -c ATI时，会向/dev/mhi_DUN发送ATI\r\n (即会自动往命令追加\r\n)
+  - ```binary_at``` (b) 需要发送控制字符（如^z）等，可使用16进制发送，如tom_modem -d /dev/mhi_DUN  -o b -c 4154490D0A 表示向/dev/mhi_DUN发送ATI\r\n。（注意，此选项不会自动追加\r\n 。）
   - `sms_read` (r)
   - `sms_send` (s)
   - `sms_delete` (d)
