@@ -270,6 +270,7 @@ check_ip()
                         ;;
                     "mediatek")
                         check_ip_command="AT+CGPADDR=3"
+                        check_ipv6=1
                         stric=1
                         ;;
                 esac
@@ -277,6 +278,12 @@ check_ip()
         esac
         ipaddr=$(at "$at_port" "$check_ip_command" |grep +CGPADDR:)
         if [ -n "$ipaddr" ];then
+            if [ "$check_ipv6" = "1" ] && [ "$pdp_type" = "IPv4v6" ];then
+                if ! ping -c 2 -w 5 2400:3200::1 > /dev/null 2>&1; then
+                    m_debug "ipv6 is down,try to restart"
+                    ifdown "$interface"V6 && sleep 2 && ifup "$interface"V6
+                fi
+            fi
             ipv6=$(echo $ipaddr | grep -oE "\b([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b")
             ipv4=$(echo $ipaddr | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
             disallow_ipv4="0.0.0.0"
@@ -761,6 +768,7 @@ at_dial()
     esac
     m_debug "dialing vendor:$manufacturer;platform:$platform; $cgdcont_command ; $at_command"
     at "${at_port}" "${cgdcont_command}"
+    sleep 3 #修复fm350拨号失败问题 ps:350处理不过来
     at "$at_port" "$at_command"
 }
 
