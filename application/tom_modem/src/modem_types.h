@@ -34,6 +34,8 @@
 //operations
 #define AT_OP_S 'a'
 #define AT_OP_L "at"
+#define BINARY_AT_OP_S 'b'
+#define BINARY_AT_OP_L "binary_at"
 #define SMS_READ_OP_S 'r'
 #define SMS_READ_OP_L "sms_read"
 #define SMS_SEND_OP_S 's'
@@ -109,6 +111,7 @@ enum ERROR_CODES {
     KEYWORD_NOT_MATCH,
     TIMEOUT_WAITING_NEWLINE,
     INVALID_PARAM,
+    INVALID_HEX,
     UNKNOWN_ERROR,
 };
 
@@ -135,6 +138,7 @@ enum OPTIONS {
 enum OPERATIONS {
     NULL_OP,
     AT_OP,
+    BINARY_AT_OP,
     SMS_READ_OP,
     SMS_SEND_OP,
     SMS_DELETE_OP

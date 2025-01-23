@@ -25,6 +25,48 @@ int at(PROFILE_T *profile,FDS_T *fds)
     user_msg("%s", output);
     return SUCCESS;
 }
+
+int binary_at(PROFILE_T *profile,FDS_T *fds)
+{
+    int w_ret,r_ret,hex_convert_ret;
+    int binary_at_cmd_len;
+    char *binary_at_cmd;
+    char output[COMMON_BUF_SIZE] = {0};
+    if (profile->at_cmd == NULL)
+    {
+        err_msg("AT command is empty");
+        return INVALID_PARAM;
+    }
+
+    if (strlen(profile->at_cmd) % 2 != 0)
+    {
+        err_msg("Invalid AT command length");
+        return INVALID_PARAM;
+    }
+    binary_at_cmd = (char *)malloc(strlen(profile->at_cmd) / 2 + 1);
+    hex_convert_ret = str_to_hex(profile->at_cmd, binary_at_cmd);
+    if (binary_at_cmd == NULL || hex_convert_ret)
+    {
+        err_msg("Binary AT command is empty");
+        return INVALID_PARAM;
+    }
+
+    w_ret = tty_write_raw(fds->fdo, binary_at_cmd);
+    if (w_ret)
+    {
+        return w_ret;
+    }
+    r_ret = tty_read_keyword(fds->fdi, output, COMMON_BUF_SIZE, "OK",profile->timeout);
+    if (r_ret)
+    {
+        dbg_msg("Error sending AT command, error code: %d", r_ret);
+        if (r_ret == COMM_ERROR)
+            return r_ret;
+    }
+    user_msg("%s", output);
+    return SUCCESS;
+}
+
 int sms_delete(PROFILE_T *profile,FDS_T *fds)
 {
     int w_ret,r_ret;

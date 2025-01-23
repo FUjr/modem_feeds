@@ -22,6 +22,8 @@ extern PROFILE_T s_profile;   // global profile
 
 extern  int at(PROFILE_T *profile,FDS_T *fds);
 
+extern int binary_at(PROFILE_T *profile,FDS_T *fds);
+
 extern  int sms_read(PROFILE_T *profile,FDS_T *fds);
 
 extern  int sms_send(PROFILE_T *profile,FDS_T *fds);

@@ -238,6 +238,8 @@ int match_operation(char *operation_name)
         {
         case AT_OP_S:
             return AT_OP;
+        case BINARY_AT_OP_S:
+            return BINARY_AT_OP;
         case SMS_READ_OP_S:
             return SMS_READ_OP;
         case SMS_SEND_OP_S:
@@ -254,6 +256,10 @@ int match_operation(char *operation_name)
         if (strcmp(operation_name, AT_OP_L) == 0)
         {
             return AT_OP;
+        }
+        else if (strcmp(operation_name, BINARY_AT_OP_L) == 0)
+        {
+            return BINARY_AT_OP;
         }
         else if (strcmp(operation_name, SMS_READ_OP_L) == 0)
         {
@@ -337,16 +343,36 @@ int usage(char* name)
     err_msg("  -b, --baud_rate <baud rate>  Baud rate Default: 115200 Supported: 4800,9600,19200,38400,57600,115200");
     err_msg("  -B, --data_bits <data bits>  Data bits Default: 8 Supported: 5,6,7,8");
     err_msg("  -t, --timeout <timeout>  Timeout Default: 3");
-    err_msg("  -o, --operation <operation>  Operation(at[a:defualt], sms_read[r], sms_send[s], sms_delete[d])");
+    err_msg("  -o, --operation <operation>  Operation(at[a:defualt],binary_at[b], sms_read[r], sms_send[s], sms_delete[d])");
     err_msg("  -D, --debug Debug mode Default: off");
     err_msg("  -p, --sms_pdu <sms pdu>  SMS PDU");
     err_msg("  -i, --sms_index <sms index>  SMS index");
     err_msg("Example:");
     err_msg("  %s -c ATI -d /dev/ttyUSB2 -b 115200 -B 8 -o at #advance at mode set bautrate and data bit", name);
     err_msg("  %s -c ATI -d /dev/ttyUSB2 # normal at mode", name);
+    err_msg("  %s -c ATI -d /dev/ttyUSB2 -o binary_at -c 4154490D0A # means sending ATI to ttyUSB2", name);
     err_msg("  %s -d /dev/mhi_DUN -o r # read sms", name);
     exit(-1);
 }
+
+int str_to_hex(char *str, char *hex)
+{
+    int len = strlen(str)/2;
+    int high,low;
+    for (int i = 0; i < len; i++)
+    {
+        high = char_to_hex(str[i*2]);
+        low = char_to_hex(str[i*2+1]);
+        if (high == -1 || low == -1)
+        {
+            return INVALID_HEX;
+        }
+        hex[i] = (high << 4) | low;
+        dbg_msg("hex[%d]: %x", i, hex[i]);
+    }
+    return SUCCESS;
+}
+
 void dump_profile()
 {
     dbg_msg("AT command: %s", s_profile.at_cmd);

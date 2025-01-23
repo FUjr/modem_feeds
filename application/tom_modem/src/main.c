@@ -142,6 +142,8 @@ int run_op(PROFILE_T *profile,FDS_T *fds)
     {
     case AT_OP:
         return at(profile,fds);
+    case BINARY_AT_OP:
+        return binary_at(profile,fds);
     case SMS_READ_OP:
         return sms_read(profile,fds);
     case SMS_SEND_OP:

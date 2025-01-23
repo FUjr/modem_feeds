@@ -186,6 +186,20 @@ int tty_read_keyword(FILE *fdi, char *output, int len, char *key_word, int soft_
     return exitcode;
 }
 
+int tty_write_raw(FILE *fdo, char *input)
+{
+    int ret;
+    ret = fputs(input, fdo);
+    fflush(fdo);
+    usleep(100);
+    if (ret < 0)
+    {
+        err_msg("Error writing to tty %d" , ret);
+        return COMM_ERROR;
+    }
+    return SUCCESS;
+}
+
 int tty_write(FILE *fdo, char *input)
 {
     int cmd_len, ret;
@@ -198,14 +212,7 @@ int tty_write(FILE *fdo, char *input)
         return COMM_ERROR;
     }
     snprintf(cmd_line, cmd_len, "%s\r\n", input);
-    ret = fputs(cmd_line, fdo);
+    ret =  tty_write_raw(fdo, cmd_line);
     free(cmd_line);
-    fflush(fdo);
-    usleep(100);
-    if (ret < 0)
-    {
-        err_msg("Error writing to tty %d" , ret);
-        return COMM_ERROR;
-    }
-    return SUCCESS;
+    return ret;
 }
