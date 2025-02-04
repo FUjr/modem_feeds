@@ -379,6 +379,69 @@ get_modem_disabled_features()
     config_list_foreach $config_section disabled_features _add_disabled_features
 }
 
+get_sms_capabilities() {
+    local res sms_cap
+    res=$(at $at_port "AT+CPMS?" | grep "CPMS:" | xargs)
+    [ -z "$res" ] && return
+
+    sms_cap=${res##*+CPMS:}
+    set -- $(echo "$sms_cap" | tr ',' ' ')
+    local mem1=$1 used1=$2 total1=$3
+    local mem2=$4 used2=$5 total2=$6
+    local mem3=$7 used3=$8 total3=$9
+
+    json_add_object "sms_capabilities"
+    json_add_string "mem1" "$mem1"
+    json_add_string "mem2" "$mem2"
+    json_add_string "mem3" "$mem3"
+    json_add_object "ME"
+    json_close_object
+    json_add_object "SM"
+    json_close_object
+
+    for idx in 1 2 3; do
+        eval "mem=\$mem$idx"
+        eval "used=\$used$idx"
+        eval "total=\$total$idx"
+
+        case "$mem" in
+            "SM")
+                json_select "SM"
+                ;;
+            "MT"|"ME")
+                json_select "ME"
+                ;;
+            *)
+                continue
+                ;;
+        esac
+
+        json_add_string "used" "$used"
+        json_add_string "total" "$total"
+        json_close_object
+    done
+}
+
+set_sms_storage()
+{
+    mem1=$(echo $1 | jq -r '.mem1')
+    mem2=$(echo $1 | jq -r '.mem2')
+    mem3=$(echo $1 | jq -r '.mem3')
+    json_add_string "raw" "$1"
+    if [ -z "$mem1" ] || [ -z "$mem2" ]; then
+        return
+    fi
+    if [ "$mem3" == "Loading" ];then
+        res=$(at $at_port "AT+CPMS=\"$mem1\",\"$mem2\"")
+    else
+        res=$(at $at_port "AT+CPMS=\"$mem1\",\"$mem2\",\"$mem3\"")
+    fi
+    
+    json_select "result"
+    json_add_string "result" "$res"
+}
+
+
 get_global_disabled_features()
 {
     . /lib/functions.sh

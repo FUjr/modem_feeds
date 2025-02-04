@@ -31,3 +31,27 @@ msgstr "发送短信失败"
 
 msgid "Send SMS Success"
 msgstr "发送短信成功"
+
+msgid "SMS Storage"
+msgstr "短信存储"
+
+msgid "Set Storage"
+msgstr "设置存储"
+
+msgid "ETC Storage"
+msgstr "ETC存储"
+
+msgid "Writing Storage"
+msgstr "写入存储"
+
+msgid "Reading Storage"
+msgstr "读取存储"
+
+msgid "Loading..."
+msgstr "加载中..."
+
+msgid "(U)SIM message storage"
+msgstr "(U)SIM短信存储"
+
+msgid "Mobile equipment message storage"
+msgstr "移动设备短信存储"

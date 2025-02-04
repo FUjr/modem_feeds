@@ -537,17 +537,70 @@ class ModemSMS {
         this.modem_cfg_list = [];
         this.sms_recvbox_table = new LuciTable();
         this.sms_send_table = new LuciTable();
-        
+        this.sms_storage_table = new LuciTable();
         this.sms_send_table.title = "<%:Send SMS%>";
         this.cbi_map = document.querySelector('.cbi-map');
+        this.cbi_map.appendChild(this.sms_storage_table.fieldset);
         this.cbi_map.appendChild(this.sms_recvbox_table.fieldset);
         this.cbi_map.appendChild(this.sms_send_table.fieldset);
+        
         this.modem_selector = document.getElementById('modem_selector');
         this.create_modem_cfg_selector();
         this.update_modem_cfg_list();
         this.init_send_table_view();
         this.init_msg_box();
+        this.init_sms_storage_table();
     }
+
+    init_sms_storage_table() {
+    const createOption = (value, text, disabled = false, selected = false) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.innerHTML = text;
+        opt.disabled = disabled;
+        opt.selected = selected;
+        return opt;
+    };
+
+    const reading_storage = document.createElement('select');
+    const writing_storage = document.createElement('select');
+    const etc_storage = document.createElement('select');
+    const set_storage_btn = document.createElement('input');
+    set_storage_btn.type = "button";
+    set_storage_btn.value = "Set";
+    set_storage_btn.onclick = () => this.set_sms_storage();
+
+    const opt_mt = createOption("ME", "<%: Mobile equipment message storage %>");
+    const opt_sm = createOption("SM", "<%: (U)SIM message storage %>");
+    const opt_loading = createOption("Loading", "<%: Loading... %>", true, true);
+
+    const storages = [reading_storage, writing_storage, etc_storage];
+    storages.forEach(storage => {
+        storage.appendChild(opt_mt.cloneNode(true));
+        storage.appendChild(opt_sm.cloneNode(true));
+        storage.appendChild(opt_loading.cloneNode(true));
+        storage.options[2].selected = true;
+    });
+
+    const data = [
+        { "col": 2, "left": document.createTextNode("<%: Reading Storage%>"), "right": reading_storage },
+        { "col": 2, "left": document.createTextNode("<%: Writing Storage%>"), "right": writing_storage },
+        { "col": 2, "left": document.createTextNode("<%: ETC Storage%>"), "right": etc_storage },
+        { "col": 2, "left": document.createTextNode("<%: Set Storage%>"), "right": set_storage_btn }
+    ];
+
+    this.sms_storage_table.title = "<%:SMS Storage%>";
+    this.sms_storage_table.data = data;
+    this.reading_storage = reading_storage;
+    this.writing_storage = writing_storage;
+    this.etc_storage = etc_storage;
+    this.opt_mt1 = storages[0].querySelector('option[value="ME"]');
+    this.opt_sm1 = storages[0].querySelector('option[value="SM"]');
+    this.opt_mt2 = storages[1].querySelector('option[value="ME"]');
+    this.opt_sm2 = storages[1].querySelector('option[value="SM"]');
+    this.opt_mt3 = storages[2].querySelector('option[value="ME"]');
+    this.opt_sm3 = storages[2].querySelector('option[value="SM"]');
+}
 
     init_msg_box()
     {
@@ -640,6 +693,26 @@ class ModemSMS {
         });
     }
 
+    set_sms_storage(){
+        let payload;
+        let mem1,mem2,mem3;
+        mem1 = this.reading_storage.value;
+        mem2 = this.writing_storage.value;
+        mem3 = this.etc_storage.value;
+        payload = {
+            "mem1": mem1,
+            "mem2": mem2,
+            "mem3": mem3,
+        }
+        XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "modem_ctrl")%>', {
+            "cfg": this.cfg_id,
+            "action":"set_sms_storage",
+            "params": JSON.stringify(JSON.stringify(payload))
+        },(x,data)=>{
+            this.update();
+        });
+    }
+
     lock(){
         var delete_btns = document.querySelectorAll('input[value="<%:Delete%>"]');
         for (let btn of delete_btns) {
@@ -697,7 +770,6 @@ class ModemSMS {
         }
         XHR.poll(10,'<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "get_sms")%>',{
             "cfg": this.cfg_id,
-
         }, (x,data) => {
             this.combine_messages(data);
         });
@@ -708,6 +780,7 @@ class ModemSMS {
             "cfg": this.cfg_id,
         }, (x,data) => {
             this.combine_messages(data);
+            this.update_sms_capabilities(data);
         });
     }
 
@@ -796,6 +869,40 @@ class ModemSMS {
             this.view = messages;
 
     }
+
+    update_sms_capabilities(data) {
+    const sms_capabilities = data.sms_capabilities;
+    const storages = [
+        { mem: sms_capabilities.mem1, storage: this.reading_storage, opts: ['opt_mt1', 'opt_sm1'] },
+        { mem: sms_capabilities.mem2, storage: this.writing_storage, opts: ['opt_mt2', 'opt_sm2'] },
+        { mem: sms_capabilities.mem3, storage: this.etc_storage, opts: ['opt_mt3', 'opt_sm3'] }
+    ];
+
+    const updateStorage = (mem, storage, mtOpt, smOpt) => {
+        let mt = "", sm = "";
+        if (mem === "MT" || mem === "ME") {
+            if (storage.value === "Loading") storage.value = "ME";
+            mt = "[<%:Using%>]";
+        } else if (mem === "SM") {
+            if (storage.value === "Loading") storage.value = "SM";
+            sm = "[<%:Using%>]";
+        } else {
+            storage.value = "Loading";
+        }
+        this[mtOpt].innerHTML = mt + me_message_text;
+        this[smOpt].innerHTML = sm + sm_message_text;
+    };
+
+    const me_message_text = sms_capabilities.ME.used
+        ? `<%: Mobile equipment message storage %> <%: (Used/Total) %>(${sms_capabilities.ME.used}/${sms_capabilities.ME.total})`
+        : "<%: Mobile equipment message storage %>";
+
+    const sm_message_text = sms_capabilities.SM.used
+        ? `<%: (U)SIM message storage %> <%: (Used/Total) %>(${sms_capabilities.SM.used}/${sms_capabilities.SM.total})`
+        : "<%: (U)SIM message storage %>";
+
+    storages.forEach(({ mem, storage, opts }) => updateStorage(mem, storage, opts[0], opts[1]));
+}
 
     set cfg_options(value){
         var longger = this.modem_cfg_list.length > value.length ? this.modem_cfg_list : value;
@@ -910,6 +1017,7 @@ window.onload = function(){
 <div>
     <div class="cbi-map">
         <fieldset class="cbi-section">
+            
             <table class="table">
                 <tbody>
                     <tr class="tr">
