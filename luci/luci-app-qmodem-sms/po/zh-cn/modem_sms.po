@@ -55,3 +55,12 @@ msgstr "(U)SIM短信存储"
 
 msgid "Mobile equipment message storage"
 msgstr "移动设备短信存储"
+
+msgid "Using"
+msgstr "使用中"
+
+msgid "(Used/Total)"
+msgstr "(已用/总可用)"
+
+msgid "Set"
+msgstr "设置"
