@@ -24,7 +24,6 @@ LUCI_DEPENDS:=+luci-compat \
 		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT:pciutils \
 		+PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM:quectel-CM-5G-M \
 		+PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G:quectel-CM-5G \
-		+PACKAGE_luci-app-qmodem_USING_NORMAL_QUECTEL_CM:quectel-cm \
 		+PACKAGE_luci-app-qmodem_ADD_LUA_LUCI_HOMEPAGE:luci-app-qmodem_with_lua_index_page \
 		+tom_modem \
 		+jq +bc\
@@ -50,10 +49,6 @@ define Package/luci-app-qmodem/config
 
 	config PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G
 		bool "Using QWRT quectel-CM-5G"
-		default n
-	
-	config PACKAGE_luci-app-qmodem_USING_NORMAL_QUECTEL_CM
-		bool "Using Normal quectel-cm"
 		default n
 endef
 
