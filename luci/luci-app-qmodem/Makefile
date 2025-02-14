@@ -37,7 +37,7 @@ endef
 define Package/luci-app-qmodem/config
 	config PACKAGE_luci-app-qmodem_ADD_LUA_LUCI_HOMEPAGE
 		bool "Add Lua Luci Homepage"
-		default n
+		default y
 
 	config PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT
 		bool "Add PCIe Modem SUPPORT"
@@ -58,7 +58,9 @@ endef
 
 define Package/luci-app-qmodem_with_lua_index_page/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/admin_status/index
-	$(INSTALL_DATA) ./files/modem_overview.htm $(1)/usr/lib/lua/luci/view/admin_status/index
+	if [ ! -f $(TOPDIR)/feeds/luci/package.json ]; then \
+		$(INSTALL_DATA) ./files/modem_overview.htm $(1)/usr/lib/lua/luci/view/admin_status/index/; \
+	fi
 endef
 
 include $(TOPDIR)/feeds/luci/luci.mk
