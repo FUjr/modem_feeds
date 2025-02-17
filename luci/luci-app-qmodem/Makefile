@@ -50,17 +50,21 @@ choice
   bool "Generic QMI driver"
 endchoice
 
+choice
+  prompt "Quectel Connect Manager Selection"
+  default PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
+  
+	config PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
+	bool "Tom customized Quectel CM"
+
+	config PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G
+	bool "QWRT Quectel-CM-5G"
+endchoice
+
 	config PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT
 		bool "Add PCIe Modem SUPPORT"
 		default n
 
-	config PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
-		bool "Using Tom customized Quectel CM"
-		default y
-
-	config PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G
-		bool "Using QWRT quectel-CM-5G"
-		default n
 endef
 
 define Package/luci-app-qmodem_with_lua_index_page
