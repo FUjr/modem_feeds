@@ -112,7 +112,23 @@ at_get_slot()
 				;;
 			esac
 			;;
-			
+		"simcom")
+			at_res=$(at $at_port AT+SMSIMCFG? | grep "+SMSIMCFG:" | awk -F',' '{print $2}' | sed 's/\r//g')
+			case $at_res in
+				"1")
+					sim_slot="1"
+					;;
+				"2")
+					sim_slot="2"
+					;;
+				*)
+					sim_slot="1"
+					;;
+			*)
+				sim_slot="1"
+				;;
+			esac
+			;;
 		*)
 			at_q_res=$(at $at_port AT+QSIMDET? |grep +QSIMDET: |awk -F: '{print $2}')
 			at_f_res=$(at $at_port AT+GTDUALSIM? |grep +GTDUALSIM: |awk -F: '{print $2}')

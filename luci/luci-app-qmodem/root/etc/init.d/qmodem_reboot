@@ -1,0 +1,39 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+USE_PROCD=1
+
+START=95
+STOP=0
+
+start_service() {
+	:
+}
+
+stop_service() {
+	procd_set_param timeout 30
+	config_load qmodem
+	config_foreach _reboot_usb modem-device
+	
+}
+
+_reboot_usb() {
+	config_get data_interface $1 data_interface
+	if [ "$data_interface" == "usb" ]; then
+		config_get name $1 name
+		if [ "$name" == "fm350-gl" ]; then
+			config_get at_port $1 at_port
+			response=$(tom_modem -d "$at_port" -o a -c "AT+CFUN=1,1")
+			retries=3
+			while ! echo "$response" | grep -qi "ok" && [ $retries -gt 0 ]; do
+				sleep 1
+				response=$(tom_modem -d "$at_port" -o a -c "AT+CFUN=1,1")
+				retries=$((retries - 1))
+			done
+			max_retries=15
+    	while [ -e "/dev/$at_port" ] && [ $max_retries -gt 0 ]; do
+        	sleep 1
+        	max_retries=$((max_retries - 1))
+    	done
+		fi
+	fi
+}

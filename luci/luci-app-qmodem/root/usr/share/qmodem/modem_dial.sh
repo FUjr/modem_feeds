@@ -270,22 +270,35 @@ check_ip()
                         ;;
                     "mediatek")
                         check_ip_command="AT+CGPADDR=3"
-                        mtk=1
                         stric=1
+                        ;;
+                esac
+                ;;
+            "simcom")
+                case $platform in
+                    "qualcomm")
+                        check_ip_command="AT+CGPADDR=6"
                         ;;
                 esac
                 ;;
         esac
         ipaddr=$(at "$at_port" "$check_ip_command" |grep +CGPADDR:)
         if [ -n "$ipaddr" ];then
-            if [ $mtk -eq 1 ] && [ "$pdp_type" = "IPv4v6" ];then
-                if ! ping -c 2 -w 5 2400:3200::1 > /dev/null 2>&1; then
-                    m_debug "ipv6 is down,try to restart"
-                    ifdown "$interface"V6 && sleep 2 && ifup "$interface"V6
+            if [ $mtk -eq 1 ] && echo "$ipv4_config" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+                if [ "$pdp_type" = "IPv4v6" ];then
+                    if ! ping -c 2 -w 5 2400:3200::1 > /dev/null 2>&1; then
+                        m_debug "ipv6 is down,try to restart"
+                        ifdown "$interface"V6 && sleep 2 && ifup "$interface"V6
+                    fi
                 fi
             fi
             ipv6=$(echo $ipaddr | grep -oE "\b([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}\b")
             ipv4=$(echo $ipaddr | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
+            if [ "$manufacturer" = "simcom" ];then
+                ipv4=$(echo $ipaddr | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | grep -v "0\.0\.0\.0" | head -n 1)
+                ipaddr=$(echo $ipaddr | sed 's/\./:/g' | sed 's/+CGPADDR: //g' | sed 's/'$ipv4',//g')
+                ipv6=$(echo $ipaddr | grep -oE "\b([0-9a-fA-F]{0,4}.){2,7}[0-9a-fA-F]{0,4}\b")
+            fi
             disallow_ipv4="0.0.0.0"
             #remove the disallow ip
             if [ "$ipv4" == *"$disallow_ipv4"* ];then
@@ -768,7 +781,15 @@ at_dial()
                     ;;
             esac
             ;;
-            
+        "simcom")
+            case $platform in
+                "qualcomm")
+                    local cnmp=$(at ${at_port} "AT+CNMP?" | grep "+CNMP:" | sed 's/+CNMP: //g' | sed 's/\r//g')
+                    at_command="AT+CNMP=$cnmp;+CNWINFO=1"
+                    cgdcont_command="AT+CGDCONT=1,\"IPV4V6\",\"$apn\""
+                    ;;
+            esac
+            ;;
     esac
     m_debug "dialing vendor:$manufacturer;platform:$platform; $cgdcont_command ; $at_command"
     at "${at_port}" "${cgdcont_command}"
@@ -949,7 +970,7 @@ at_dial_monitor()
             fi
             sleep 10
         else
-        #检测ipv4是否变化
+            #检测ipv4是否变化
             sleep 15
             if [ "$ipv4" != "$ipv4_cache" ];then
                 handle_ip_change

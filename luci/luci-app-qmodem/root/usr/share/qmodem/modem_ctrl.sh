@@ -23,6 +23,9 @@ case $vendor in
     "sierra")
         . /usr/share/qmodem/vendor/sierra.sh
         ;;
+    "simcom")
+        . /usr/share/qmodem/vendor/simcom.sh
+        ;;
     *)
         . /usr/share/qmodem/generic.sh
         ;;
