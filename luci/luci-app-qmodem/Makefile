@@ -14,17 +14,21 @@ LUCI_DEPENDS:=+luci-compat \
 		+kmod-usb2 +kmod-usb3 \
 		+kmod-usb-serial +kmod-usb-serial-option  +kmod-usb-serial-qualcomm \
 		+kmod-usb-net +kmod-usb-acm \
-		+kmod-usb-wdm +kmod-usb-net-qmi-wwan \
+		+kmod-usb-wdm \
 		+kmod-usb-net-cdc-ether \
 		+kmod-usb-net-cdc-mbim \
 		+kmod-usb-net-rndis \
 		+kmod-usb-net-cdc-ncm +kmod-usb-net-huawei-cdc-ncm \
+		+PACKAGE_luci-app-qmodem_INCLUDE_generic-qmi-wwan:kmod-usb-net-qmi-wwan \
+		+PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan:kmod-qmi_wwan_q \
+		+PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan:kmod-qmi_wwan_f \
+		+PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan:kmod-qmi_wwan_m \
 		+usbutils \
 		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT:kmod-pcie_mhi \
 		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT:pciutils \
 		+PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM:quectel-CM-5G-M \
 		+PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G:quectel-CM-5G \
-		+PACKAGE_luci-app-qmodem_ADD_LUA_LUCI_HOMEPAGE:luci-app-qmodem_with_lua_index_page \
+		+luci-app-qmodem_with_lua_index_page \
 		+tom_modem \
 		+jq +bc\
 		+coreutils +coreutils-stat
@@ -35,9 +39,16 @@ define Package/luci-app-qmodem/conffiles
 endef
 
 define Package/luci-app-qmodem/config
-	config PACKAGE_luci-app-qmodem_ADD_LUA_LUCI_HOMEPAGE
-		bool "Add Lua Luci Homepage"
-		default y
+choice
+  prompt "Qualcomm QMI WWAN Driver Selection"
+  default PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan
+  
+  config PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan
+  bool "Vendor QMI driver "
+
+  config PACKAGE_luci-app-qmodem_INCLUDE_generic-qmi-wwan
+  bool "Generic QMI driver"
+endchoice
 
 	config PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT
 		bool "Add PCIe Modem SUPPORT"
