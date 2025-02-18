@@ -41,7 +41,7 @@ endef
 define Package/luci-app-qmodem/config
 choice
   prompt "Qualcomm QMI WWAN Driver Selection"
-  default PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan
+  default PACKAGE_luci-app-qmodem_INCLUDE_generic-qmi-wwan
   
   config PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan
   bool "Vendor QMI driver"
