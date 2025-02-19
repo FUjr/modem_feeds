@@ -83,21 +83,6 @@
                     "ncm"
                 ]
             },
-            "rm500q-gl": {
-                "manufacturer_id": "2c7c",
-                "manufacturer": "quectel",
-                "platform": "qualcomm",
-                "data_interface": "usb",
-                "define_connect": "1",
-                "modes": [
-                    "qmi",
-                    "gobinet",
-                    "ecm",
-                    "mbim",
-                    "rndis",
-                    "ncm"
-                ]
-            },
             "rm510q-gl": {
                 "manufacturer_id": "2c7c",
                 "manufacturer": "quectel",
