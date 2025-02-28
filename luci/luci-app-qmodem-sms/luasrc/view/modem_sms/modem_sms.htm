@@ -942,7 +942,7 @@ class ModemSMS {
             let sender,timestamp,content,part,total,index;
             sender = msg.sender;
             if (typeof(msg.timestamp) == "number") {
-                timestamp = new Date(msg.timestamp*1000).toLocaleString();
+                timestamp = new Date(msg.timestamp*1000).toISOString()
             }
             else{
                 timestamp = msg.timestamp;
