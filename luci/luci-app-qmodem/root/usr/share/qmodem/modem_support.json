@@ -68,6 +68,21 @@
                     "ncm"
                 ]
             },
+            "rm500s-ce": {
+                "manufacturer_id": "2c7c",
+                "manufacturer": "quectel",
+                "platform": "qualcomm",
+                "data_interface": "usb",
+                "define_connect": "1",
+                "modes": [
+                    "qmi",
+                    "gobinet",
+                    "ecm",
+                    "mbim",
+                    "rndis",
+                    "ncm"
+                ]
+            },
             "rm500q-cn": {
                 "manufacturer_id": "2c7c",
                 "manufacturer": "quectel",
@@ -249,6 +264,21 @@
                 ]
             },
             "rg520n-eu": {
+                "manufacturer_id": "2c7c",
+                "manufacturer": "quectel",
+                "platform": "qualcomm",
+                "data_interface": "usb",
+                "define_connect": "1",
+                "modes": [
+                    "qmi",
+                    "gobinet",
+                    "ecm",
+                    "mbim",
+                    "rndis",
+                    "ncm"
+                ]
+            },
+            "mh8001-eu": {
                 "manufacturer_id": "2c7c",
                 "manufacturer": "quectel",
                 "platform": "qualcomm",
@@ -514,6 +544,17 @@
             }
         },
         "pcie": {
+            "rm500s-ce": {
+                "manufacturer": "quectel",
+                "platform": "qualcomm",
+                "data_interface": "pcie",
+                "define_connect": "1",
+                "modes": [
+                    "qmi",
+                    "gobinet",
+                    "mbim"
+                ]
+            },
             "rm500q-cn": {
                 "manufacturer": "quectel",
                 "platform": "qualcomm",
@@ -604,6 +645,17 @@
                 ]
             },
             "rg520n-eu": {
+                "manufacturer": "quectel",
+                "platform": "qualcomm",
+                "data_interface": "pcie",
+                "define_connect": "1",
+                "modes": [
+                    "qmi",
+                    "gobinet",
+                    "mbim"
+                ]
+            },
+            "mh8001-eu": {
                 "manufacturer": "quectel",
                 "platform": "qualcomm",
                 "data_interface": "pcie",
