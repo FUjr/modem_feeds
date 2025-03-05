@@ -278,6 +278,10 @@ match_config()
     platform=$(echo $modem_config | jq -r ".platform")
     define_connect=$(echo $modem_config | jq -r ".define_connect")
     modes=$(echo $modem_config | jq -r ".modes[]")
+    wcdma_available_band=$(echo $modem_config | jq -r ".wcdma_band")
+    lte_available_band=$(echo $modem_config | jq -r ".lte_band")
+    nsa_available_band=$(echo $modem_config | jq -r ".nsa_band")
+    sa_available_band=$(echo $modem_config | jq -r ".sa_band")
 }
 
 get_modem_model()
@@ -378,6 +382,12 @@ set qmodem.$section_name.manufacturer=$manufacturer
 set qmodem.$section_name.platform=$platform
 set qmodem.$section_name.define_connect=$define_connect
 EOF
+
+    [ -n "$wcdma_available_band" ] && uci set qmodem.$section_name.wcdma_band=$wcdma_available_band
+    [ -n "$lte_available_band" ] && uci set qmodem.$section_name.lte_band=$lte_available_band
+    [ -n "$nsa_available_band" ] && uci set qmodem.$section_name.nsa_band=$nsa_available_band
+    [ -n "$sa_available_band" ] && uci set qmodem.$section_name.sa_band=$sa_available_band
+
     for mode in $modes; do
         uci add_list qmodem.$section_name.modes=$mode
     done
