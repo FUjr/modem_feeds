@@ -43,8 +43,8 @@ endef
 define Package/luci-app-qmodem/config
 choice
   prompt "Qualcomm QMI WWAN Driver Selection"
-  default PACKAGE_luci-app-qmodem_INCLUDE_generic-qmi-wwan
-  
+  default PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan
+
   config PACKAGE_luci-app-qmodem_INCLUDE_vendor-qmi-wwan
   bool "Vendor QMI driver"
 
@@ -55,7 +55,7 @@ endchoice
 choice
   prompt "Quectel Connect Manager Selection"
   default PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
-  
+
 	config PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM
 	bool "Tom customized Quectel CM"
 

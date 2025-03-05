@@ -23,6 +23,12 @@ echo 'src-git modem https://github.com/FUjr/modem_feeds.git;main' >> feeds.conf.
 ./scripts/feeds install -a -p modem
 ```
 
+强制更新库驱动 (使用本库驱动): 
+
+```shell
+./scripts/feeds install -a -f -p modem
+```
+
 ## 集成软件包
 
 在终端中运行以下命令以打开配置菜单：
@@ -38,10 +44,9 @@ make menuconfig
 | -------------------------------------------- | :------------------: |
 | **luci-app-qmodem**| 有模组信息、拨号设置、高级设置三大功能块。由于主程序在这里，因此其他功能依赖该程序（原谅我将后端程序也放在了这里）。|
 | **Add Lua Luci Homepage**| 添加 Lua Luci 首页。luci2（Js Luci）首页默认已添加，若使用luci2时勾选了这个，会有两个首页|
+| **QMI驱动选择**| 可选择 Generic QMI driver（通用QMI驱动）或 Vendor QMI driver（厂商QMI驱动）|
+| **Quectel Connect Manager选择**| 可选择以下三种之一：<br>- Tom customized Quectel CM：使用本仓库定制的Quectel CM，支持屏蔽添加默认路由、屏蔽修改resolv.conf等功能<br>- QWRT Quectel-CM-5G：使用 QWRT 仓库的 quectel-CM-5G<br>- NORMAL Quectel-CM：使用普通的 quectel-cm|
 | **Add PCIe Modem SUPPORT**| 勾选 PCIe 驱动，需要feeds里有kmod_mhi|
-| **Using Tom customized Quectel CM**| 使用本仓库定制的的 Quectel CM，支持屏蔽添加默认路由、屏蔽修改resolv.conf等功能(三选一即可)|
-| **Using QWRT quectel-CM-5G**| 使用 QWRT 仓库的 quectel-CM-5G。(三选一即可)|
-| **Using Normal quectel-cm**| 使用普通的 quectel-cm。(三选一即可)|
 | **luci-app-qmodem-hc**| 支持 hc-g80 SIM 卡切换，该插件为设备专属插件|
 | **luci-app-qmodem-mwan**| 支持多 WAN 设置。|
 | **luci-app-qmodem-sms**| 短信首发功能|
@@ -160,4 +165,4 @@ make menuconfig
 | https://github.com/gl-inet/gl-modem-at       |    AT命令发送工具    |
 | https://github.com/ouyangzq/sendat           |    AT命令发送工具    |
 
-# 
+#

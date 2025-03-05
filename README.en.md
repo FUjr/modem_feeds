@@ -19,6 +19,12 @@ echo 'src-git modem https://github.com/FUjr/modem_feeds.git;main' >> feeds.conf.
 ./scripts/feeds install -a -p modem
 ```
 
+Force update library drivers (use this library drivers):
+
+```shell
+./scripts/feeds install -a -f -p modem
+```
+
 ## Integrate Packages
 
 Run the following command in the terminal to open the configuration menu:
@@ -35,10 +41,9 @@ In the configuration menu, you can select the following packages (all under Luci
 | ------------------------------------- | :---------------------------------------: |
 | **luci-app-qmodem**                   | Provides module info, dialing settings, and advanced settings. Other features depend on this main program (backend included here). |
 | **Add Lua Luci Homepage**             | Adds Lua Luci homepage. If using luci2 (Js Luci) and selected, there will be two homepages. |
+| **QMI Driver Selection**              | Choose between Generic QMI driver or Vendor QMI driver. |
+| **Quectel Connect Manager Selection** | Choose one of:<br>- Tom customized Quectel CM: With options to block default route addition and resolv.conf modification<br>- QWRT quectel-CM-5G: Uses QWRT's quectel-CM-5G<br>- NORMAL quectel-cm: Uses the standard quectel-cm |
 | **Add PCIe Modem SUPPORT**            | Select PCIe driver, requires kmod_mhi in feeds. |
-| **Using Tom customized Quectel CM**   | Uses a customized Quectel CM from this repo, supporting options like blocking default route addition and resolv.conf modification (choose one). |
-| **Using QWRT quectel-CM-5G**          | Uses QWRT's quectel-CM-5G (choose one).   |
-| **Using Normal quectel-cm**           | Uses the standard quectel-cm (choose one).|
 | **luci-app-qmodem-hc**                | Supports hc-g80 SIM card switching, exclusive to specific devices. |
 | **luci-app-qmodem-mwan**              | Supports multi-WAN settings.              |
 | **luci-app-qmodem-sms**               | SMS sending feature.                      |
