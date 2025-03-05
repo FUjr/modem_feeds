@@ -1760,8 +1760,14 @@ static void ql_net_get_drvinfo(struct net_device *net, struct ethtool_drvinfo *i
 {
     /* Inherit standard device info */
     usbnet_get_drvinfo(net, info);
+    /* strlcpy() is deprecated in kernel 6.8.0+, using strscpy instead */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,8,0))
     strlcpy(info->driver, driver_name, sizeof(info->driver));
     strlcpy(info->version, VERSION_NUMBER, sizeof(info->version));
+#else
+    strscpy(info->driver, driver_name, sizeof(info->driver));
+    strscpy(info->version, VERSION_NUMBER, sizeof(info->version));
+#endif
 }
 
 static struct ethtool_ops ql_net_ethtool_ops;
