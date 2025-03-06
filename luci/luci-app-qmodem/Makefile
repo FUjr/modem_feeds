@@ -27,6 +27,7 @@ LUCI_DEPENDS:=+luci-compat \
 		+usbutils \
 		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT:kmod-pcie_mhi \
 		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT:pciutils \
+		+PACKAGE_luci-app-qmodem_INCLUDE_ADD_QFIREHOSE_SUPPORT:qfirehose \
 		+PACKAGE_luci-app-qmodem_USE_TOM_CUSTOMIZED_QUECTEL_CM:quectel-CM-5G-M \
 		+PACKAGE_luci-app-qmodem_USING_QWRT_QUECTEL_CM_5G:quectel-CM-5G \
 		+PACKAGE_luci-app-qmodem_USING_NORMAL_QUECTEL_CM:quectel-cm \
@@ -68,6 +69,10 @@ endchoice
 
 	config PACKAGE_luci-app-qmodem_INCLUDE_ADD_PCI_SUPPORT
 		bool "Add PCIe Modem SUPPORT"
+		default n
+
+	config PACKAGE_luci-app-qmodem_INCLUDE_ADD_QFIREHOSE_SUPPORT
+		bool "Add Qfirehose SUPPORT"
 		default n
 endef
 

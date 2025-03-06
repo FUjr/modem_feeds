@@ -44,14 +44,14 @@ make menuconfig
 | -------------------------------------------- | :------------------: |
 | **luci-app-qmodem**| 有模组信息、拨号设置、高级设置三大功能块。由于主程序在这里，因此其他功能依赖该程序（原谅我将后端程序也放在了这里）。|
 | **Add Lua Luci Homepage**| 添加 Lua Luci 首页。luci2（Js Luci）首页默认已添加，若使用luci2时勾选了这个，会有两个首页|
-| **QMI驱动选择**| 可选择 Generic QMI driver（通用QMI驱动）或 Vendor QMI driver（厂商QMI驱动）|
-| **Quectel Connect Manager选择**| 可选择以下三种之一：<br>- Tom customized Quectel CM：使用本仓库定制的Quectel CM，支持屏蔽添加默认路由、屏蔽修改resolv.conf等功能<br>- QWRT Quectel-CM-5G：使用 QWRT 仓库的 quectel-CM-5G<br>- NORMAL Quectel-CM：使用普通的 quectel-cm|
+| **QMI Driver Selection**| 可选择 Generic QMI driver（通用QMI驱动）或 Vendor QMI driver（厂商QMI驱动）|
+| **Quectel Connect Manager Selection**| 可选择以下三种之一：<br>- Tom customized Quectel CM：使用本仓库定制的Quectel CM，支持屏蔽添加默认路由、屏蔽修改resolv.conf等功能<br>- QWRT Quectel-CM-5G：使用 QWRT 仓库的 quectel-CM-5G<br>- NORMAL Quectel-CM：使用普通的 quectel-cm|
 | **Add PCIe Modem SUPPORT**| 勾选 PCIe 驱动，需要feeds里有kmod_mhi|
+| **Add Qfirehose SUPPORT**| 添加 Qfirehose 支持，用于高通芯片模组固件升级|
 | **luci-app-qmodem-hc**| 支持 hc-g80 SIM 卡切换，该插件为设备专属插件|
 | **luci-app-qmodem-mwan**| 支持多 WAN 设置。|
 | **luci-app-qmodem-sms**| 短信首发功能|
 | **luci-app-qmodem-ttl**| TTL 重写功能|
-
 
 # 项目介绍
 

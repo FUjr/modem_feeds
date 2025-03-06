@@ -44,6 +44,7 @@ In the configuration menu, you can select the following packages (all under Luci
 | **QMI Driver Selection**              | Choose between Generic QMI driver or Vendor QMI driver. |
 | **Quectel Connect Manager Selection** | Choose one of:<br>- Tom customized Quectel CM: With options to block default route addition and resolv.conf modification<br>- QWRT quectel-CM-5G: Uses QWRT's quectel-CM-5G<br>- NORMAL quectel-cm: Uses the standard quectel-cm |
 | **Add PCIe Modem SUPPORT**            | Select PCIe driver, requires kmod_mhi in feeds. |
+| **Add Qfirehose SUPPORT**             | Add Qfirehose support for Qualcomm chip module firmware upgrade. |
 | **luci-app-qmodem-hc**                | Supports hc-g80 SIM card switching, exclusive to specific devices. |
 | **luci-app-qmodem-mwan**              | Supports multi-WAN settings.              |
 | **luci-app-qmodem-sms**               | SMS sending feature.                      |
