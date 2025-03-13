@@ -440,6 +440,16 @@
                     "rndis"
                 ]
             },
+            "fm350r-gl": {
+                "manufacturer_id": "0e8d",
+                "manufacturer": "fibocom",
+                "platform": "mediatek",
+                "data_interface": "usb",
+                "define_connect": "3",
+                "modes": [
+                    "rndis"
+                ]
+            },
             "fm150-ae": {
                 "manufacturer_id": "2cb7",
                 "manufacturer": "fibocom",
@@ -821,6 +831,15 @@
                 ]
             },
             "fm350-gl": {
+                "manufacturer": "fibocom",
+                "platform": "mediatek",
+                "data_interface": "pcie",
+                "define_connect": "1",
+                "modes": [
+                    "mbim"
+                ]
+            },
+            "fm350r-gl": {
                 "manufacturer": "fibocom",
                 "platform": "mediatek",
                 "data_interface": "pcie",
