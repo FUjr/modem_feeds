@@ -42,7 +42,10 @@
 #define SMS_SEND_OP_L "sms_send"
 #define SMS_DELETE_OP_S 'd'
 #define SMS_DELETE_OP_L "sms_delete"
-
+#ifdef USE_SEMAPHORE
+#define CLEANUP_SEMAPHORE_OP_S 'C'
+#define CLEANUP_SEMAPHORE_OP_L "cleanup"
+#endif
 #define SET_READ_STORAGE "AT+CPMS=\"%s\""
 #define SET_PDU_FORMAT "AT+CMGF=0"
 #define READ_ALL_SMS "AT+CMGL=4"
@@ -141,7 +144,8 @@ enum OPERATIONS {
     BINARY_AT_OP,
     SMS_READ_OP,
     SMS_SEND_OP,
-    SMS_DELETE_OP
+    SMS_DELETE_OP,
+    CLEANUP_SEMAPHORE_OP
 };
 
 #endif

@@ -287,6 +287,8 @@ int match_operation(char *operation_name)
             return SMS_SEND_OP;
         case SMS_DELETE_OP_S:
             return SMS_DELETE_OP;
+        case CLEANUP_SEMAPHORE_OP_S:
+            return CLEANUP_SEMAPHORE_OP;
         default:
             return INVALID_PARAM;
             break;
@@ -313,6 +315,10 @@ int match_operation(char *operation_name)
         else if (strcmp(operation_name, SMS_DELETE_OP_L) == 0)
         {
             return SMS_DELETE_OP;
+        }
+        else if (strcmp(operation_name, CLEANUP_SEMAPHORE_OP_L) == 0)
+        {
+            return CLEANUP_SEMAPHORE_OP;
         }
         else
         {
@@ -388,11 +394,17 @@ int usage(char* name)
     err_msg("  -D, --debug Debug mode Default: off");
     err_msg("  -p, --sms_pdu <sms pdu>  SMS PDU");
     err_msg("  -i, --sms_index <sms index>  SMS index");
+    #ifdef USE_SEMAPHORE
+    err_msg("  -C, --cleanup Semaphore cleanup");
+    #endif
     err_msg("Example:");
     err_msg("  %s -c ATI -d /dev/ttyUSB2 -b 115200 -B 8 -o at #advance at mode set bautrate and data bit", name);
     err_msg("  %s -c ATI -d /dev/ttyUSB2 # normal at mode", name);
     err_msg("  %s -c ATI -d /dev/ttyUSB2 -o binary_at -c 4154490D0A # means sending ATI to ttyUSB2", name);
     err_msg("  %s -d /dev/mhi_DUN -o r # read sms", name);
+    #ifdef USE_SEMAPHORE
+    err_msg("  %s -d /dev/mhi_DUN  -o C # force cleanup semaphore", name);
+    #endif
     exit(-1);
 }
 
