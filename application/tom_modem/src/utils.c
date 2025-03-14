@@ -19,9 +19,7 @@ int lock_at_port(char* filename){
         perror("sem_open failed");
         return -1;
     }
-    wait_start = clock();
     sem_wait(sem);
-    dbg_msg("waited %f ms for semaphore", wait_total);
     return 0;
 }
 
