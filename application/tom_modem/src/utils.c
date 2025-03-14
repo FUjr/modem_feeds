@@ -1,5 +1,48 @@
 #include "utils.h"
 
+#ifdef USE_SEMAPHORE
+void generate_semaphore_name(const char* filename, char* semaphore_name) {
+    snprintf(semaphore_name, MAX_FILENAME_LEN, "%s%s", SEMAPHORE_PREFIX, filename);
+    for (int i = 0; semaphore_name[i] != '\0'; i++) {
+        if (semaphore_name[i] == '/') {
+            semaphore_name[i] = '_';
+        }
+    }
+}
+
+int lock_at_port(char* filename){
+    char semaphore_name[MAX_FILENAME_LEN];
+    generate_semaphore_name(filename, semaphore_name);
+    dbg_msg("semaphore_name: %s", semaphore_name);
+    sem_t *sem = sem_open(semaphore_name, O_CREAT, 0644, 1);
+    if (sem == SEM_FAILED) {
+        perror("sem_open failed");
+        return -1;
+    }
+    wait_start = clock();
+    sem_wait(sem);
+    dbg_msg("waited %f ms for semaphore", wait_total);
+    return 0;
+}
+
+int unlock_at_port(char* filename){
+    char semaphore_name[MAX_FILENAME_LEN];
+    generate_semaphore_name(filename, semaphore_name);
+    dbg_msg("semaphore_name: %s", semaphore_name);
+    sem_t *sem = sem_open(semaphore_name, O_CREAT, 0644, 1);
+    if (sem == SEM_FAILED) {
+        perror("sem_open failed");
+        return -1;
+    }
+    sem_post(sem);
+    sem_close(sem);
+    sem_unlink(semaphore_name);
+    return 0;
+}
+
+#endif
+
+
 static int char_to_hex(char c)
 {
     // convert char to hex

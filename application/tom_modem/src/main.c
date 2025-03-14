@@ -157,6 +157,10 @@ int run_op(PROFILE_T *profile,FDS_T *fds)
 }
 static void clean_up()
 {
+    if (unlock_at_port(s_profile.tty_dev))
+    {
+        err_msg("Failed to unlock tty device");
+    }
     if (tcsetattr(s_fds.tty_fd, TCSANOW, &s_fds.old_termios) != 0)
     {
         err_msg("Error restoring old tty attributes");
@@ -174,6 +178,16 @@ int main(int argc, char *argv[])
     FDS_T *fds = &s_fds;
     parse_user_input(argc, argv, profile);
     dump_profile();
+    #ifdef USE_SEMAPHORE
+    if (profile->tty_dev != NULL)
+    {
+        if (lock_at_port(profile->tty_dev))
+        {
+            err_msg("Failed to lock tty device");
+            return COMM_ERROR;
+        }
+    }
+    #endif
     // try open tty devices
     if (tty_open_device(profile,fds))
     {
@@ -184,6 +198,10 @@ int main(int argc, char *argv[])
     if (run_op(profile,fds))
     {
         err_msg("Failed to run operation %d", profile->op);
+        if (unlock_at_port(profile->tty_dev))
+        {
+            err_msg("Failed to unlock tty device");
+        }
         kill(getpid(), SIGINT); 
     }
     
