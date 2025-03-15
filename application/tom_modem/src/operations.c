@@ -149,7 +149,7 @@ int sms_read(PROFILE_T *profile,FDS_T *fds)
             }
             else
             {
-                dbg_msg("Error decoding sms");
+                dbg_msg("Error decoding sms in line: %s", line);
                 destroy_sms(sms);
             }
         }

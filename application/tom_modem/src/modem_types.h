@@ -52,7 +52,7 @@
 #define SEND_SMS "AT+CMGS=%d"
 #define DELETE_SMS "AT+CMGD=%d"
 
-#define SMS_BUF_SIZE 16384
+#define SMS_BUF_SIZE 65536
 #define LINE_BUF 1024
 #define SMS_LIST_SIZE 128
 #define COMMON_BUF_SIZE 16384
