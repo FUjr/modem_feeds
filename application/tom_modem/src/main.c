@@ -157,10 +157,12 @@ int run_op(PROFILE_T *profile,FDS_T *fds)
 }
 static void clean_up()
 {
+#ifdef USE_SEMAPHORE
     if (unlock_at_port(s_profile.tty_dev))
     {
         err_msg("Failed to unlock tty device");
     }
+#endif
     dbg_msg("Clean up success");
     if (s_fds.tty_fd >= 0)
     {
@@ -208,14 +210,15 @@ int main(int argc, char *argv[])
         err_msg("Failed to open tty device");
         return COMM_ERROR;
     }
-
     if (run_op(profile,fds))
     {
         err_msg("Failed to run operation %d", profile->op);
+#ifdef USE_SEMAPHORE
         if (unlock_at_port(profile->tty_dev))
         {
             err_msg("Failed to unlock tty device");
         }
+#endif
         kill(getpid(), SIGINT); 
     }
     
