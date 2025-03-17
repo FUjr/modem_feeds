@@ -688,7 +688,8 @@ static void rmnet_vnd_update_tx_stats(struct net_device *net,
 #endif
 }
 
-static struct rtnl_link_stats64 * _rmnet_vnd_get_stats64(struct net_device *net, struct rtnl_link_stats64 *stats)
+#if defined(MHI_NETDEV_STATUS64)
+static struct rtnl_link_stats64 *_rmnet_vnd_get_stats64(struct net_device *net, struct rtnl_link_stats64 *stats)
 {
     struct qmap_priv *dev = netdev_priv(net);
     unsigned int start;
@@ -707,12 +708,12 @@ static struct rtnl_link_stats64 * _rmnet_vnd_get_stats64(struct net_device *net,
         struct pcpu_sw_netstats *stats64;
         u64 rx_packets, rx_bytes;
         u64 tx_packets, tx_bytes;
-        
+
         stats64 = per_cpu_ptr(dev->stats64, cpu);
-        
+
         do {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)
-            start = u64_stats_fetch_begin_irq(&stats64->syncp); 
+            start = u64_stats_fetch_begin_irq(&stats64->syncp);
 #else
             start = u64_stats_fetch_begin(&stats64->syncp);
 #endif
@@ -729,7 +730,7 @@ static struct rtnl_link_stats64 * _rmnet_vnd_get_stats64(struct net_device *net,
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6,6,0)
         } while (u64_stats_fetch_retry_irq(&stats64->syncp, start));
-#else  
+#else
         } while (u64_stats_fetch_retry(&stats64->syncp, start));
 #endif
 
@@ -742,7 +743,6 @@ static struct rtnl_link_stats64 * _rmnet_vnd_get_stats64(struct net_device *net,
     return stats;
 }
 
-#if defined(MHI_NETDEV_STATUS64)
 #if (LINUX_VERSION_CODE > KERNEL_VERSION( 4,10,0 )) //bc1f44709cf27fb2a5766cadafe7e2ad5e9cb221
 static void rmnet_vnd_get_stats64(struct net_device *net, struct rtnl_link_stats64 *stats) {
     _rmnet_vnd_get_stats64(net, stats);
@@ -1195,7 +1195,11 @@ static int qmap_register_device(sQmiWwanQmap * pDev, u8 offset_id)
     priv->mux_id = FIBOCOM_QMAP_MUX_ID + offset_id;
     sprintf(qmap_net->name, "%s.%d", real_dev->name, offset_id + 1);
     qmap_net->netdev_ops = &qmap_netdev_ops;
-    ether_addr_copy(qmap_net->dev_addr, real_dev->dev_addr);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,17,0)
+    memcpy(qmap_net->dev_addr, real_dev->dev_addr, ETH_ALEN);
+#else
+    __dev_addr_set(qmap_net, real_dev->dev_addr, ETH_ALEN);
+#endif
 
 #ifdef FIBOCOM_BRIDGE_MODE
     priv->bridge_mode = !!(pDev->bridge_mode & BIT(offset_id));
