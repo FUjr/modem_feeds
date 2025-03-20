@@ -430,6 +430,7 @@ rpm_resume_exit:
 	return ret;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static int mhi_system_resume(struct device *dev)
 {
 	int ret = 0;
@@ -473,6 +474,7 @@ int mhi_system_suspend(struct device *dev)
 	MHI_LOG("Exit\n");
 	return 0;
 }
+#endif
 #endif
 
 /* checks if link is down */
