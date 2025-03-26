@@ -285,7 +285,7 @@ check_ip()
         ipaddr=$(at "$at_port" "$check_ip_command" |grep +CGPADDR:)
         if [ -n "$ipaddr" ];then
             if [ $mtk -eq 1 ] && echo "$ipv4_config" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
-                if [ "$pdp_type" = "IPv4v6" ];then
+                if [ "$pdp_type" = "ipv4v6" ];then
                     if ! ping -c 2 -w 5 2400:3200::1 > /dev/null 2>&1; then
                         m_debug "ipv6 is down,try to restart"
                         ifdown "$interface"V6 && sleep 2 && ifup "$interface"V6
