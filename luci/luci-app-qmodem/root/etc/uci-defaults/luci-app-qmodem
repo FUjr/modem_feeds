@@ -14,5 +14,9 @@ uci -q batch <<-EOF >/dev/null
 	commit ucitrack
 EOF
 
+if [ -f /www/luci-static/resources/luci.js ]; then 
+  rm -f /usr/lib/lua/luci/view/admin_status/index/modem_overview.htm
+fi
+
 rm -rf /tmp/luci-*cache
 exit 0
