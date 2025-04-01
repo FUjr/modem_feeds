@@ -288,7 +288,7 @@ check_ip()
                 if [ "$pdp_type" = "ipv4v6" ];then
                     if ! ping -c 2 -w 5 2400:3200::1 > /dev/null 2>&1; then
                         m_debug "ipv6 is down,try to restart"
-                        ifdown "$interface"V6 && sleep 2 && ifup "$interface"V6
+                        ifdown "$interface6_name" && sleep 2 && ifup "$interface6_name"
                     fi
                 fi
             fi
