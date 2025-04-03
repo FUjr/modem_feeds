@@ -311,8 +311,12 @@ add()
     #section name is replace slot .:- with _ 
     section_name=$(echo $slot | sed 's/[\.:-]/_/g')
     is_exist=$(uci -q get qmodem.$section_name)
-    is_fixed_device=$(uci -q get qmodem.@qmodem[0].fixed_device)
-    [ -n "$is_fixed_device" ] && [ "$is_fixed_device" == "1" ] && return
+    is_fixed_device=$(uci -q get qmodem.${section_name}.fixed_device)
+    if [ "$is_fixed_device" == "1" ];then
+        m_debug "modem $modem_name slot $slot slot_type $slot_type is fixed device, skip"
+        lock -u /tmp/lock/modem_add_$slot
+        return
+    fi
     case $slot_type in
         "usb")
             scan_usb_slot_interfaces $slot
