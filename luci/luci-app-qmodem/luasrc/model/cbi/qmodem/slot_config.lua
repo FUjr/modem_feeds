@@ -1,7 +1,7 @@
 m = Map("qmodem", translate("Slot Configuration"))
 m.redirect = luci.dispatcher.build_url("admin", "modem", "qmodem","settings")
 
-s = m:section(NamedSection, arg[1], "modem-device", "")
+s = m:section(NamedSection, arg[1], "modem-slot", "")
 
 slot_type = s:option(ListValue, "type", translate("Slot Type"))
 slot_type:value("usb", translate("USB"))

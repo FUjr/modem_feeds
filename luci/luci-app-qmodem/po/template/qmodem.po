@@ -546,3 +546,134 @@ msgstr ""
 
 msgid "Clear AT Command"
 msgstr ""
+
+# view/qmodem/modem_config.htm
+msgid "Fixed Device"
+msgstr "固定设备"
+
+msgid "If the device is fixed, it will not be update when the device is connected or disconnected."
+msgstr "如果设备是固定的，则在设备连接或断开时不会更新。"
+
+msgid "Slot Path"
+msgstr "插槽路径"
+
+msgid "Interface Type"
+msgstr "接口类型"
+
+msgid "USB"
+msgstr "USB"
+
+msgid "PCIe"
+msgstr "PCIe"
+
+msgid "Alias"
+msgstr "别名"
+
+msgid "Alias for the modem, used for identification."
+msgstr "调制解调器的别名，用于标识。"
+
+msgid "Enter alias name"
+msgstr "输入别名"
+
+msgid "Modem Model"
+msgstr "调制解调器型号"
+
+msgid "PDP Context Index"
+msgstr "PDP上下文序号"
+
+
+msgid "Manufacturer"
+msgstr "制造商"
+
+msgid "Quectel"
+msgstr "移远"
+
+msgid "Simcom"
+msgstr "芯讯通（Simcom）"
+
+msgid "Sierra Wireless"
+msgstr "Sierra无线"
+
+msgid "Fibocom"
+msgstr "广和通"
+
+msgid "Platform"
+msgstr "平台"
+
+msgid "lte"
+msgstr "LTE"
+
+msgid "lte12"
+msgstr "LTE12"
+
+msgid "qualcomm"
+msgstr "高通"
+
+msgid "mediatek"
+msgstr "联发科"
+
+msgid "unisoc"
+msgstr "紫光展锐"
+
+msgid "intel"
+msgstr "英特尔"
+
+msgid "AT Port"
+msgstr "AT端口"
+
+msgid "AT command port for modem communication."
+msgstr "用于调制解调器通信的AT命令端口。"
+
+msgid "Supported Modes"
+msgstr "支持的模式"
+
+msgid "ECM"
+msgstr "ECM"
+
+msgid "MBIM"
+msgstr "MBIM"
+
+msgid "QMI"
+msgstr "QMI"
+
+msgid "NCM"
+msgstr "NCM"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "WCDMA Band"
+msgstr "WCDMA频段"
+
+msgid "WCDMA band configuration, e.g., 1/2/3"
+msgstr "WCDMA频段配置，例如：1/2/3"
+
+msgid "Enter WCDMA band"
+msgstr "输入WCDMA频段"
+
+msgid "LTE Band"
+msgstr "LTE频段"
+
+msgid "LTE band configuration, e.g., 1/2/3"
+msgstr "LTE频段配置，例如：1/2/3"
+
+msgid "Enter LTE band"
+msgstr "输入LTE频段"
+
+msgid "NSA Band"
+msgstr "NSA频段"
+
+msgid "NSA band configuration, e.g., 1/2/3"
+msgstr "NSA频段配置，例如：1/2/3"
+
+msgid "Enter NSA band"
+msgstr "输入NSA频段"
+
+msgid "SA Band"
+msgstr "SA频段"
+
+msgid "SA band configuration, e.g., 1/2/3"
+msgstr "SA频段配置，例如：1/2/3"
+
+msgid "Enter SA band"
+msgstr "输入SA频段"

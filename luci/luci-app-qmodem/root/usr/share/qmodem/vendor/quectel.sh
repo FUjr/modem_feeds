@@ -1,5 +1,9 @@
 #!/bin/sh
-
+# Copyright (C) 2023 Siriling <siriling@qq.com>
+# Copyright (C) 2025 Fujr <fjrcn@outlook.com>
+_Vendor="quectel"
+_Author="Siriling,Fujr"
+_Maintainer="Fujr <fjrcn@outlook.com>"
 source /usr/share/qmodem/generic.sh
 debug_subject="quectel_ctrl"
 #return raw data

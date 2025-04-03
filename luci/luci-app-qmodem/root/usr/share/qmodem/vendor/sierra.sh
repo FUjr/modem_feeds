@@ -1,5 +1,8 @@
 #!/bin/sh
-
+# Copyright (C) 2025 Fujr <fjrcn@outlook.com>
+_Vendor="sierra"
+_Author="Fujr"
+_Maintainer="Fujr <fjrcn@outlook.com>"
 source /usr/share/qmodem/generic.sh
 debug_subject="quectel_ctrl"
 function unlock_advance(){

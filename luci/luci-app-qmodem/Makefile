@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=luci-app-qmodem
 LUCI_TITLE:=LuCI support for QWRT Modem
 LUCI_PKGARCH:=all
-PKG_VERSION:=2.6.2
+PKG_VERSION:=2.7.0
 PKG_LICENSE:=GPLv3
 PKG_LINCESE_FILES:=LICENSE
 PKG_MAINTAINER:=Tom <fjrcn@outlook.com>

@@ -19,7 +19,9 @@ fastat()
 	local atcmd="${new_str/\"/\"}"
 	#过滤空行
     # sms_tool_q -t 1 -d $at_port at "$atcmd"
-	tom_modem -d $at_port -o a -c "$atcmd" -t 1
+	local at_port_num=${at_port##ttyUSB}
+	sendat "$at_port_num" "$atcmd"
+	#tom_modem -d $at_port -o a -c "$atcmd" -t 1
 }
 
 log2file()

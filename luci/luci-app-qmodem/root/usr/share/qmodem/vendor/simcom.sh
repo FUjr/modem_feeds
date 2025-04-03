@@ -1,5 +1,8 @@
 #!/bin/sh
-
+# Copyright (C) 2025 sfwtw
+_Vendor="simcom"
+_Author="sfwtw"
+_Maintainer="sfwtw <unkown>"
 source /usr/share/qmodem/generic.sh
 debug_subject="quectel_ctrl"
 #return raw data

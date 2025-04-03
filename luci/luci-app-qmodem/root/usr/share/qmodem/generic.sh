@@ -453,3 +453,12 @@ _add_disabled_features()
 {
     json_add_string "" "$1"
 }
+
+_copyright()
+{
+    json_add_object "copyright"
+    json_add_string "Vendor" "${_Vendor}"
+    json_add_string "Author" "${_Author}"
+    json_add_string "Maintainer" "${_Maintainer}"
+    json_close_object
+}

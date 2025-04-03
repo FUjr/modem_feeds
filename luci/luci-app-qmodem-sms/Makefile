@@ -5,6 +5,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-qmodem-sms
 LUCI_TITLE:=Luci qwrt modem sms support
+PKG_VERSION:=2.7.0
 LUCI_PKGARCH:=all
 PKG_VERSION:=1
 PKG_LICENSE:=GPLv3

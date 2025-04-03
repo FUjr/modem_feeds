@@ -50,6 +50,9 @@ end
 
 o = s:option(DummyValue, "state", translate("Modem Status"))
 o.cfgvalue = function(t, n)
+    if Value.cfgvalue(t,n) == nil then
+        return translate("Unknown")
+    end
     return translate(Value.cfgvalue(t, n):upper() or "-")
 end
 

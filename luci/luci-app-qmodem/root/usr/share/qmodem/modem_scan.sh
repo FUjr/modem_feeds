@@ -311,6 +311,8 @@ add()
     #section name is replace slot .:- with _ 
     section_name=$(echo $slot | sed 's/[\.:-]/_/g')
     is_exist=$(uci -q get qmodem.$section_name)
+    is_fixed_device=$(uci -q get qmodem.@qmodem[0].fixed_device)
+    [ -n "$is_fixed_device" ] && [ "$is_fixed_device" == "1" ] && return
     case $slot_type in
         "usb")
             scan_usb_slot_interfaces $slot

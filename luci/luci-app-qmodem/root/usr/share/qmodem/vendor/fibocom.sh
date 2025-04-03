@@ -1,7 +1,13 @@
 #!/bin/sh
 # Copyright (C) 2023 Siriling <siriling@qq.com>
-
+# Copyright (C) 2025 Fujr <fjrcn@outlook.com>
+_Vendor="fibocom"
+_Author="Siriling Fujr"
+_Maintainer="Fujr <fjrcn@outlook.com>"
 source /usr/share/qmodem/generic.sh
+
+
+
 debug_subject="fibocom_ctrl"
 #获取拨号模式
 # $1:AT串口

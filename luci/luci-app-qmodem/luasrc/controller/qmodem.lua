@@ -30,6 +30,7 @@ function index()
 	--Qmodem设置
 	entry({"admin", "modem", "qmodem", "settings"}, cbi("qmodem/settings"), luci.i18n.translate("QModem Settings"),100).leaf = true
 	entry({"admin", "modem", "qmodem", "slot_config"}, cbi("qmodem/slot_config")).leaf = true
+	entry({"admin", "modem", "qmodem", "modem_config"}, cbi("qmodem/modem_config")).leaf = true
 end
 
 --[[
