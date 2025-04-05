@@ -18,6 +18,6 @@ return {
         mbim = "MBIM",
         qmi = "QMI",
         ncm = "NCM",
-        rndi = "RNDIS"
+        rndis = "RNDIS"
     }
 }
