@@ -93,6 +93,10 @@ populate_options(modes, modem_cfg.modes)
 enabled = s:option(Flag, "enabled", translate("Enable"))
 enabled.default = "1"
 
+disabled_features = s:option(DynamicList, "disabled_features", translate("Disabled Features"))
+disabled_features.description = translate("Select features to disable for this modem.")
+populate_options(disabled_features, modem_cfg.disabled_features)
+
 -- Band Configurations
 local band_options = {
     { name = "wcdma_band", label = "WCDMA Band", placeholder = "Enter WCDMA band" },

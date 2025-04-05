@@ -677,3 +677,75 @@ msgstr "SA频段配置，例如：1/2/3"
 
 msgid "Enter SA band"
 msgstr "输入SA频段"
+
+msgid "Modem Config List"
+msgstr "模组配置列表"
+
+msgid "Please Select"
+msgstr "请选择"
+
+msgid "Quectel"
+msgstr "移远通信"
+
+msgid "Simcom"
+msgstr "芯讯通"
+
+msgid "Sierra Wireless"
+msgstr "Sierra无线"
+
+msgid "Fibocom"
+msgstr "广和通"
+
+msgid "LTE"
+msgstr "LTE"
+
+msgid "LTE12"
+msgstr "LTE12"
+
+msgid "Qualcomm"
+msgstr "高通"
+
+msgid "MediaTek"
+msgstr "联发科"
+
+msgid "Unisoc"
+msgstr "紫光展锐"
+
+msgid "Intel"
+msgstr "英特尔"
+
+msgid "ECM"
+msgstr "ECM模式"
+
+msgid "MBIM"
+msgstr "MBIM模式"
+
+msgid "QMI"
+msgstr "QMI模式"
+
+msgid "NCM"
+msgstr "NCM模式"
+
+msgid "RNDIS"
+msgstr "RNDIS模式"
+
+msgid "Dial Mode"
+msgstr "拨号模式"
+
+msgid "Rat Prefer"
+msgstr "网络制式优先"
+
+msgid "Set IMEI"
+msgstr "设置IMEI"
+
+msgid "Neighbor Cell"
+msgstr "邻小区信息"
+
+msgid "Lock Band"
+msgstr "锁频段"
+
+msgid "Reboot Modem"
+msgstr "重启调制解调器"
+
+msgid "AT Debug"
+msgstr "AT调试"

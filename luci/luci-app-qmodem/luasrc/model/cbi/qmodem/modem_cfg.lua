@@ -19,5 +19,14 @@ return {
         qmi = "QMI",
         ncm = "NCM",
         rndis = "RNDIS"
+    },
+    disabled_features = {
+        DialMode = "Dial Mode",
+        RatPrefer = "Rat Prefer",
+        IMEI = "Set IMEI",
+        NeighborCell = "Neighbor Cell",
+        LockBand = "Lock Band",
+        RebootModem = "Reboot Modem",
+        AtDebug = "AT Debug"
     }
 }
