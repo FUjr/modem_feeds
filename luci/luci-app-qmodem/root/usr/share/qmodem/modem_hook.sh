@@ -24,7 +24,7 @@ esac
 
 _execute_ats(){
     command=$1
-    res=$(at $at_port $command)
+    res=$(at $at_port $command | tr -d '\r')
     m_debug "execute_ats $config_section: $command $at_port"
     m_debug "execute_ats_result $config_section: $res"
 }
