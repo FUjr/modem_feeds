@@ -102,11 +102,7 @@ slot_type.cfgvalue = function(t, n)
     return name:upper()
 end
 
-slot_path = s:option(DummyValue, "slot", translate("Slot Path"))
-slot_path.cfgvalue = function(t, n)
-    local path = (Value.cfgvalue(t, n) or "-")
-    return path
-end
+path = s:option(DummyValue, "path", translate("Slot Path"))
 
 default_alias = s:option(DummyValue, "alias", translate("Alias"))
 default_alias.cfgvalue = function(t, n)

@@ -8,6 +8,14 @@ debug_subject="modem_scan"
 source /lib/functions.sh
 source /usr/share/qmodem/modem_util.sh
 
+
+
+exec_post_init()
+{
+    section_name=$1
+    /usr/share/qmodem/modem_hook.sh $section_name post_init
+}
+
 get_associate_usb()
 {
     target_slot=$1
@@ -315,6 +323,7 @@ add()
     if [ "$is_fixed_device" == "1" ];then
         m_debug "modem $modem_name slot $slot slot_type $slot_type is fixed device, skip"
         lock -u /tmp/lock/modem_add_$slot
+        exec_post_init $section_name
         return
     fi
     case $slot_type in
@@ -407,6 +416,8 @@ EOF
     uci commit qmodem
     mkdir -p /var/run/qmodem/${section_name}_dir
     lock -u /tmp/lock/modem_add_$slot
+#增加预初始化脚本
+    exec_post_init $section_name
 #判断是否重启网络
     [ -n "$is_exist" ] && [ "$orig_network" == "$net_devices" ] && [ "$orig_at_port" == "/dev/$at_port" ] && [ "$orig_state" == "enabled" ] && [ "$orig_name" == "$modem_name" ] && return
     /etc/init.d/qmodem_network restart

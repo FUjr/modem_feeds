@@ -771,3 +771,40 @@ msgstr "重启调制解调器"
 
 msgid "AT Debug"
 msgstr "AT调试"
+
+msgid "Post Init Delay"
+msgstr "初始化延时"
+
+msgid "Delay of executing AT command after modem initialization, in seconds."
+msgstr "模组初始化后执行AT命令的延迟时间，以秒为单位。"
+
+msgid "Enter delay in seconds"
+msgstr "输入延时（秒）"
+
+msgid "Post Init AT Commands"
+msgstr "初始化后AT命令"
+
+msgid "AT commands to execute after modem initialization."
+msgstr "模组初始化后执行的AT命令。"
+
+msgid "Enter AT commands"
+msgstr "输入AT命令"
+
+msgid "Pre Dial Delay"
+msgstr "拨号前延时"
+
+msgid "Delay of executing AT command before dialing, in seconds."
+msgstr "拨号前执行AT命令的延迟时间，以秒为单位。"
+
+
+msgid "Pre Dial AT Commands"
+msgstr "拨号前AT命令"
+
+msgid "AT commands to execute before dialing."
+msgstr "拨号前执行的AT命令。"
+
+msgid "(still in beta)"
+msgstr "（仍在测试中）"
+
+msgid “（beta）"
+msgstr "(测试)"

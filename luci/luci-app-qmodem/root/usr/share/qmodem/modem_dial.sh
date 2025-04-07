@@ -11,6 +11,12 @@ debug_subject="modem_dial"
 source "${SCRIPT_DIR}/generic.sh"
 touch $log_file
 
+exec_pre_dial()
+{
+    section=$1
+    /usr/share/qmodem/modem_hook.sh $section pre_dial
+}
+
 get_led()
 {
     config_foreach get_led_by_slot modem-slot
@@ -575,6 +581,7 @@ dial(){
     done
     set_if
     m_debug "dialing $modem_path driver $driver"
+    exec_pre_dial $modem_config
     case $driver in
         "qmi")
             qmi_dial

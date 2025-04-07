@@ -114,4 +114,30 @@ for _, band in ipairs(band_options) do
     end
 end
 
+pre_dial_delay = s:option(Value, "pre_dial_delay", translate("Pre Dial Delay")..translate(" (beta)"))
+pre_dial_delay.description = translate("Delay of executing AT command before dialing, in seconds."..translate("(still in beta))"))
+pre_dial_delay.placeholder = translate("Enter delay in seconds")
+pre_dial_delay.default = "0"
+pre_dial_delay.datatype = "uinteger"
+pre_dial_delay.rmempty = true
+
+pre_add_delay = s:option(Value, "post_init_delay", translate("Post Init Delay")..translate(" (beta)"))
+pre_add_delay.description = translate("Delay of executing AT command after modem initialization, in seconds."..translate("(still in beta))"))
+pre_add_delay.placeholder = translate("Enter delay in seconds")
+pre_add_delay.default = "0"
+pre_add_delay.datatype = "uinteger"
+pre_add_delay.rmempty = true
+
+pre_add_at_cmds = s:option(DynamicList, "post_init_at_cmds", translate("Post Init AT Commands")..translate(" (beta)"))
+pre_add_at_cmds.description = translate("AT commands to execute after modem initialization."..translate("(still in beta))"))
+pre_add_at_cmds.placeholder = translate("Enter AT commands")
+pre_add_at_cmds.datatype = "string"
+pre_add_at_cmds.rmempty = true
+
+pre_dial_at_cmds = s:option(DynamicList, "pre_dial_at_cmds", translate("Pre Dial AT Commands")..translate(" (beta)"))
+pre_dial_at_cmds.description = translate("AT commands to execute before dialing."..translate("(still in beta))"))
+pre_dial_at_cmds.placeholder = translate("Enter AT commands")
+pre_dial_at_cmds.datatype = "string"
+pre_dial_at_cmds.rmempty = true
+
 return m
