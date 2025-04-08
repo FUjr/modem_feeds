@@ -1,0 +1,141 @@
+#
+# Copyright (c) 2022-2023 SMALLPROGRAM <https://github.com/smallprogram>
+# Description: Auto compile
+#
+
+#
+# Fork and compile the latest version yourself using Github Actions
+#   1.Into the repository of your own fork
+#   2.Into the repository [Settings]
+#   3.[Code and automation - Actions] ↓ [General] → [Workflow permissions] ↓  Check the [Read and write permissions] and [Save]
+#   4.Let's take [Actions]
+#
+
+name: "Auto compile with OpenWrt SDK"
+on:
+  push:
+    tags:
+      - '*'
+env:
+  TZ: Asia/Shanghai
+  BUILD_ARCH: '["arm64", "arm64_ipk"]'
+
+
+jobs:
+  job_build_qmodem:
+    name: Build QModem
+    strategy:
+      matrix:
+        build_arch: ${{ fromJSON(env.BUILD_ARCH) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install packages
+        run: |
+          echo "Install packages"
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install zstd build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev python3-venv rsync unzip zlib1g-dev file wget
+
+          # sudo -E apt-get -qq install zstd build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf rsync
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: 'qmodem'
+
+      - name: Import Env
+        run: cat qmodem/.github/workflows/${{ matrix.build_arch }}.env >> "$GITHUB_ENV"
+
+      - name: Cache openwrt SDK
+        id: cache-sdk
+        uses: actions/cache@v3
+        with:
+          path: sdk
+          key: openwrt-sdk-${{ matrix.build_arch }}
+
+      - name: Initialization  environment
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        env:
+          url_sdk: ${{ env.SDK_URL }}${{ env.SDK_NAME}}.${{ env.SDK_EXT }}
+        run: |
+          wget ${{ env.url_sdk }}
+          file_name=${{ env.SDK_NAME}}.${{ env.SDK_EXT }}
+          if [ "${{ env.SDK_EXT }}" == "tar.zst" ]; then
+            mkdir sdk && tar --zstd -xvf $file_name -C ./sdk --strip-components=1
+          elif [ "${{ env.SDK_EXT }}" == "tar.xz" ]; then
+            mkdir sdk && tar -xvf $file_name -C ./sdk --strip-components=1
+          fi
+          
+          cd sdk
+          echo "src-git base https://github.com/openwrt/openwrt.git;main" > feeds.conf
+          echo "src-git packages https://github.com/openwrt/packages.git;master" >> feeds.conf
+          echo "src-git luci https://github.com/openwrt/luci.git;master" >> feeds.conf
+          echo "src-git routing https://git.openwrt.org/feed/routing.git;master"  >> feeds.conf
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Configure QModem
+        run: |
+          echo "src-link qmodem `pwd`/qmodem" >> sdk/feeds.conf
+          
+          cd sdk
+          ./scripts/feeds update qmodem
+          ./scripts/feeds install -a -p qmodem
+          echo "CONFIG_ALL_NONSHARED=n" > .config
+          echo "CONFIG_ALL_KMODS=n" >> .config
+          echo "CONFIG_ALL=n" >> .config
+          echo "CONFIG_AUTOREMOVE=n" >> .config
+          echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
+          cat ../qmodem/.github/workflows/openwrt_package.config >> .config
+          make defconfig
+          make download -j$(nproc) || true
+          
+
+      - name: Compile QModem
+        id: compile
+        run: |
+          cd sdk
+          generic_package=$(cat ../qmodem/.github/workflows/qmodem_package_generic)
+          arch_package=$(cat ../qmodem/.github/workflows/qmodem_package_arch)
+          for package in $generic_package; do
+            make package/$package/compile -j$(nproc) || true
+          done
+          for package in $arch_package; do
+            make package/$package/compile -j$(nproc) || true
+          done
+          ls bin/package/${{ env.SDK_ARCH }}/qmodem/
+          cd ..
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "FIRMWARE=bin/package/${{ env.SDK_ARCH }}/qmodem/" >> $GITHUB_ENV
+
+      - name: Upload QModem
+        if: ${{ steps.compile.outputs.status == 'success' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: QModem-${{ matrix.build_arch }}
+          path: ${{ env.FIRMWARE }}
+          retention-days: 7
+
+
+
+        
+  job_release_artifacts:
+    name: Release Artifacts
+    needs: job_build_qmodem
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag_name=$(git describe --tags --abbrev=0)
+          release_name="Release $tag_name"
+          artifacts_path="artifacts"
+          gh release create "$tag_name" "$artifacts_path/*" --title "$release_name" --notes "Automated release of QModem artifacts."
+    
