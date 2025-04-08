@@ -1,0 +1,178 @@
+name: "Auto compile with OpenWrt SDK"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'qmodem/luci/luci-app-qmodem/Makefile'
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  job_prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      git_tag: ${{ steps.set_git_tag.outputs.git_tag }}
+      is_latest: ${{ steps.cache-version.outputs.cache-hit }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        path: 'qmodem'
+
+    - name: Set git tag
+      id: set_git_tag
+      run: |
+        pkg_version=$(grep -oP '^PKG_VERSION:=\K.*' qmodem/luci/luci-app-qmodem/Makefile)
+        if [ -z "$pkg_version" ]; then
+          echo "PKG_VERSION not found in Makefile"
+          exit 1
+        fi
+        echo "Extracted PKG_VERSION: $pkg_version"
+        tag="v$pkg_version"
+        echo "git_tag=$tag" >> $GITHUB_OUTPUT
+        echo "git_tag=$tag"
+        echo "git_tag=$tag" >> cache-version
+      
+    - name: Cache Version
+      id: cache-version
+      uses: actions/cache@v3
+      with:
+        path:  cache-version
+        key: qmodem-version
+
+  job_build_qmodem:
+    name: Build QModem
+    needs: job_prepare
+    continue-on-error: true
+    strategy:
+      matrix:
+        build_arch: ['arm64_ipk',"arm64_apk"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install packages
+        run: |
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install zstd build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev python3-venv rsync unzip zlib1g-dev file wget
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+
+      
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: 'qmodem'
+
+
+      - name: Import Env
+        run: cat qmodem/.github/workflows/${{ matrix.build_arch }}.env >> "$GITHUB_ENV"
+
+      - name: Cache openwrt SDK
+        id: cache-sdk
+        uses: actions/cache@v3
+        with:
+          path: sdk
+          key: openwrt-sdk-${{ matrix.build_arch }}
+
+      - name: Initialization environment
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        env:
+          url_sdk: ${{ env.SDK_URL }}${{ env.SDK_NAME}}.${{ env.SDK_EXT }}
+        run: |
+          wget ${{ env.url_sdk }}
+          file_name=${{ env.SDK_NAME}}.${{ env.SDK_EXT }}
+          if [ "${{ env.SDK_EXT }}" == "tar.zst" ]; then
+            mkdir sdk && tar --zstd -xvf $file_name -C ./sdk --strip-components=1
+          elif [ "${{ env.SDK_EXT }}" == "tar.xz" ]; then
+            mkdir sdk && tar -xvf $file_name -C ./sdk --strip-components=1
+          fi
+          cd sdk
+          echo "src-git base https://github.com/openwrt/openwrt.git;main" > feeds.conf
+          echo "src-git packages https://github.com/openwrt/packages.git;master" >> feeds.conf
+          echo "src-git luci https://github.com/openwrt/luci.git;master" >> feeds.conf
+          echo "src-git routing https://git.openwrt.org/feed/routing.git;master"  >> feeds.conf
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          cd ..
+          echo "src-link qmodem `pwd`/qmodem" >> sdk/feeds.conf
+          cd sdk
+          ./scripts/feeds update qmodem
+          ./scripts/feeds install -a -p qmodem
+          echo "CONFIG_ALL_NONSHARED=n" > .config
+          echo "CONFIG_ALL_KMODS=n" >> .config
+          echo "CONFIG_ALL=n" >> .config
+          echo "CONFIG_AUTOREMOVE=n" >> .config
+          echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
+          cat ../qmodem/.github/workflows/openwrt_package.config >> .config
+          make defconfig
+          make download -j$(nproc) || true
+
+      - name: Compile QModem
+        id: compile
+        run: |
+          cd sdk
+          ./scripts/feeds update qmodem
+          ./scripts/feeds install -a -p qmodem
+          generic_package=$(cat ../qmodem/.github/workflows/qmodem_package_generic)
+          arch_package=$(cat ../qmodem/.github/workflows/qmodem_package_arch)
+          for package in $generic_package; do
+            make package/$package/compile -j$(nproc) || true
+          done
+          for package in $arch_package; do
+            make package/$package/compile -j$(nproc) || true
+          done
+          ls bin/packages/${{ env.SDK_ARCH }}/qmodem/
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "FIRMWARE=$(pwd)/bin/packages/${{ env.SDK_ARCH }}/qmodem/" >> $GITHUB_ENV
+
+      - name: Upload QModem
+        if: ${{ steps.compile.outputs.status == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: QModem-${{ matrix.build_arch }}
+          path: ${{ env.FIRMWARE }}*
+          retention-days: 7
+
+  job_release_artifacts:
+    name: Release Artifacts
+    needs: [job_build_qmodem, job_prepare]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+        
+      - name: Create releases directory
+        run: mkdir -p releases
+
+      - name: Package artifacts into tar.gz
+        run: |
+          for dir in artifacts/*; do
+            if [ -d "$dir" ]; then
+              base_name=$(basename "$dir")
+              tar -czf "releases/${base_name}.tar.gz" -C "$dir" .
+            fi
+          done
+
+      - name: Check Release type
+        run: |
+          if [[ "${GITHUB_REF}" == *"-beta" ]]; then
+            echo "Release type: beta"
+            echo "RELEASE_TYPE=beta" >> $GITHUB_ENV
+          elif [[ "${GITHUB_REF}" == *"-rc" ]]; then
+            echo "Release type: rc"
+            echo "RELEASE_TYPE=rc" >> $GITHUB_ENV
+          else
+            echo "Release type: release"
+            echo "RELEASE_TYPE=release" >> $GITHUB_ENV
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ needs.job_prepare.outputs.is_latest == 'true' }}
+        with:
+          tag_name: ${{ needs.job_prepare.outputs.git_tag }}
+          prerelease: false
+          files: releases/*
