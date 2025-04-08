@@ -18,10 +18,10 @@ on:
       - '*'
 
   workflow_dispatch:
-    
-env:
-  TZ: Asia/Shanghai
-  BUILD_ARCH: '["arm64", "arm64_ipk"]'
+
+  env:
+    TZ: Asia/Shanghai
+    BUILD_ARCH: '["arm64", "arm64_ipk"]'
 
 
 jobs:
