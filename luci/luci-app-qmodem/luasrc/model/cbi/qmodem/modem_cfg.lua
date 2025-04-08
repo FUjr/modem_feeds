@@ -3,7 +3,8 @@ return {
         quectel = "Quectel",
         simcom = "Simcom",
         sierra = "Sierra Wireless",
-        fibocom = "Fibocom"
+        fibocom = "Fibocom",
+        meig = "Meig"
     },
     platforms = {
         lte = "LTE",

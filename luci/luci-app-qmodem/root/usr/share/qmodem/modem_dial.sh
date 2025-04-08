@@ -287,8 +287,15 @@ check_ip()
                         ;;
                 esac
                 ;;
+            "meig")
+                case $platform in
+                    "qualcomm")
+                        check_ip_command="AT+CGPADDR=1"
+                        ;;
+                esac
+                ;;
         esac
-        ipaddr=$(at "$at_port" "$check_ip_command" |grep +CGPADDR:)
+        ipaddr=$(at "$at_port" "$check_ip_command" | grep +CGPADDR:)
         if [ -n "$ipaddr" ];then
             if [ $mtk -eq 1 ] && echo "$ipv4_config" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
                 if [ "$pdp_type" = "ipv4v6" ];then
@@ -793,7 +800,15 @@ at_dial()
                 "qualcomm")
                     local cnmp=$(at ${at_port} "AT+CNMP?" | grep "+CNMP:" | sed 's/+CNMP: //g' | sed 's/\r//g')
                     at_command="AT+CNMP=$cnmp;+CNWINFO=1"
-                    cgdcont_command="AT+CGDCONT=1,\"IPV4V6\",\"$apn\""
+                    cgdcont_command="AT+CGDCONT=1,\"$pdp_type\",\"$apn\""
+                    ;;
+            esac
+            ;;
+        "meig")
+            case $platform in
+                "qualcomm")
+                    at_command=""
+                    cgdcont_command="AT+CGDCONT=1,\"$pdp_type\",\"$apn\""
                     ;;
             esac
             ;;

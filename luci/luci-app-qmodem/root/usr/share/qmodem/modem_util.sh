@@ -129,6 +129,23 @@ at_get_slot()
 				;;
 			esac
 			;;
+		"meig")
+			at_res=$(at $at_port AT^SIMSLOT? | grep "\^SIMSLOT:" | awk -F': ' '{print $2}' | awk -F',' '{print $2}')
+			case $at_res in
+				"1")
+					sim_slot="1"
+					;;
+				"0")
+					sim_slot="2"
+					;;
+				*)
+					sim_slot="1"
+					;;
+			*)
+				sim_slot="1"
+				;;
+			esac
+			;;
 		*)
 			at_q_res=$(at $at_port AT+QSIMDET? |grep +QSIMDET: |awk -F: '{print $2}')
 			at_f_res=$(at $at_port AT+GTDUALSIM? |grep +GTDUALSIM: |awk -F: '{print $2}')

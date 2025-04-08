@@ -597,6 +597,9 @@ msgstr "Sierra无线"
 msgid "Fibocom"
 msgstr "广和通"
 
+msgid "Meig"
+msgstr "美格"
+
 msgid "Platform"
 msgstr "平台"
 

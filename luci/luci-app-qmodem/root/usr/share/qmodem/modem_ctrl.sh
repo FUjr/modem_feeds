@@ -26,6 +26,9 @@ case $vendor in
     "simcom")
         . /usr/share/qmodem/vendor/simcom.sh
         ;;
+    "meig")
+        . /usr/share/qmodem/vendor/meig.sh
+        ;;
     *)
         . /usr/share/qmodem/generic.sh
         ;;
