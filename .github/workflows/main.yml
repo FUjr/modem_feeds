@@ -16,6 +16,9 @@ on:
   push:
     tags:
       - '*'
+
+  workflow_dispatch:
+    
 env:
   TZ: Asia/Shanghai
   BUILD_ARCH: '["arm64", "arm64_ipk"]'
