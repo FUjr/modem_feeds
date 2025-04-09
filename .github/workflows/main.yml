@@ -2,45 +2,49 @@ name: "Auto compile with OpenWrt SDK"
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'qmodem/luci/luci-app-qmodem/Makefile'
+    tags:
+      - 'v*'
+    branches:
+      - main
 
 env:
   TZ: Asia/Shanghai
 
 jobs:
   job_prepare:
-    name: Prepare
     runs-on: ubuntu-latest
     outputs:
-      git_tag: ${{ steps.set_git_tag.outputs.git_tag }}
-      is_latest: ${{ steps.cache-version.outputs.cache-hit }}
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        path: 'qmodem'
+      branch_name: ${{ env.branch_name }}
+      tag_name: ${{ env.tag_name }}
+      push_type: ${{ env.push_type }}
+      tag_message: ${{ env.tag_message }}
 
-    - name: Set git tag
-      id: set_git_tag
-      run: |
-        pkg_version=$(grep -oP '^PKG_VERSION:=\K.*' qmodem/luci/luci-app-qmodem/Makefile)
-        if [ -z "$pkg_version" ]; then
-          echo "PKG_VERSION not found in Makefile"
-          exit 1
-        fi
-        echo "Extracted PKG_VERSION: $pkg_version"
-        tag="v$pkg_version"
-        echo "git_tag=$tag" >> $GITHUB_OUTPUT
-        echo "git_tag=$tag"
-        echo "git_tag=$tag" >> cache-version
-      
-    - name: Cache Version
-      id: cache-version
-      uses: actions/cache@v3
-      with:
-        path:  cache-version
-        key: qmodem-version
+    steps:
+      - name: Determine push type
+        run: |
+            if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+              echo "This is a tag push."
+              echo "tag_name=${{ github.ref_name }}" >> $GITHUB_ENV
+              echo "push_type=tag" >> $GITHUB_ENV
+            else
+              echo "This is a branch push."
+              echo "branch_name=${{ github.ref_name }}" >> $GITHUB_ENV
+              echo "push_type=branch" >> $GITHUB_ENV
+            fi
+
+      - name: Checkout
+        if: 
+        uses: actions/checkout@v2
+        with:
+          path: 'qmodem'
+
+      - name: Get tag info
+        id: get_tag_info
+        run: |
+          cd qmodem
+          TAG_MESSAGE=$(git for-each-ref refs/tags/${{ env.tag_name }} --format='%(contents)')
+          echo "tag_message=${TAG_MESSAGE}" >> $GITHUB_ENV
+
 
   job_build_qmodem:
     name: Build QModem
@@ -48,7 +52,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        build_arch: ['arm64_ipk',"arm64_apk"]
+        build_arch: ['arm64_ipk',"arm64_apk","x64_apk","x64_ipk" ]
     runs-on: ubuntu-latest
     steps:
       - name: Install packages
@@ -156,23 +160,11 @@ jobs:
             fi
           done
 
-      - name: Check Release type
-        run: |
-          if [[ "${GITHUB_REF}" == *"-beta" ]]; then
-            echo "Release type: beta"
-            echo "RELEASE_TYPE=beta" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF}" == *"-rc" ]]; then
-            echo "Release type: rc"
-            echo "RELEASE_TYPE=rc" >> $GITHUB_ENV
-          else
-            echo "Release type: release"
-            echo "RELEASE_TYPE=release" >> $GITHUB_ENV
-          fi
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: ${{ needs.job_prepare.outputs.is_latest == 'true' }}
+        if: ${{ needs.job_prepare.outputs.push_type == 'tag' }}
         with:
-          tag_name: ${{ needs.job_prepare.outputs.git_tag }}
-          prerelease: false
+          body: ${{ needs.job_prepare.outputs.tag_message }}
+          tag_name: ${{ needs.job_prepare.outputs.tag_name }}
+          prerelease: ${{ needs.job_prepare.outputs.tag_name == '*-beta' || needs.job_prepare.outputs.tag_name == '*-rc' }}
           files: releases/*
