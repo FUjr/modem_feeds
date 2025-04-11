@@ -20,7 +20,7 @@ dynamic_load_json="$vendor_script_prefix/dynamic_load.json"
 vendor_file="${vendor_script_prefix}/`jq -r --arg vendor $vendor '.[$vendor]' $dynamic_load_json`"
 if [ -z "$vendor" ] || [ ! -f "$vendor_file" ]; then
     logger -t modem_ctrl "vendor $vendor not support"
-    exit 1
+    . /usr/share/qmodem/generic.sh
 fi
 . $vendor_file
 
