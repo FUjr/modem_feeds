@@ -1081,9 +1081,13 @@
 			table.appendChild(tr);
 			tr = this.createTR();
 			td_l = this.createTD();
-			td_l.appendChild(this.at_btn);
-			td_l.appendChild(this.clear_port_btn);
-			td_l.appendChild(this.clear_cmd_btn);
+			let span = document.createElement('span');
+			span.classList.add("flex_container");
+			td_l.setAttribute("colspan",2);
+			span.appendChild(this.at_btn);
+			span.appendChild(this.clear_port_btn);
+			span.appendChild(this.clear_cmd_btn);
+			td_l.appendChild(span);
 			tr.appendChild(td_l);
 			table.appendChild(tr);
 			this.fieldset.appendChild(table);
@@ -1347,6 +1351,12 @@
 		margin-top: 1rem;
 		align-items: center;
 		min-width: 15%;
+	}
+
+	.flex_container {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-around;
 	}
 </style>
 <div class="cbi-map">
