@@ -111,7 +111,7 @@ scan_pcie()
 {
     #beta
     m_debug "scan_pcie"
-    pcie_net_device_prefixs="rmnet"
+    pcie_net_device_prefixs="rmnet wwan"
     pcie_slots=""
     for pcie_net_device_prefix in $pcie_net_device_prefixs; do
         pcie_netdev=$(ls /sys/class/net | grep -E "${pcie_net_device_prefix}")
@@ -119,7 +119,8 @@ scan_pcie()
             netdev_path=$(readlink -f "/sys/class/net/$netdev/device/")
             [ -z "$netdev_path" ] && continue
             [ -z "$(echo $netdev_path | grep pci)" ] && continue
-            pcie_slot=$(basename $(dirname $netdev_path))
+            # pcie_slot=$(basename $(dirname $netdev_path))
+	    pcie_slot=$(echo "$netdev_path" | tr '/' '\n' | grep -E '^[0-9a-fA-F]{4}:[0-9a-fA-F:.]+$' | tail -n1)
             [ "$pcie_slot" == "net" ] && continue
             m_debug "netdev_path: $netdev_path pcie slot: $pcie_slot"
             [ -z "$pcie_slots" ] && pcie_slots="$pcie_slot" || pcie_slots="$pcie_slots $pcie_slot"
@@ -163,6 +164,15 @@ scan_pcie_slot_interfaces()
                 ;;
         esac
     done
+    interface_mhi_path="$slot_path/mhi0"
+    if [ ! -z "$interface_mhi_path" ]; then
+        wwan0_path="$slot_path/mhi0/wwan/wwan0"
+        if [  -d "$wwan0_path" ];then
+          dun_device=$(ls "$wwan0_path" | grep wwan0at0)
+          [ ! -z "$dun_device" ] &&  dun_device_path="$wwan0_path/$dun_device"
+          [ ! -z "$dun_device_path" ] &&  dun_devices=$(basename "$dun_device_path") 
+	fi
+    fi
     m_debug "net_devices: $net_devices dun_devices: $dun_devices"
     at_ports="$dun_devices" 
     [ -n "$net_devices" ] && get_associate_usb $slot
@@ -274,7 +284,10 @@ match_config()
 	[[ "$name" = *"rm500u-cn"* ]] && name="rm500u-cn"
 
 	[[ "$name" = *"rm500u-ea"* ]] && name="rm500u-ea"
+	#t99w175
+	[[ "$name" = *"mv31-w"* ]] && name="t99w175"
 
+        [[ "$name" = *"T99W175"* ]] && name="t99w175"
 	#rg200u-cn
     [[ "$name" = *"rg200u-cn"* ]] && name="rg200u-cn"
 
