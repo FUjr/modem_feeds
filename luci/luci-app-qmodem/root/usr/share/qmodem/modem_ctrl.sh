@@ -9,30 +9,20 @@ platform=$(uci get qmodem.$config_section.platform)
 define_connect=$(uci get qmodem.$config_section.define_connect)
 modem_path=$(uci get qmodem.$config_section.path)
 modem_slot=$(basename $modem_path)
+
 [ -z "$define_connect" ] && {
     define_connect="1"
 }
 
-case $vendor in
-    "quectel")
-        . /usr/share/qmodem/vendor/quectel.sh
-        ;;
-    "fibocom")
-        . /usr/share/qmodem/vendor/fibocom.sh
-        ;;
-    "sierra")
-        . /usr/share/qmodem/vendor/sierra.sh
-        ;;
-    "simcom")
-        . /usr/share/qmodem/vendor/simcom.sh
-        ;;
-    "meig")
-        . /usr/share/qmodem/vendor/meig.sh
-        ;;
-    *)
-        . /usr/share/qmodem/generic.sh
-        ;;
-esac
+#please update dynamic_load.json to add new vendor
+vendor_script_prefix="/usr/share/qmodem/vendor"
+dynamic_load_json="$vendor_script_prefix/dynamic_load.json"
+vendor_file="${vendor_script_prefix}/`jq -r --arg vendor $vendor '.[$vendor]' $dynamic_load_json`"
+if [ -z "$vendor" ] || [ ! -f "$vendor_file" ]; then
+    logger -t modem_ctrl "vendor $vendor not support"
+    exit 1
+fi
+. $vendor_file
 
 try_cache() {
     cache_timeout=$1
