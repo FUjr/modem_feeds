@@ -15,5 +15,5 @@ reload_service()
 
 service_triggers()
 {
-	procd_add_reload_trigger qmodem
+	procd_add_reload_trigger qmodem qmodem_voip
 }
