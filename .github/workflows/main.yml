@@ -325,7 +325,10 @@ jobs:
     name: Release Artifacts
     needs: [job_build_qmodem, job_prepare]
     runs-on: ubuntu-latest
-    if: ${{ needs.job_prepare.outputs.push_type == 'tag' }}
+    # A tag push is the authoritative release signal. Keep this job alive
+    # when a matrix leg is allowed to fail so successful artifacts still get
+    # published and the failure remains visible in the run summary.
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/v') && needs.job_prepare.result == 'success' }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -352,7 +355,7 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2.2.2
-        if: ${{ needs.job_prepare.outputs.push_type == 'tag' }}
+        if: ${{ always() && startsWith(github.ref, 'refs/tags/v') }}
         with:
           body_path: release_note/release_note.md
           generate_release_notes: true
