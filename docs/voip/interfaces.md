@@ -36,8 +36,11 @@ fields. Errors return:
 | `attach_rtp` | RTP negotiation object below | Internal registrar boundary; attaches PCMA/PCMU RTP to the call |
 | `release_rtp` | `{}` | Internal registrar boundary; detaches RTP idempotently |
 
-`external_sip` is a recognized reserved endpoint and is rejected. Unknown
-endpoints and client attempts to act as `cellular` are invalid.
+`external_sip` remains a reserved endpoint in the call-control API during the
+outbound SIP rollout. Unknown endpoints and client attempts to act as
+`cellular` are invalid. Outbound registration is selected by the UCI
+`qmodem_voip.sip.mode` setting described in
+[the outbound design](outbound-sip-design.md); it is not an ubus endpoint.
 
 ### Browser media token
 
@@ -190,7 +193,7 @@ config sip 'sip'
         option enabled '0'
 	option username 'qmodem'
 	option password '<generated>'
-        option interface 'br-lan'
+        option interface 'wan'
         option rtp_start '40000'
         option rtp_end '40031'
 ```

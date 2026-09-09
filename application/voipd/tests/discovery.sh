@@ -9,6 +9,8 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin" "$TMP/sys/2-1.1" "$TMP/dev"
 : >"$TMP/dev/ttyUSB1"
 : >"$TMP/dev/ttyUSB3"
+printf '%s\n' 0 >"$TMP/use_ubus"
+: >"$TMP/uci-log"
 
 cat >"$TMP/bin/uci" <<'EOF'
 #!/bin/sh
@@ -28,6 +30,12 @@ get:qmodem.2_1_1.at_port) printf '%s\n' /dev/ttyUSB3 ;;
 get:qmodem.3_1_1.at_port) printf '%s\n' /dev/ttyUSB7 ;;
 get:qmodem.2_1_1.voice_pcm_port) printf '%s\n' /dev/ttyUSB1 ;;
 get:qmodem.3_1_1.voice_pcm_port) printf '%s\n' /dev/ttyUSB5 ;;
+get:qmodem.2_1_1.use_ubus) cat "$UCI_USE_UBUS_STATE" ;;
+set:qmodem.2_1_1.use_ubus=1)
+	printf '%s\n' 1 >"$UCI_USE_UBUS_STATE"
+	printf '%s\n' 'set qmodem.2_1_1.use_ubus=1' >>"$UCI_TEST_LOG"
+	;;
+commit:qmodem) printf '%s\n' 'commit qmodem' >>"$UCI_TEST_LOG" ;;
 *) exit 1 ;;
 esac
 EOF
@@ -36,7 +44,9 @@ chmod +x "$TMP/bin/uci"
 PATH=$TMP/bin:$PATH
 QMODEM_VOIP_SYSFS_ROOT=$TMP/sys
 QMODEM_VOIP_DEVICE_ROOT=$TMP/dev
-export PATH QMODEM_VOIP_SYSFS_ROOT QMODEM_VOIP_DEVICE_ROOT
+UCI_USE_UBUS_STATE=$TMP/use_ubus
+UCI_TEST_LOG=$TMP/uci-log
+export PATH QMODEM_VOIP_SYSFS_ROOT QMODEM_VOIP_DEVICE_ROOT UCI_USE_UBUS_STATE UCI_TEST_LOG
 set -- recover
 . "$ADAPTER"
 set --
@@ -46,6 +56,12 @@ qmodem_voip_adapter_device_exists() { [ -e "$1" ]; }
 [ "$(qmodem_voip_adapter_endpoint)" = /dev/ttyUSB3 ]
 [ "$(qmodem_voip_adapter_pcm_endpoint)" = /dev/ttyUSB1 ]
 [ "$(qmodem_voip_adapter_rediscover 2-1.1 | tr '\n' ' ')" = '/dev/ttyUSB3 /dev/ttyUSB1 ' ]
+qmodem_voip_adapter_enable_ubus
+[ "$(cat "$TMP/use_ubus")" = 1 ]
+[ "$(cat "$TMP/uci-log")" = "set qmodem.2_1_1.use_ubus=1
+commit qmodem" ]
+qmodem_voip_adapter_enable_ubus
+[ "$(wc -l <"$TMP/uci-log")" -eq 2 ]
 UCI_DUPLICATE=1
 export UCI_DUPLICATE
 if qmodem_voip_adapter_section >/dev/null 2>&1; then

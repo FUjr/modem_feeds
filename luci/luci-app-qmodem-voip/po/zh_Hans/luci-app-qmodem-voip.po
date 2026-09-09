@@ -231,6 +231,62 @@ msgstr "运行中"
 msgid "SIP account"
 msgstr "SIP 账户"
 
+#: view/qmodem-voip/call.js
+msgid "SIP connection"
+msgstr "SIP 连接"
+
+#: view/qmodem-voip/call.js
+msgid "The selected network interface supplies the SIP and RTP address."
+msgstr "所选网络接口将提供 SIP 和 RTP 地址。"
+
+#: view/qmodem-voip/call.js
+msgid "Listening interface"
+msgstr "监听接口"
+
+#: view/qmodem-voip/call.js
+msgid "Choose an OpenWrt network interface, such as wan for the lan4 port."
+msgstr "选择 OpenWrt 网络接口，例如 lan4 端口对应的 wan。"
+
+#: view/qmodem-voip/call.js
+msgid "Connection mode"
+msgstr "连接模式"
+
+#: view/qmodem-voip/call.js
+msgid "Local SIP"
+msgstr "本地 SIP"
+
+#: view/qmodem-voip/call.js
+msgid "Outbound Asterisk"
+msgstr "外连 Asterisk"
+
+#: view/qmodem-voip/call.js
+msgid "Asterisk server"
+msgstr "Asterisk 服务器"
+
+#: view/qmodem-voip/call.js
+msgid "Asterisk TLS port"
+msgstr "Asterisk TLS 端口"
+
+#: view/qmodem-voip/call.js
+msgid "Transport"
+msgstr "传输协议"
+
+#: view/qmodem-voip/call.js
+msgid "TLS"
+msgstr "TLS"
+
+#: view/qmodem-voip/call.js
+msgid "SIP password"
+msgstr "SIP 密码"
+
+#: view/qmodem-voip/call.js
+msgid "SIP realm"
+msgstr "SIP 认证域"
+
+#: view/qmodem-voip/call.js
+msgid "Registration interval"
+msgstr "注册刷新间隔"
+
 #: view/qmodem-voip/call.js:392
 msgid ""
 "SIP account is not configured. Registration is not reported by v1 status."

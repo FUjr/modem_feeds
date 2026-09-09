@@ -36,7 +36,9 @@
 #include <pjlib.h>
 #include <pjlib-util.h>
 #include <pjsip.h>
+#include <pjsip-ua/sip_regc.h>
 #include <pjsip/sip_transport_tcp.h>
+#include <pjsip/sip_transport_tls.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +49,7 @@
 #include <unistd.h>
 
 #define REALM QMODEM_VOIP_SIP_REALM
-#define BINDING_SIZE 256
+#define BINDING_SIZE 384
 #define MAX_SIP_MESSAGE 4096
 #define MAX_SIP_BODY 2048
 #define RATE_SLOTS 32
@@ -98,6 +100,21 @@ struct consumer {
 	pjsip_response_addr pending_lan_response_addr;
 	int reload_requested;
 	char lan_address[16];
+	int outbound;
+	pjsip_regc *regc;
+	pjsip_auth_clt_sess outbound_auth;
+	int outbound_auth_initialized;
+	pjsip_tx_data *outbound_invite;
+	char dialog_contact[BINDING_SIZE];
+	char outbound_server[256];
+	char outbound_server_uri[384];
+	char outbound_username[QMODEM_VOIP_SIP_USERNAME_SIZE];
+	char outbound_aor[320];
+	char outbound_password[128];
+	char outbound_realm[128];
+	unsigned outbound_port;
+	unsigned outbound_interval;
+	int outbound_registered;
 };
 
 static int g711_bridge_encode(enum qmodem_voip_media_codec codec,
@@ -135,6 +152,77 @@ static volatile sig_atomic_t running = 1;
 static void stop_media(void);
 static int rtp_open(void);
 static int attach_media(void);
+static void outbound_register(void);
+
+static void outbound_regc_cb(struct pjsip_regc_cbparam *param)
+{
+	if (!param)
+		return;
+	app.outbound_registered = param->status == PJ_SUCCESS &&
+		param->code >= 200 && param->code < 300 && param->expiration > 0;
+	if (app.outbound_registered) {
+		if (strlen(app.outbound_aor) >= sizeof(app.binding)) {
+			app.outbound_registered = 0;
+			return;
+		}
+		(void)snprintf(app.binding, sizeof(app.binding), "%s", app.outbound_aor);
+		app.expires = param->expiration ? param->expiration : app.outbound_interval;
+		pj_gettimeofday(&app.binding_until);
+		app.binding_until.sec += (long)app.expires;
+		syslog(LOG_INFO, "qmodem_voip sip: outbound REGISTER succeeded code=%d expires=%u",
+			param->code, app.expires);
+	} else {
+		app.binding[0] = '\0';
+		app.expires = 0;
+		syslog(LOG_WARNING, "qmodem_voip sip: outbound REGISTER failed status=%d code=%d",
+			(int)param->status, param->code);
+	}
+}
+
+static int outbound_setup_registration(void)
+{
+	pj_str_t server = pj_str(app.outbound_server_uri);
+	pj_str_t aor = pj_str(app.outbound_aor);
+	char contact[384];
+	pj_str_t contact_str;
+	pjsip_cred_info credential;
+	unsigned interval = app.outbound_interval;
+	if (!app.outbound || !app.outbound_server[0] || !app.outbound_password[0])
+		return -1;
+	(void)snprintf(contact, sizeof(contact), "<sip:%s@%s:%u;transport=tls>",
+		app.username, app.lan_address, 5061U);
+	contact_str = pj_str(contact);
+	if (pjsip_regc_create(app.endpoint, NULL, &outbound_regc_cb, &app.regc) != PJ_SUCCESS ||
+		pjsip_regc_init(app.regc, &server, &aor, &aor, 1, &contact_str,
+			interval) != PJ_SUCCESS)
+		return -1;
+	pj_bzero(&credential, sizeof(credential));
+	credential.realm = pj_str(app.outbound_realm[0] ? app.outbound_realm : (char *)"*");
+	credential.scheme = pj_str((char *)"Digest");
+	credential.username = pj_str(app.username);
+	credential.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+	credential.data = pj_str(app.outbound_password);
+	if (pjsip_regc_set_credentials(app.regc, 1, &credential) != PJ_SUCCESS ||
+		pjsip_regc_set_delay_before_refresh(app.regc, interval > 60 ? 30 : 5) != PJ_SUCCESS)
+		return -1;
+	if (pjsip_auth_clt_init(&app.outbound_auth, app.endpoint, app.pool, 0) != PJ_SUCCESS ||
+	    pjsip_auth_clt_set_credentials(&app.outbound_auth, 1, &credential) != PJ_SUCCESS)
+		return -1;
+	app.outbound_auth_initialized = 1;
+	return 0;
+}
+
+static void outbound_register(void)
+{
+	pjsip_tx_data *request = NULL;
+	pj_status_t status;
+	if (!app.outbound || !app.regc || pjsip_regc_register(app.regc, PJ_TRUE, &request) != PJ_SUCCESS)
+		return;
+	status = pjsip_regc_send(app.regc, request);
+	if (status != PJ_SUCCESS)
+		syslog(LOG_WARNING, "qmodem_voip sip: outbound REGISTER send failed status=%d",
+			(int)status);
+}
 
 static void stop_handler(int signo)
 {
@@ -294,11 +382,18 @@ static int authenticate(pjsip_rx_data *request)
 	return 1;
 }
 
+static int trusted_outbound_request(pjsip_rx_data *request)
+{
+	return app.outbound && request && request->tp_info.transport &&
+		PJSIP_TRANSPORT_IS_SECURE(request->tp_info.transport) &&
+		request->tp_info.transport->dir == PJSIP_TP_DIR_OUTGOING;
+}
+
 static unsigned request_expiry(pjsip_msg *message, pjsip_contact_hdr *contact)
 {
 	pjsip_expires_hdr *expires;
 	long value = contact->expires;
-	if (value == PJSIP_EXPIRES_NOT_SPECIFIED) {
+	if (value == (long)PJSIP_EXPIRES_NOT_SPECIFIED) {
 		expires = (pjsip_expires_hdr *)pjsip_msg_find_hdr(
 			message, PJSIP_H_EXPIRES, NULL);
 		value = expires ? expires->ivalue : 3600;
@@ -521,7 +616,9 @@ static int set_lan_answer(pjsip_rx_data *request, pjsip_tx_data *response,
 	 * such as Linphone to tear the call down after their session refresh. */
 	if (to->tag.slen == 0)
 		pj_create_unique_string(response->pool, &to->tag);
-	length = snprintf(contact_value, sizeof(contact_value), "sip:qmodem_voip@%s:5060", address);
+	length = snprintf(contact_value, sizeof(contact_value),
+		"sip:qmodem_voip@%s:%u%s", address, app.outbound ? 5061U : 5060U,
+		app.outbound ? ";transport=tls" : "");
 	if (length < 0 || length >= (int)sizeof(contact_value))
 		return -1;
 	contact = pjsip_contact_hdr_create(response->pool);
@@ -554,7 +651,7 @@ static void invite_call(pjsip_rx_data *request)
 		send_response(request, PJSIP_SC_SERVICE_UNAVAILABLE, PJ_FALSE, PJ_FALSE);
 		return;
 	}
-	if (!authenticate(request))
+	if (!trusted_outbound_request(request) && !authenticate(request))
 		return;
 	if (supported_sdp(request, &media) != 0) {
 		send_response(request, PJSIP_SC_NOT_ACCEPTABLE_HERE, PJ_FALSE, PJ_FALSE);
@@ -636,7 +733,7 @@ static int in_dialog_media_refresh(pjsip_rx_data *request)
 		return -1;
 	(void)branch;
 	(void)cseq;
-	if (!authenticate(request))
+	if (!trusted_outbound_request(request) && !authenticate(request))
 		return 0;
 	if (supported_sdp(request, &media) != 0) {
 		send_response(request, PJSIP_SC_NOT_ACCEPTABLE_HERE, PJ_FALSE, PJ_FALSE);
@@ -689,6 +786,120 @@ static int set_incoming_offer(pjsip_tx_data *request)
 	return request->msg->body ? 0 : -1;
 }
 
+static void remember_outbound_invite(pjsip_tx_data *request)
+{
+	if (app.outbound_invite)
+		pjsip_tx_data_dec_ref(app.outbound_invite);
+	app.outbound_invite = request;
+	if (request)
+		pjsip_tx_data_add_ref(request);
+}
+
+static void send_dialog_bye(void)
+{
+	pjsip_method method;
+	pjsip_tx_data *bye = NULL;
+	pjsip_contact_hdr *contact;
+	pjsip_cid_hdr *call_id;
+	pjsip_from_hdr *from;
+	pjsip_to_hdr *to;
+	pjsip_cseq_hdr *cseq;
+	pjsip_uri *target;
+	pj_str_t remote_tag;
+	unsigned next_cseq;
+
+	if (!app.call.active || !app.call.established || !app.outbound_invite ||
+	    !app.dialog_contact[0])
+		return;
+	contact = (pjsip_contact_hdr *)pjsip_msg_find_hdr(
+		app.outbound_invite->msg, PJSIP_H_CONTACT, NULL);
+	call_id = PJSIP_MSG_CID_HDR(app.outbound_invite->msg);
+	from = PJSIP_MSG_FROM_HDR(app.outbound_invite->msg);
+	to = PJSIP_MSG_TO_HDR(app.outbound_invite->msg);
+	cseq = PJSIP_MSG_CSEQ_HDR(app.outbound_invite->msg);
+	if (!contact || !call_id || !from || !to || !cseq)
+		return;
+	pjsip_method_set(&method, PJSIP_BYE_METHOD);
+	target = pjsip_parse_uri(app.outbound_invite->pool, app.dialog_contact,
+		strlen(app.dialog_contact), 0);
+	if (!target)
+		return;
+	next_cseq = cseq->cseq + 1U;
+	if (pjsip_endpt_create_request_from_hdr(app.endpoint, &method,
+		target, from, to, NULL, call_id, next_cseq, NULL, &bye) != PJ_SUCCESS)
+		return;
+	remote_tag = pj_str(app.call.remote_tag);
+	pj_strdup(bye->pool, &PJSIP_MSG_TO_HDR(bye->msg)->tag, &remote_tag);
+	if (pjsip_endpt_send_request(app.endpoint, bye, 30000, NULL, NULL) != PJ_SUCCESS)
+		syslog(LOG_WARNING, "qmodem_voip sip: cellular release BYE send failed");
+}
+
+static pj_status_t send_outbound_ack(pjsip_tx_data *invite,
+		pjsip_rx_data *response)
+{
+	pjsip_contact_hdr *contact;
+	pjsip_cid_hdr *call_id;
+	pjsip_from_hdr *from;
+	pjsip_to_hdr *to;
+	pjsip_cseq_hdr *cseq;
+	pjsip_tx_data *ack = NULL;
+	pjsip_tpselector selector;
+	pj_status_t status;
+	if (!invite || !response || !invite->tp_info.transport)
+		return PJ_EINVAL;
+	contact = (pjsip_contact_hdr *)pjsip_msg_find_hdr(
+		response->msg_info.msg, PJSIP_H_CONTACT, NULL);
+	call_id = PJSIP_MSG_CID_HDR(invite->msg);
+	from = PJSIP_MSG_FROM_HDR(invite->msg);
+	to = response->msg_info.to;
+	cseq = response->msg_info.cseq;
+	if (!contact || !contact->uri || !call_id || !from || !to || !cseq)
+		return PJ_EINVAL;
+	status = pjsip_endpt_create_request_from_hdr(app.endpoint, &pjsip_ack_method,
+		contact->uri, from, to, NULL, call_id, cseq->cseq, NULL, &ack);
+	pj_bzero(&selector, sizeof(selector));
+	selector.type = PJSIP_TPSELECTOR_TRANSPORT;
+	selector.u.transport = invite->tp_info.transport;
+	if (status == PJ_SUCCESS)
+		status = pjsip_tx_data_set_transport(ack, &selector);
+	if (status == PJ_SUCCESS)
+		status = pjsip_endpt_send_request_stateless(app.endpoint, ack, NULL, NULL);
+	else if (ack)
+		pjsip_tx_data_dec_ref(ack);
+	return status;
+}
+
+static void outbound_invite_cb(void *token, pjsip_event *event)
+{
+	pjsip_transaction *transaction;
+	pjsip_tx_data *request;
+	pj_status_t status;
+	(void)token;
+	if (!event || event->type != PJSIP_EVENT_TSX_STATE)
+		return;
+	transaction = event->body.tsx_state.tsx;
+	if (!transaction || transaction->status_code < 200)
+		return;
+	if (event->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
+	    (transaction->status_code == PJSIP_SC_UNAUTHORIZED ||
+	     transaction->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED)) {
+		status = pjsip_auth_clt_reinit_req(&app.outbound_auth,
+			event->body.tsx_state.src.rdata, transaction->last_tx, &request);
+		if (status == PJ_SUCCESS) {
+			PJSIP_MSG_CSEQ_HDR(request->msg)->cseq++;
+			remember_outbound_invite(request);
+			status = pjsip_endpt_send_request(app.endpoint, request, 30000,
+				NULL, &outbound_invite_cb);
+		}
+		if (status == PJ_SUCCESS)
+			return;
+		syslog(LOG_WARNING, "qmodem_voip sip: outbound INVITE authentication failed status=%d",
+			(int)status);
+		(void)ubus_action("reject", NULL);
+		qmodem_voip_sip_call_release(&app.call);
+	}
+}
+
 static void send_incoming_invite(void)
 {
 	pjsip_method method;
@@ -704,7 +915,10 @@ static void send_incoming_invite(void)
 	pjsip_cid_hdr *cid;
 	if (!binding_active() || app.call.active)
 		return;
-	(void)snprintf(address, sizeof(address), "sip:cellular@%s:5060", app.lan_address);
+	(void)snprintf(address, sizeof(address), "%s:%s@%s:%u%s",
+		app.outbound ? "sips" : "sip",
+		app.outbound ? app.username : "cellular", app.lan_address,
+		app.outbound ? 5061U : 5060U, app.outbound ? ";transport=tls" : "");
 	from = pj_str(address);
 	contact = pj_str(address);
 	pjsip_method_set(&method, PJSIP_INVITE_METHOD);
@@ -717,8 +931,16 @@ static void send_incoming_invite(void)
 	    qmodem_voip_sip_call_begin(&app.call, QMODEM_VOIP_SIP_CALL_CELLULAR,
 		call_id, pending_tag, pending_branch, 1) != 0)
 		return;
-	if (pjsip_endpt_send_request(app.endpoint, request, 30000, NULL, NULL) != PJ_SUCCESS)
+	if (app.outbound)
+		remember_outbound_invite(request);
+	app.dialog_contact[0] = '\0';
+	if (pjsip_endpt_send_request(app.endpoint, request, 30000, NULL,
+		app.outbound ? &outbound_invite_cb : NULL) != PJ_SUCCESS) {
+		if (app.outbound)
+			remember_outbound_invite(NULL);
+		app.dialog_contact[0] = '\0';
 		qmodem_voip_sip_call_release(&app.call);
+	}
 }
 
 static pj_bool_t on_response(pjsip_rx_data *response)
@@ -730,13 +952,29 @@ static pj_bool_t on_response(pjsip_rx_data *response)
 	    copy_pj_string(call_id, sizeof(call_id), &response->msg_info.cid->id) != 0 ||
 	    strcmp(call_id, app.call.call_id) != 0)
 		return PJ_FALSE;
+	if (status == PJSIP_SC_UNAUTHORIZED ||
+	    status == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED)
+		return PJ_FALSE;
 	if (status >= 200 && status < 300) {
+		pj_status_t ack_status = app.outbound ?
+			send_outbound_ack(app.outbound_invite, response) : PJ_SUCCESS;
 		char remote_tag[QMODEM_VOIP_SIP_TAG_SIZE];
 		pjsip_msg_body *body = response->msg_info.msg->body;
 		struct qmodem_voip_sip_media media;
 		int media_attached = body && qmodem_voip_sip_parse_media(
 			(const char *)body->data, body->len, &media) == 0;
-		if (media_attached) {
+		if (ack_status != PJ_SUCCESS) {
+			syslog(LOG_WARNING, "qmodem_voip sip: outbound ACK failed status=%d",
+				(int)ack_status);
+			(void)ubus_action("reject", NULL);
+			qmodem_voip_sip_call_release(&app.call);
+		} else if (media_attached) {
+			pjsip_contact_hdr *contact = (pjsip_contact_hdr *)pjsip_msg_find_hdr(
+				response->msg_info.msg, PJSIP_H_CONTACT, NULL);
+			if (contact)
+				(void)pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, contact->uri,
+					app.dialog_contact, sizeof(app.dialog_contact) - 1);
+			app.dialog_contact[sizeof(app.dialog_contact) - 1] = '\0';
 			app.media = media;
 			/* For a cellular-originated call the SIP 200 response is the
 			 * answer trigger.  The old path answered the modem call but never
@@ -759,6 +997,8 @@ static pj_bool_t on_response(pjsip_rx_data *response)
 	} else if (status >= 300) {
 		(void)ubus_action("reject", NULL);
 		qmodem_voip_sip_call_release(&app.call);
+		if (app.outbound)
+			remember_outbound_invite(NULL);
 	}
 	return PJ_FALSE;
 }
@@ -782,7 +1022,7 @@ static void end_call(pjsip_rx_data *request, int cancel)
 	 * it with 401 leaves the cellular leg active and the caller stuck waiting;
 	 * identity and Via-branch matching below still prevent unrelated calls from
 	 * being cancelled.  BYE remains Digest-authenticated. */
-	if (!cancel && !authenticate(request))
+	if (!cancel && !trusted_outbound_request(request) && !authenticate(request))
 		return;
 	if (request_identity(request, call_id, sizeof(call_id), remote_tag,
 		    sizeof(remote_tag), branch, sizeof(branch), &cseq) != 0) {
@@ -824,6 +1064,10 @@ static pj_bool_t on_request(pjsip_rx_data *request)
 		return PJ_TRUE;
 	}
 	if (method->id == PJSIP_REGISTER_METHOD) {
+		if (app.outbound) {
+			send_response(request, PJSIP_SC_METHOD_NOT_ALLOWED, PJ_FALSE, PJ_FALSE);
+			return PJ_TRUE;
+		}
 		register_contact(request);
 		return PJ_TRUE;
 	}
@@ -838,6 +1082,13 @@ static pj_bool_t on_request(pjsip_rx_data *request)
 		return PJ_TRUE;
 	}
 	if (method->id == PJSIP_ACK_METHOD) {
+		return PJ_TRUE;
+	}
+	if (method->id == PJSIP_OTHER_METHOD && str_equal(&method->name, "OPTIONS")) {
+		if (trusted_outbound_request(request))
+			send_response(request, PJSIP_SC_OK, PJ_FALSE, PJ_FALSE);
+		else
+			send_response(request, PJSIP_SC_FORBIDDEN, PJ_FALSE, PJ_FALSE);
 		return PJ_TRUE;
 	}
 	if (method->id == PJSIP_CANCEL_METHOD) {
@@ -1205,8 +1456,12 @@ static void consumer_event(struct ubus_context *context,
 			app.pending_lan_response = NULL;
 			release_pending_lan_response();
 		}
+		send_dialog_bye();
 		stop_media();
 		qmodem_voip_sip_call_release(&app.call);
+		if (app.outbound)
+			remember_outbound_invite(NULL);
+		app.dialog_contact[0] = '\0';
 	} else if (strcmp(blobmsg_get_string(values[0]), "ring") == 0)
 		send_incoming_invite();
 }
@@ -1246,12 +1501,62 @@ static int advertise_address_is_local_voice(const char *address)
 	return found;
 }
 
+static int copy_config_value(char *destination, size_t size, const char *value)
+{
+	size_t length = value ? strlen(value) : 0;
+	if (!destination || !value || length >= size)
+		return -1;
+	memcpy(destination, value, length + 1);
+	return 0;
+}
+
+static int load_outbound_config(const char *path)
+{
+	FILE *file;
+	char line[512];
+	char key[64];
+	char value[384];
+	if (!path || !path[0] || strlen(path) >= 256)
+		return -1;
+	file = fopen(path, "r");
+	if (!file)
+		return -1;
+	while (fgets(line, sizeof(line), file)) {
+		if (sscanf(line, "%63[^=]=%383[^\n]", key, value) != 2)
+			continue;
+		if (strcmp(key, "server") == 0) {
+			if (copy_config_value(app.outbound_server, sizeof(app.outbound_server), value) != 0) return -1;
+		} else if (strcmp(key, "aor") == 0) {
+			if (copy_config_value(app.outbound_aor, sizeof(app.outbound_aor), value) != 0) return -1;
+		} else if (strcmp(key, "server_uri") == 0) {
+			if (copy_config_value(app.outbound_server_uri, sizeof(app.outbound_server_uri), value) != 0) return -1;
+		} else if (strcmp(key, "password") == 0) {
+			if (copy_config_value(app.outbound_password, sizeof(app.outbound_password), value) != 0) return -1;
+		} else if (strcmp(key, "username") == 0) {
+			if (copy_config_value(app.outbound_username, sizeof(app.outbound_username), value) != 0) return -1;
+		} else if (strcmp(key, "realm") == 0) {
+			if (copy_config_value(app.outbound_realm, sizeof(app.outbound_realm), value) != 0) return -1;
+		}
+		else if (strcmp(key, "port") == 0)
+			app.outbound_port = (unsigned)strtoul(value, NULL, 10);
+		else if (strcmp(key, "interval") == 0)
+			app.outbound_interval = (unsigned)strtoul(value, NULL, 10);
+	}
+	(void)fclose(file);
+	return app.outbound_server[0] && app.outbound_aor[0] && app.outbound_username[0] &&
+		app.outbound_server_uri[0] && app.outbound_password[0] &&
+		app.outbound_port >= 1 && app.outbound_port <= 65535 &&
+		app.outbound_interval >= 60 ? 0 : -1;
+}
+
 int main(int argc, char **argv)
 {
 	pj_sockaddr_in address;
 	pj_status_t rc;
 	pj_time_val delay = {0, 0};
-	if (argc != 7 || strcmp(argv[1], "--listen-address") != 0 ||
+	const char *outbound_config = NULL;
+	int i;
+	if (argc < 7 || strcmp(argv[1], "--listen-address") != 0 ||
 	    strcmp(argv[3], "--advertise-address") != 0 ||
 	    strcmp(argv[5], "--media-socket-path") != 0 ||
 	    strcmp(argv[2], "0.0.0.0") != 0 ||
@@ -1260,9 +1565,17 @@ int main(int argc, char **argv)
 	    !argv[6][0] ||
 	    strlen(argv[6]) >= sizeof(app.media_socket_path)) {
 		fprintf(stderr,
-			"usage: %s --listen-address 0.0.0.0 --advertise-address IPV4 --media-socket-path SOCKET\n",
+			"usage: %s --listen-address 0.0.0.0 --advertise-address IPV4 --media-socket-path SOCKET [--mode outbound --outbound-config FILE]\n",
 			argv[0]);
 		return 2;
+	}
+	for (i = 7; i < argc; i++) {
+		if (strcmp(argv[i], "--mode") == 0 && i + 1 < argc)
+			app.outbound = strcmp(argv[++i], "outbound") == 0;
+		else if (strcmp(argv[i], "--outbound-config") == 0 && i + 1 < argc)
+			outbound_config = argv[++i];
+		else
+			return 2;
 	}
 	app.media_sock.fd = -1;
 	app.media_fd_event.fd = -1;
@@ -1270,10 +1583,15 @@ int main(int argc, char **argv)
 	app.rtp_fd = -1;
 	app.media_attach_timeout.cb = media_attach_retry;
 	app.media_revision = (uint64_t)time(NULL);
-	if (load_credentials() != 0)
+	if (!app.outbound && load_credentials() != 0) {
 		return 2;
+	}
 	(void)strcpy(app.lan_address, argv[4]);
 	(void)snprintf(app.media_socket_path, sizeof(app.media_socket_path), "%s", argv[6]);
+	if (app.outbound && (!outbound_config || load_outbound_config(outbound_config) != 0))
+		return 2;
+	if (app.outbound)
+		(void)snprintf(app.username, sizeof(app.username), "%s", app.outbound_username);
 	if (pj_init() != PJ_SUCCESS || pjlib_util_init() != PJ_SUCCESS)
 		return 1;
 	pj_caching_pool_init(&app.caching_pool, NULL, 0);
@@ -1282,6 +1600,8 @@ int main(int argc, char **argv)
 		return 1;
 	rc = pjsip_endpt_create(&app.caching_pool.factory, "qmodem_voip", &app.endpoint);
 	if (rc != PJ_SUCCESS)
+		return 1;
+	if (pjsip_tsx_layer_init_module(app.endpoint) != PJ_SUCCESS)
 		return 1;
 	app.module = (pjsip_module){
 		.name = {"mod-qmodem-sip", 15},
@@ -1303,10 +1623,20 @@ int main(int argc, char **argv)
 	address.sin_port = pj_htons(5060);
 	address.sin_addr = pj_inet_addr(&((pj_str_t){argv[2],
 		(pj_ssize_t)strlen(argv[2])}));
-	if (pjsip_udp_transport_start(app.endpoint, &address, NULL, 1, NULL) != PJ_SUCCESS)
-		return 1;
-	if (pjsip_tcp_transport_start(app.endpoint, &address, 1, NULL) != PJ_SUCCESS)
-		return 1;
+	if (!app.outbound) {
+		if (pjsip_udp_transport_start(app.endpoint, &address, NULL, 1, NULL) != PJ_SUCCESS)
+			return 1;
+		if (pjsip_tcp_transport_start(app.endpoint, &address, 1, NULL) != PJ_SUCCESS)
+			return 1;
+	} else {
+		pjsip_tls_setting tls;
+		pjsip_tls_setting_default(&tls);
+		tls.ca_list_file = pj_str((char *)"/etc/ssl/certs/ca-certificates.crt");
+		tls.verify_server = PJ_TRUE;
+		address.sin_port = pj_htons(5061);
+		if (pjsip_tls_transport_start(app.endpoint, &tls, &address, NULL, 1, NULL) != PJ_SUCCESS)
+			return 1;
+	}
 	app.ubus = ubus_connect(NULL);
 	if (!app.ubus)
 		return 1;
@@ -1317,6 +1647,10 @@ int main(int argc, char **argv)
 	if (ubus_register_event_handler(app.ubus, &app.call_events,
 				"qmodem_voip.call") != 0)
 		return 1;
+	if (app.outbound) {
+		if (outbound_setup_registration() != 0)
+			return 1;
+	}
 	signal(SIGINT, stop_handler);
 	signal(SIGTERM, stop_handler);
 	signal(SIGHUP, reload_handler);
@@ -1332,14 +1666,19 @@ int main(int argc, char **argv)
 		(void)fprintf(pidfile, "%ld %llu\n", (long)getpid(), start);
 		(void)fclose(pidfile);
 	}
-	fprintf(stdout, "READY udp,tcp=%s:5060 advertise=%s realm=%s rtp=40000 socket=%s\n",
-		argv[2], app.lan_address, REALM, app.media_socket_path);
+	fprintf(stdout, "READY transport=%s listen=%s:%u advertise=%s realm=%s rtp=40000 socket=%s\n",
+		app.outbound ? "tls" : "udp,tcp", argv[2], app.outbound ? 5061U : 5060U,
+		app.lan_address, app.outbound ? app.outbound_realm : REALM,
+		app.media_socket_path);
 	fflush(stdout);
+	if (app.outbound)
+		outbound_register();
 	while (running) {
 		if (app.reload_requested) {
 			app.reload_requested = 0;
 			uloop_timeout_cancel(&app.media_attach_timeout);
-			(void)load_credentials();
+			if (!app.outbound)
+				(void)load_credentials();
 			app.binding[0] = '\0';
 			app.expires = 0;
 			qmodem_voip_sip_call_release(&app.call);
@@ -1350,12 +1689,24 @@ int main(int argc, char **argv)
 	(void)unlink(PIDFILE);
 	uloop_timeout_cancel(&app.media_attach_timeout);
 	stop_media();
+	remember_outbound_invite(NULL);
 	uloop_done();
 	ubus_free(app.ubus);
+	if (app.regc) {
+		pjsip_tx_data *request = NULL;
+		if (app.outbound_registered &&
+		    pjsip_regc_unregister(app.regc, &request) == PJ_SUCCESS)
+			(void)pjsip_regc_send(app.regc, request);
+		(void)pjsip_regc_destroy(app.regc);
+		app.regc = NULL;
+	}
+	if (app.outbound_auth_initialized)
+		(void)pjsip_auth_clt_deinit(&app.outbound_auth);
 	pjsip_endpt_destroy(app.endpoint);
 	pj_pool_release(app.pool);
 	pj_caching_pool_destroy(&app.caching_pool);
 	pj_shutdown();
 	memset(app.ha1, 0, sizeof(app.ha1));
+	memset(app.outbound_password, 0, sizeof(app.outbound_password));
 	return 0;
 }

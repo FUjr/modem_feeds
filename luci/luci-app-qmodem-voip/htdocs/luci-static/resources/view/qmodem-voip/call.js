@@ -4,6 +4,7 @@
 'require dom';
 'require ui';
 'require form';
+'require uci';
 'require rpc as luciRpc';
 'require qmodem-voip.rpc as rpc';
 'require qmodem-voip.reducer as reducer';
@@ -48,7 +49,8 @@ return view.extend({
 		});
 	},
 
-	createServiceMap() {
+	async createServiceMap() {
+		await uci.load('network');
 		const map = new form.Map('qmodem_voip');
 		const section = map.section(form.NamedSection, 'main', 'main',
 			_('Call service'),
@@ -67,6 +69,56 @@ return view.extend({
 		webEnabled.description = _('Enables the uhttpd HTTPS listener used by browser WSS media.');
 		this.serviceMap = map;
 		this.serviceOption = enabled;
+		const sip = map.section(form.NamedSection, 'sip', 'sip',
+			_('SIP connection'),
+			_('The selected network interface supplies the SIP and RTP address.'));
+		sip.anonymous = true;
+		sip.addremove = false;
+		const mode = sip.option(form.ListValue, 'mode', _('Connection mode'));
+		mode.value('lan', _('Local SIP'));
+		mode.value('outbound', _('Outbound Asterisk'));
+		mode.default = 'lan';
+		mode.rmempty = false;
+		const listener = sip.option(form.ListValue, 'interface', _('Listening interface'));
+		listener.default = 'wan';
+		listener.rmempty = false;
+		listener.description = _('Choose an OpenWrt network interface, such as wan for the lan4 port.');
+		const interfaces = uci.sections('network', 'interface') || [];
+		interfaces.forEach((network) => {
+			if (network['.name'])
+				listener.value(network['.name'], network['.name']);
+		});
+		if (!interfaces.some((network) => network['.name'] === 'wan'))
+			listener.value('wan', 'wan');
+		const server = sip.option(form.Value, 'outbound_server', _('Asterisk server'));
+		server.datatype = 'host';
+		server.rmempty = false;
+		server.depends('mode', 'outbound');
+		const port = sip.option(form.Value, 'outbound_port', _('Asterisk TLS port'));
+		port.datatype = 'port';
+		port.default = '5061';
+		port.rmempty = false;
+		port.depends('mode', 'outbound');
+		const transport = sip.option(form.ListValue, 'outbound_transport', _('Transport'));
+		transport.value('tls', _('TLS'));
+		transport.default = 'tls';
+		transport.rmempty = false;
+		transport.depends('mode', 'outbound');
+		const username = sip.option(form.Value, 'outbound_username', _('SIP account'));
+		username.rmempty = false;
+		username.depends('mode', 'outbound');
+		const password = sip.option(form.Value, 'outbound_password', _('SIP password'));
+		password.password = true;
+		password.rmempty = false;
+		password.depends('mode', 'outbound');
+		const realm = sip.option(form.Value, 'outbound_realm', _('SIP realm'));
+		realm.placeholder = 'asterisk';
+		realm.depends('mode', 'outbound');
+		const interval = sip.option(form.Value, 'outbound_register_interval', _('Registration interval'));
+		interval.datatype = 'range(60,3600)';
+		interval.default = '300';
+		interval.rmempty = false;
+		interval.depends('mode', 'outbound');
 		return map;
 	},
 
@@ -470,7 +522,8 @@ return view.extend({
 	},
 
 	async render() {
-		const serviceForm = await this.createServiceMap().render();
+		const serviceMap = await this.createServiceMap();
+		const serviceForm = await serviceMap.render();
 		surface.build(this, serviceForm);
 		this.updateView();
 		this.updateHistory();

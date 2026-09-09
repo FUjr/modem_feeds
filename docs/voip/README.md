@@ -20,6 +20,12 @@ composition, operator profile, and sustained bidirectional media evidence.
   UCI, AT-daemon, browser-media, and RTP contracts.
 - [Development notes](development-notes.md): RM520N-GL findings, failed
   hypotheses, lifecycle lessons, and remaining gaps.
+- [Outbound SIP design](outbound-sip-design.md): topology, security,
+  idempotent lifecycle, and phased delivery plan.
+- [Outbound SIP usage](outbound-sip.md): UCI configuration and verification
+  procedure for the outbound mode.
+- [Asterisk TLS endpoint](asterisk-tls.md): public TLS endpoint, NAT, routing,
+  and container configuration.
 
 ## Scope
 

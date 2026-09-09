@@ -5,7 +5,7 @@ USE_PROCD=1
 qmodem_voip_interface_address()
 {
 	interface=$(uci -q get qmodem_voip.sip.interface)
-	interface=${interface:-br-lan}
+	interface=${interface:-wan}
 	case $interface in ''|*[!A-Za-z0-9_.:-]*) return 1 ;; esac
 	status=$(ubus -t 2 call "network.interface.$interface" status 2>/dev/null) || status=
 	device=$(printf '%s\n' "$status" | jsonfilter -e '@.l3_device' 2>/dev/null)
@@ -22,6 +22,15 @@ qmodem_voip_start_registrar()
 	media_socket_path=$2
 	[ "$(uci -q get qmodem_voip.main.enabled)" = 1 ] || return 0
 	[ "$(uci -q get qmodem_voip.sip.enabled)" = 1 ] || return 0
+	mode=$(uci -q get qmodem_voip.sip.mode)
+	mode=${mode:-lan}
+	/usr/sbin/qmodem_voip_sip_validate
+	result=$?
+	if [ "$result" -ne 0 ]; then
+		logger -t qmodem_voip "SIP mode $mode is not startable (validation=$result)"
+		return 1
+	fi
+	[ "$mode" = lan ] || return 0
 	case "$engine" in
 	consumer|registrar) ;;
 	*)
@@ -45,13 +54,41 @@ qmodem_voip_start_registrar()
 	ubus call service event '{"type":"firewall","data":{"reload":true}}' >/dev/null 2>&1 || :
 }
 
+qmodem_voip_write_outbound_config()
+{
+	path=/var/run/qmodem_voip/outbound.conf
+	server=$(uci -q get qmodem_voip.sip.outbound_server)
+	port=$(uci -q get qmodem_voip.sip.outbound_port)
+	transport=$(uci -q get qmodem_voip.sip.outbound_transport)
+	username=$(uci -q get qmodem_voip.sip.outbound_username)
+	password=$(uci -q get qmodem_voip.sip.outbound_password)
+	realm=$(uci -q get qmodem_voip.sip.outbound_realm)
+	interval=$(uci -q get qmodem_voip.sip.outbound_register_interval)
+	case "$transport" in tls) ;; *) logger -t qmodem_voip 'outbound SIP requires TLS'; return 1 ;; esac
+	case "$server" in ''|*[!A-Za-z0-9_.:-]*) return 1 ;; esac
+	case "$port" in ''|*[!0-9]*) return 1 ;; esac
+	case "$username$realm$password" in *[!A-Za-z0-9_.:@+%/=-]*) return 1 ;; esac
+	case "$interval" in ''|*[!0-9]*) return 1 ;; esac
+	[ "$port" -ge 1 ] 2>/dev/null && [ "$port" -le 65535 ] || return 1
+	[ "$interval" -ge 60 ] 2>/dev/null || return 1
+	{
+		printf 'server=%s\n' "$server"
+		printf 'server_uri=sips:%s:%s;transport=tls\n' "$server" "$port"
+		printf 'aor=sips:%s@%s:%s;transport=tls\n' "$username" "$server" "$port"
+		printf 'username=%s\npassword=%s\nrealm=%s\nport=%s\ninterval=%s\n' \
+			"$username" "$password" "$realm" "$port" "$interval"
+	} >"$path"
+	chmod 600 "$path"
+	printf '%s\n' "$path"
+}
+
 start_service()
 {
 	mkdir -p -m 700 /etc/qmodem_voip
 	mkdir -p -m 700 /var/run/qmodem_voip
 	mkdir -p -m 700 /var/lib/qmodem_voip
 	interface=$(uci -q get qmodem_voip.sip.interface)
-	interface=${interface:-br-lan}
+	interface=${interface:-wan}
 	case $interface in ''|*[!A-Za-z0-9_.:-]*) return 1 ;; esac
 	lan_address=$(qmodem_voip_interface_address)
 	media_socket_path=$(uci -q get qmodem_voip.sip.media_socket_path)
@@ -68,7 +105,22 @@ start_service()
 	procd_set_param respawn 3600 5 5
 	procd_close_instance
 
-	[ -n "$lan_address" ] && qmodem_voip_start_registrar "$lan_address" "$media_socket_path"
+	if [ -n "$lan_address" ]; then
+		mode=$(uci -q get qmodem_voip.sip.mode)
+		mode=${mode:-lan}
+		if [ "$mode" = outbound ]; then
+			outbound_config=$(qmodem_voip_write_outbound_config) || return 1
+			procd_open_instance registrar
+			procd_set_param command /usr/sbin/qmodem_voip_consumer_wait \
+				--listen-address 0.0.0.0 --advertise-address "$lan_address" \
+				--media-socket-path "$media_socket_path" --mode outbound \
+				--outbound-config "$outbound_config"
+			procd_set_param respawn 3600 5 5
+			procd_close_instance
+		else
+			qmodem_voip_start_registrar "$lan_address" "$media_socket_path"
+		fi
+	fi
 	/usr/sbin/qmodem_voip_web
 }
 

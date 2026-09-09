@@ -238,10 +238,18 @@ qmodem_voip_enable()
 			qmodem_voip_fault 'incomplete modem safety transaction requires recovery'
 			return 1
 		}
+		qmodem_voip_adapter_enable_ubus || {
+			qmodem_voip_fault 'failed to enable the shared AT transport'
+			return 1
+		}
 		qmodem_voip_recover
 		return $?
 	fi
 	qmodem_voip_probe >/dev/null || { qmodem_voip_fault 'unsupported experimental modem prerequisites'; return 1; }
+	qmodem_voip_adapter_enable_ubus || {
+		qmodem_voip_fault 'failed to enable the shared AT transport'
+		return 1
+	}
 	qmodem_voip_capture_baseline || return 1
 	case $media_uac in false|0) requested_uac=0 ;; true|1) requested_uac=1 ;; *) return 1 ;; esac
 	audio_usbcfg=$(qmodem_voip_usbcfg_audio "$requested_uac") || { qmodem_voip_fault 'baseline USB tuple is not audio-toggleable'; return 1; }

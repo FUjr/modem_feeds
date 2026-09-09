@@ -474,15 +474,22 @@ int qmodem_voip_line(struct qmodem_voip_call *call, const char *port,
 			notify(event, call, "reconcile_inconclusive", opaque);
 			return 0;
 		}
-		if ((call->state != QMODEM_VOIP_OUTGOING_SETUP &&
+		{
+			int had_active_call = call->state == QMODEM_VOIP_ACTIVE;
+			if ((call->state != QMODEM_VOIP_OUTGOING_SETUP &&
 		     call->state != QMODEM_VOIP_INCOMING_RINGING &&
 		     call->state != QMODEM_VOIP_EARLY_MEDIA &&
 		     call->state != QMODEM_VOIP_ACTIVE) ||
 		    call->reconcile_voice_misses >= 2U)
 			clear_call(call);
-		call->reconcile_pending = 0;
-		call->reconcile_command_id = 0;
-		call->reconcile_saw_data = 0;
+			call->reconcile_pending = 0;
+			call->reconcile_command_id = 0;
+			call->reconcile_saw_data = 0;
+			if (had_active_call) {
+				notify(event, call, "release", opaque);
+				return 0;
+			}
+		}
 		notify(event, call, call->state == QMODEM_VOIP_ACTIVE ?
 			"reconcile_inconclusive" : "reconcile_idle", opaque);
 		return 0;

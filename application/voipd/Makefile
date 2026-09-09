@@ -19,7 +19,7 @@ define Package/$(PKG_NAME)
   TITLE:=QModem VoIP daemon (experimental)
   DEPENDS:=+libubus +libubox +libblobmsg-json +libjson-c +libuci +uci +jsonfilter +jshn +adb \
 	+alsa-lib +libspandsp3 +libsoxr +libwebsockets-mbedtls +px5g-mbedtls \
-	+libpj +libpjlib-util +libpjsip \
+	+libpj +libpjlib-util +libpjsip +libpjsip-ua \
 	+kmod-usb-serial +kmod-usb-serial-option
 endef
 
@@ -60,7 +60,7 @@ define Build/Compile
 		$(PKG_BUILD_DIR)/sip_activation.c $(PKG_BUILD_DIR)/media_socket_client.c \
 		$(TARGET_LDFLAGS) \
 		-L$(STAGING_DIR)/usr/lib/spandsp3/lib \
-		-lpjsip -lpjlib-util -lpj -lspandsp -lsoxr -lasound -lubus -lubox \
+		-lpjsip -lpjsip-ua -lpjlib-util -lpj -lspandsp -lsoxr -lasound -lubus -lubox \
 		-lblobmsg_json -lm
 	$(TARGET_CC) $(TARGET_CPPFLAGS) $(TARGET_CFLAGS) -std=gnu11 -Wall -Wextra -Werror \
 		-I$(STAGING_DIR)/usr/include -I$(STAGING_DIR)/usr/lib/spandsp3/include \
@@ -104,6 +104,7 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./files/usr/sbin/qmodem_voip_daemon_wait $(1)/usr/sbin/
 	$(INSTALL_BIN) ./files/usr/sbin/qmodem_voip_consumer_wait $(1)/usr/sbin/
 	$(INSTALL_BIN) ./files/usr/sbin/qmodem_voip_registrar_wait $(1)/usr/sbin/
+	$(INSTALL_BIN) ./files/usr/sbin/qmodem_voip_sip_validate $(1)/usr/sbin/
 	$(INSTALL_BIN) ./files/usr/sbin/qmodem_voip_web $(1)/usr/sbin/
 	$(INSTALL_BIN) ./files/etc/init.d/qmodem_voip $(1)/etc/init.d/
 	$(INSTALL_CONF) ./files/etc/config/qmodem_voip $(1)/etc/config/

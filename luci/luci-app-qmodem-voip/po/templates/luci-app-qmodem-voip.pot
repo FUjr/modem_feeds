@@ -56,6 +56,62 @@ msgstr ""
 msgid "Call service"
 msgstr ""
 
+#: view/qmodem-voip/call.js
+msgid "SIP connection"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "The selected network interface supplies the SIP and RTP address."
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Listening interface"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Choose an OpenWrt network interface, such as wan for the lan4 port."
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Connection mode"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Local SIP"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Outbound Asterisk"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Asterisk server"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Asterisk TLS port"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Transport"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "TLS"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "SIP password"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "SIP realm"
+msgstr ""
+
+#: view/qmodem-voip/call.js
+msgid "Registration interval"
+msgstr ""
+
 #: view/qmodem-voip/call.js:370
 msgid "Caller ID withheld."
 msgstr ""

@@ -28,6 +28,14 @@ qmodem_voip_adapter_section()
 	printf '%s\n' "$match"
 }
 
+qmodem_voip_adapter_enable_ubus()
+{
+	section=$(qmodem_voip_adapter_section) || return 1
+	[ "$(uci -q get "qmodem.$section.use_ubus" 2>/dev/null)" = 1 ] && return 0
+	uci -q set "qmodem.$section.use_ubus=1" || return 1
+	uci -q commit qmodem
+}
+
 qmodem_voip_adapter_usb_id()
 {
 	slot=$(qmodem_voip_adapter_usb_slot) || return 1
