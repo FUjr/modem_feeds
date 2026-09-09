@@ -23,7 +23,7 @@ define Package/$(PKG_NAME)
 		+kmod-usb-net-cdc-mbim \
 		+kmod-usb-net-rndis \
 		+kmod-usb-net-cdc-ncm +kmod-usb-net-huawei-cdc-ncm \
-  		+ubus-at-daemon +tom_modem +terminfo +sms-tool_q \
+		+ubus-at-daemon +qmodem-settings +tom_modem +terminfo +sms-tool_q \
 		+modem_scan \
 		+jq +bc\
 		+coreutils +coreutils-stat +xxd \

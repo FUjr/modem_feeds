@@ -88,6 +88,12 @@ int main(void)
     g_daemon_ctx.line_events.notify_fd.cb(&g_daemon_ctx.line_events.notify_fd,
                                            ULOOP_READ);
     assert(sent_events == 65);
+    assert(sent_urcs == 0);
+    at_line_event_enqueue(&g_daemon_ctx.line_events, &port, "LINE-00", 7, 0,
+                          AT_CORRELATION_IDLE);
+    g_daemon_ctx.line_events.notify_fd.cb(&g_daemon_ctx.line_events.notify_fd,
+                                           ULOOP_READ);
+    assert(sent_events == 66);
     assert(sent_urcs == 1);
     assert(g_daemon_ctx.line_events.count == 0);
     at_line_events_cleanup(&g_daemon_ctx.line_events);

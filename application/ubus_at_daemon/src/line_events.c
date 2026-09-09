@@ -163,6 +163,9 @@ static void publish_line_event(const at_line_event_t *event, void *opaque)
     ubus_send_event(ctx, "qmodem.at.line", b.head);
     blob_buf_free(&b);
 
+    if (event->correlation != AT_CORRELATION_IDLE)
+        return;
+
     pthread_mutex_lock(&g_daemon_ctx.control_mutex);
     for (urc = g_daemon_ctx.urcs; urc; urc = urc->next) {
         size_t prefix_length;

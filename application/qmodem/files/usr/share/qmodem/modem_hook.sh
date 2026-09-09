@@ -10,6 +10,9 @@ case $init_type in
         # pre-add at commands
         cfg_prefix="post_init"
         debug_subject="post_init"
+		if [ -x /usr/sbin/qmodem-settings ]; then
+			exec /usr/sbin/qmodem-settings apply "$config_section"
+		fi
         ;;
     pre_dial)
         # pre-dial at commands

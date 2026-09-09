@@ -79,6 +79,13 @@ int main(int argc, char **argv)
 		uloop_done();
 		return 1;
 	}
+	app->urc_events.cb = at_urc_event;
+	if (ubus_register_event_handler(app->ubus, &app->urc_events,
+					"qmodem.at.urc") != 0) {
+		ubus_free(app->ubus);
+		uloop_done();
+		return 1;
+	}
 	app->browser_timer.cb = qmodem_voip_browser_timer;
 	app->call_timer.cb = qmodem_voip_call_timer;
 	uloop_timeout_set(&app->call_timer, 1000);
