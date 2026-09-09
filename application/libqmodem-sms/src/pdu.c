@@ -428,6 +428,107 @@ pdu_encode(const char* service_center_number, const char* phone_number, const ch
 	return output_buffer_length;
 }
 
+static int utf8_to_utf16(const char *text, unsigned short *units, int capacity)
+{
+	const unsigned char *p = (const unsigned char *)text;
+	int count = 0;
+	while (*p) {
+		unsigned int cp;
+		int bytes;
+		if (*p < 0x80) { cp = *p; bytes = 1; }
+		else if ((*p & 0xe0) == 0xc0 && p[1] && (p[1] & 0xc0) == 0x80) {
+			cp = ((unsigned int)(p[0] & 0x1f) << 6) | (p[1] & 0x3f); bytes = 2;
+			if (cp < 0x80) return -1;
+		} else if ((*p & 0xf0) == 0xe0 && p[1] && p[2] && (p[1] & 0xc0) == 0x80 &&
+			   (p[2] & 0xc0) == 0x80) {
+			cp = ((unsigned int)(p[0] & 0x0f) << 12) |
+			     ((unsigned int)(p[1] & 0x3f) << 6) | (p[2] & 0x3f); bytes = 3;
+			if (cp < 0x800 || (cp >= 0xd800 && cp <= 0xdfff)) return -1;
+		} else if ((*p & 0xf8) == 0xf0 && p[1] && p[2] && p[3] && (p[1] & 0xc0) == 0x80 &&
+			   (p[2] & 0xc0) == 0x80 && (p[3] & 0xc0) == 0x80) {
+			cp = ((unsigned int)(p[0] & 0x07) << 18) |
+			     ((unsigned int)(p[1] & 0x3f) << 12) |
+			     ((unsigned int)(p[2] & 0x3f) << 6) | (p[3] & 0x3f); bytes = 4;
+			if (cp < 0x10000 || cp > 0x10ffff) return -1;
+		} else return -1;
+		if (cp <= 0xffff) {
+			if (count >= capacity) return -1;
+			units[count++] = (unsigned short)cp;
+		} else {
+			if (count + 1 >= capacity) return -1;
+			cp -= 0x10000;
+			units[count++] = (unsigned short)(0xd800 | (cp >> 10));
+			units[count++] = (unsigned short)(0xdc00 | (cp & 0x3ff));
+		}
+		p += bytes;
+	}
+	return count;
+}
+
+int pdu_encode_ucs2_parts(const char *phone_number, const char *utf8_text,
+			  unsigned char pdus[][SMS_MAX_PDU_LENGTH], int lengths[],
+			  int max_parts, unsigned int reference)
+{
+	unsigned short units[SMS_MAX_PARTS * 67];
+	int unit_count, total, offset = 0;
+	if (!phone_number || !*phone_number || !utf8_text || !pdus || !lengths ||
+	    max_parts < 1 || max_parts > SMS_MAX_PARTS)
+		return -1;
+	unit_count = utf8_to_utf16(utf8_text, units, (int)(sizeof(units) / sizeof(units[0])));
+	if (unit_count < 0)
+		return -1;
+	if (unit_count <= 70) {
+		total = 1;
+	} else {
+		int position = 0;
+		total = 0;
+		while (position < unit_count) {
+			int take = unit_count - position < 67 ? unit_count - position : 67;
+			if (position + take < unit_count && units[position + take - 1] >= 0xd800 &&
+			    units[position + take - 1] <= 0xdbff)
+				take--;
+			position += take;
+			total++;
+		}
+	}
+	if (total > max_parts)
+		return -1;
+	for (int part = 0; part < total; part++) {
+		unsigned char *out = pdus[part];
+		int length, limit = total == 1 ? 70 : 67;
+		int take = unit_count - offset < limit ? unit_count - offset : limit;
+		if (offset + take < unit_count && take > 0 &&
+		    units[offset + take - 1] >= 0xd800 && units[offset + take - 1] <= 0xdbff)
+			take--;
+		out[0] = 0;
+		out[1] = SMS_SUBMIT | (total > 1 ? 0x40 : 0);
+		out[2] = 0;
+		out[3] = (unsigned char)strlen(phone_number);
+		out[4] = strlen(phone_number) < 6 ? TYPE_OF_ADDRESS_UNKNOWN : TYPE_OF_ADDRESS_INTERNATIONAL_PHONE;
+		length = EncodePhoneNumber(phone_number, out + 5, SMS_MAX_PDU_LENGTH - 5);
+		if (length < 0)
+			return -1;
+		length += 5;
+		out[length++] = 0;
+		out[length++] = 0x08;
+		out[length++] = 0xb0;
+		out[length++] = (unsigned char)(take * 2 + (total > 1 ? 6 : 0));
+		if (total > 1) {
+			out[length++] = 5; out[length++] = 0; out[length++] = 3;
+			out[length++] = (unsigned char)reference;
+			out[length++] = (unsigned char)total;
+			out[length++] = (unsigned char)(part + 1);
+		}
+		for (int i = 0; i < take; i++) {
+			out[length++] = (unsigned char)(units[offset + i] >> 8);
+			out[length++] = (unsigned char)units[offset + i];
+		}
+		lengths[part] = length;
+		offset += take;
+	}
+	return total;
+}
+
 int pdu_decode(const unsigned char* buffer, int buffer_length,
 	       time_t* output_sms_time,
 	       char* output_sender_phone_number, int sender_phone_number_size,

@@ -112,16 +112,13 @@ int decode_pdu(SMS_T *sms)
         { 
             // GSM 7 bit
             sms->type = SMS_CHARSET_7BIT;
-            int i;
+            int i, offset = 0;
             i = skip_bytes;
             if (skip_bytes > 0)
                 i = (skip_bytes * 8 + 6) / 7;
             for (; i < strlen(sms_text); i++)
-            {
-                sprintf(sms->sms_text + i, "%c", sms_text[i]);
-            }
-            i++;
-            sprintf(sms->sms_text + i, "%c", '\0');
+                sms->sms_text[offset++] = sms_text[i];
+            sms->sms_text[offset] = '\0';
             break;
         }
     case 2:
@@ -536,11 +533,11 @@ int display_sms_in_json(SMS_T **sms,int num)
         char escaped_text[SMS_TEXT_SIZE];
         escape_json(sms[i]->sms_text, escaped_text);
         if (sms[i]->ref_number)
-            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\",\"reference\":%d,\"total\":%d,\"part\":%d},",
-                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text, sms[i]->ref_number, sms[i]->total_segments, sms[i]->segment_number);
+            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\",\"pdu\":\"%s\",\"reference\":%d,\"total\":%d,\"part\":%d},",
+                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text, sms[i]->sms_pdu, sms[i]->ref_number, sms[i]->total_segments, sms[i]->segment_number);
         else
-            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\"},",
-                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text);
+            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\",\"pdu\":\"%s\"},",
+                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text, sms[i]->sms_pdu);
     }
     
     //if not empty msg_json,remove the last ','

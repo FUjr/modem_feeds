@@ -142,64 +142,28 @@ function mergeInstances(instances) {
 	return result;
 }
 
-// Get unforwarded SMS messages
-function getUnforwardedSms(modem_cfg) {
+function claimDelivery() {
 	let conn = ubus.connect();
 	if (!conn) {
 		log(LOG_LEVEL.ERROR, 'Failed to connect to ubus');
 		return null;
 	}
-	
-	let result = conn.call('qmodem_sms', 'list_sms', {
-		config_section: modem_cfg
-	});
-	
+	let result = conn.call('qmodem.sms', 'delivery_claim', {});
 	conn.disconnect();
-	
-	if (!result || !result.conversations) {
-		log(LOG_LEVEL.DEBUG, `No conversations found for modem ${modem_cfg}`);
-		return [];
-	}
-	
-	// Extract unforwarded messages
-	let unforwarded = [];
-	for (let conv in result.conversations) {
-		for (let msg in conv.messages) {
-			if (msg.type == 'received' && !msg.forwarded) {
-				push(unforwarded, msg);
-			}
-		}
-	}
-	
-	log(LOG_LEVEL.DEBUG, `Found ${length(unforwarded)} unforwarded message(s) for modem ${modem_cfg}`);
-	return unforwarded;
+	return result;
 }
 
-// Mark messages as forwarded
-function markAsForwarded(modem_cfg, ids) {
-	if (!ids || length(ids) == 0)
-		return true;
-	
+function completeDelivery(delivery_id, success, error) {
 	let conn = ubus.connect();
-	if (!conn) {
-		log(LOG_LEVEL.ERROR, 'Failed to connect to ubus');
+	if (!conn)
 		return false;
-	}
-	
-	let result = conn.call('qmodem_sms', 'mark_forwarded', {
-		config_section: modem_cfg,
-		ids: ids
+	let result = conn.call('qmodem.sms', 'delivery_complete', {
+		delivery_id: delivery_id,
+		success: success,
+		error: error || ''
 	});
-	
 	conn.disconnect();
-	
-	if (!result || !result.success) {
-		log(LOG_LEVEL.ERROR, `Failed to mark messages as forwarded for modem ${modem_cfg}`);
-		return false;
-	}
-	
-	log(LOG_LEVEL.INFO, `Marked ${result.marked} message(s) as forwarded for modem ${modem_cfg}`);
-	return true;
+	return result && result.status == 'success';
 }
 
 // Helper function to quote shell arguments
@@ -274,71 +238,39 @@ function executeForward(msg, api_configs) {
 			break;  // Success, exit retry loop
 		}
 	}
-	return (total_success > 0);
+	return total_count > 0 && total_success == total_count;
 }
 
-// Process messages for a merged instance
-function processInstance(inst, is_recurring)
+function findInstance(instances, modem_id)
 {
-	log(LOG_LEVEL.DEBUG, `Processing instance: modem=${inst.modem_cfg}, type=${inst.api_configs}, interval=${inst.poll_interval}s`);
-	
-	let messages = getUnforwardedSms(inst.modem_cfg);
-	if (!messages || length(messages) == 0) {
-		return;
+	for (let inst in instances) {
+		if (inst.modem_cfg == modem_id)
+			return inst;
 	}
-	
-	log(LOG_LEVEL.INFO, `Processing ${length(messages)} unforwarded message(s) for modem ${inst.modem_cfg}`);
-	
-	let forwarded_ids = [];
-	let success_count = 0;
-	let fail_count = 0;
+	return null;
+}
 
-	
-	
-	for (let msg in messages) {
-				
-		// 如果是递归调用，只处理指定的消息
-		if (is_recurring > 0 && msg.id != is_recurring) {
-			log(LOG_LEVEL.DEBUG, `Skipping message ID ${msg.id} (only processing ${is_recurring})`);
+function processDeliveries(instances)
+{
+	for (let count = 0; count < 100 && !should_exit; count++) {
+		let delivery = claimDelivery();
+		if (!delivery || delivery.status == 'empty')
+			return;
+		if (delivery.status != 'claimed') {
+			log(LOG_LEVEL.ERROR, 'Failed to claim SMS delivery');
+			return;
+		}
+		let inst = findInstance(instances, delivery.modem_id);
+		if (!inst) {
+			completeDelivery(delivery.delivery_id, false, 'forward configuration unavailable');
 			continue;
 		}
-
-		// Check for multipart message completeness
-		// 递归调用时强制发送，不再检查完整性
-		if (msg.total > 1 && length(msg.part_ids) < msg.total && is_recurring < 0) {
-			log(LOG_LEVEL.WARN, `Skipping incomplete multipart message ID ${msg.id} (${length(msg.part_ids)}/${msg.total} parts received)`);
-			// 延迟后递归处理此消息，递归时强制发送
-			sleep(500);
-			processInstance(inst, msg.id);
-			// 不完整的消息可能有多段，因此不能继续处理其他消息，否则会调用多次递归
-			break;
-		}
-	
-		let success = executeForward(msg, inst.api_configs);
-		
-		
-		if (success) {
-			// Use part_ids if available (for multipart messages), otherwise use id
-			if (msg.part_ids && length(msg.part_ids) > 0) {
-				for (let part_id in msg.part_ids) {
-					push(forwarded_ids, part_id);
-				}
-			} else {
-				push(forwarded_ids, msg.id);
-			}
-			success_count++;
-		} else {
-			fail_count++;
-		}
+		delivery.id = delivery.message_id;
+		let success = executeForward(delivery, inst.api_configs);
+		if (!completeDelivery(delivery.delivery_id, success,
+				success ? '' : 'one or more forwarding targets failed'))
+			log(LOG_LEVEL.ERROR, `Failed to complete delivery ${delivery.delivery_id}`);
 	}
-	
-	// Mark successfully forwarded messages
-	if (length(forwarded_ids) > 0) {
-		markAsForwarded(inst.modem_cfg, forwarded_ids);
-        log(LOG_LEVEL.INFO, `Marked ${length(forwarded_ids)} message(s) as forwarded for modem ${inst.modem_cfg}`);
-	}
-	
-	log(LOG_LEVEL.INFO, `Forwarding complete: ${success_count} success, ${fail_count} failed`);
 }
 
 // Sleep in small intervals to allow quick response to signals
@@ -366,11 +298,7 @@ function mainLoop() {
 		
 		let merged = mergeInstances(instances);
 		
-		// Process each merged instance
-		for (let inst in merged) {
-			if (should_exit) break;
-			processInstance(inst , -1);
-		}
+		processDeliveries(merged);
 		
 		if (should_exit) break;
 		
