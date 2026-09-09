@@ -487,8 +487,17 @@ out:
     if (root)
         json_object_put(root);
     free(output);
-    (void)sms_db_record_sync(&app.db, section, trigger, started_at, *imported,
-                             result == 0 ? NULL : app.last_sync_error);
+    if (sms_db_record_sync(&app.db, section, trigger, started_at, *imported,
+                           result == 0 ? NULL : app.last_sync_error) != 0 && result == 0) {
+        snprintf(app.last_sync_error, sizeof(app.last_sync_error),
+                 "failed to record synchronization result");
+        result = -1;
+    }
+    if (sms_db_checkpoint(&app.db) != 0 && result == 0) {
+        snprintf(app.last_sync_error, sizeof(app.last_sync_error),
+                 "failed to checkpoint SMS database");
+        result = -1;
+    }
     return result;
 }
 

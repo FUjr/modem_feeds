@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static int scalar(sqlite3 *sql, const char *query)
@@ -102,6 +103,13 @@ int main(void)
             "SELECT count(*) FROM source_messages WHERE pdu='PDU-C'") == 1);
     }
     assert(scalar(db.sql, "PRAGMA foreign_keys") == 1);
+    assert(sms_db_checkpoint(&db) == 0);
+    {
+        char wal[256];
+        struct stat info;
+        snprintf(wal, sizeof(wal), "%s-wal", path);
+        assert(stat(wal, &info) != 0 || info.st_size == 0);
+    }
     sms_db_close(&db);
     unlink(path);
     {

@@ -191,6 +191,7 @@ apply_one()
 
 apply_all()
 {
+	config_load qmodem || return 1
 	config_foreach apply_one modem-device
 }
 
@@ -226,8 +227,9 @@ watch_daemon()
 			state=unavailable
 		fi
 		if [ "$state" != unavailable ] && [ "$state" != "$previous" ]; then
-			previous=$state
-			run_locked apply_all >/dev/null 2>&1 || true
+			if run_locked apply_all >/dev/null 2>&1; then
+				previous=$state
+			fi
 		fi
 		sleep 5
 	done

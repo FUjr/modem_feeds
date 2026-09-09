@@ -104,11 +104,26 @@ int sms_db_open(sms_db_t *db, const char *path)
                         NULL) != SQLITE_OK)
         return -1;
     sqlite3_busy_timeout(db->sql, 5000);
+    if (sqlite3_wal_autocheckpoint(db->sql, 64) != SQLITE_OK) {
+        sms_db_close(db);
+        return -1;
+    }
     if (exec_sql(db->sql, schema_sql) != 0 || apply_migrations(db->sql) != 0) {
         sms_db_close(db);
         return -1;
     }
     return 0;
+}
+
+int sms_db_checkpoint(sms_db_t *db)
+{
+    int log_frames = 0, checkpointed_frames = 0;
+
+    if (!db || !db->sql)
+        return -1;
+    return sqlite3_wal_checkpoint_v2(db->sql, NULL, SQLITE_CHECKPOINT_TRUNCATE,
+                                     &log_frames, &checkpointed_frames) == SQLITE_OK
+        ? 0 : -1;
 }
 
 int sms_db_record_event(sms_db_t *db, const char *modem_id, int64_t epoch,

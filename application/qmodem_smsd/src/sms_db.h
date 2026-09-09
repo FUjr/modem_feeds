@@ -34,6 +34,7 @@ typedef struct {
 } sms_import_result_t;
 
 int sms_db_open(sms_db_t *db, const char *path);
+int sms_db_checkpoint(sms_db_t *db);
 void sms_db_set_multipart_windows(sms_db_t *db, int wait_seconds,
                                   int late_seconds);
 void sms_db_close(sms_db_t *db);
