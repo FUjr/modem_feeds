@@ -1,0 +1,45 @@
+name: Sync GitHub Wiki
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/wiki/**"
+      - "docs/release/**"
+      - ".github/workflows/wiki.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Publish wiki pages
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+        run: |
+          set -eu
+          [ -n "${WIKI_TOKEN:-}" ] || {
+            echo "WIKI_TOKEN must be a classic PAT with repo scope" >&2
+            exit 1
+          }
+
+          wiki_url="https://x-access-token:${WIKI_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          git clone "$wiki_url" wiki
+          cp docs/wiki/README.zh-cn.md wiki/Home.md
+          cp docs/release/branch-policy.zh-cn.md wiki/Branch-and-Release-Policy.zh-cn.md
+          cp docs/release/version-migration.zh-cn.md wiki/Version-Migration.zh-cn.md
+
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Home.md Branch-and-Release-Policy.zh-cn.md Version-Migration.zh-cn.md
+          git diff --cached --quiet && exit 0
+          git commit -m "docs: sync QModem release wiki"
+          git push origin HEAD:master
