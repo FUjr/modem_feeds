@@ -104,7 +104,7 @@ request_sms_resync()
 apply_one()
 {
 	local section="$1" model mode use_ubus mem1 mem2 mem3 firmware setup prefix result status delay
-	local degraded=
+	local degraded= sms_resync=0
 	lease_token=
 	valid_id "$section" || return 1
 	config_get model "$section" name
@@ -171,7 +171,7 @@ apply_one()
 			degraded=sms_urc_setup_failed
 			else
 				register_urc qmodem.sms sms-new "$prefix" || degraded=sms_urc_register_failed
-				[ "$degraded" = sms_urc_register_failed ] || request_sms_resync "$section"
+				[ "$degraded" = sms_urc_register_failed ] || sms_resync=1
 			fi
 	fi
 	if [ "$(uci -q get qmodem_voip.main.enabled)" = 1 ]; then
@@ -182,6 +182,7 @@ apply_one()
 		done
 	fi
 	release_lease || degraded=lease_release_failed
+	[ "$sms_resync" -ne 1 ] || request_sms_resync "$section"
 	if [ -n "$degraded" ]; then
 		write_state "$section" ready_degraded "$degraded"
 		return 1
@@ -191,8 +192,15 @@ apply_one()
 
 apply_all()
 {
+	local apply_failed=0
 	config_load qmodem || return 1
-	config_foreach apply_one modem-device
+	config_foreach apply_one_tracked modem-device
+	[ "$apply_failed" -eq 0 ]
+}
+
+apply_one_tracked()
+{
+	apply_one "$1" || apply_failed=1
 }
 
 mark_direct_ready()
