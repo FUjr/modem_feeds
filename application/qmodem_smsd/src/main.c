@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <poll.h>
 #include <time.h>
 #include <uci.h>
 #include <unistd.h>
@@ -40,17 +41,30 @@ struct app_context {
     struct ubus_context *ubus;
     struct ubus_object object;
     struct ubus_event_handler urc_handler;
+    struct ubus_event_handler control_handler;
     sms_db_t db;
     char db_path[256];
     char last_sync_section[64];
     char last_sync_error[160];
     int64_t last_sync_at;
     int last_sync_imported;
+    int multipart_wait;
+    int late_fragment_window;
+    int received_retention;
+    int sent_retention;
     struct uloop_timeout scheduler;
 };
 
 static struct app_context app;
 static int forwarder_enabled_for(const char *section_name);
+
+static int64_t monotonic_ms(void)
+{
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+        return 0;
+    return (int64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
 
 enum {
     ARG_MODEM,
@@ -109,6 +123,48 @@ static const char *option_string(struct uci_context *uci, struct uci_section *se
 {
     const char *value = uci_lookup_option_string(uci, section, name);
     return value && *value ? value : fallback;
+}
+
+static void load_service_config(char *db_path, size_t db_path_len, int load_database)
+{
+    struct uci_context *uci = uci_alloc_context();
+    struct uci_package *package = NULL;
+    struct uci_section *section;
+    const char *value;
+
+    app.multipart_wait = 300;
+    app.late_fragment_window = 3600;
+    app.received_retention = 5000;
+    app.sent_retention = 1000;
+    if (!uci || uci_load(uci, "qmodem_sms", &package) != UCI_OK)
+        goto out;
+    section = uci_lookup_section(uci, package, "main");
+    if (!section)
+        goto out;
+    if (load_database)
+        snprintf(db_path, db_path_len, "%s",
+                 option_string(uci, section, "database", DEFAULT_DB));
+    value = option_string(uci, section, "multipart_wait", "300");
+    app.multipart_wait = atoi(value);
+    if (app.multipart_wait < 1 || app.multipart_wait > 3600)
+        app.multipart_wait = 300;
+    value = option_string(uci, section, "late_fragment_window", "3600");
+    app.late_fragment_window = atoi(value);
+    if (app.late_fragment_window < 1 || app.late_fragment_window > 86400)
+        app.late_fragment_window = 3600;
+    value = option_string(uci, section, "received_retention", "5000");
+    app.received_retention = atoi(value);
+    if (app.received_retention < 1)
+        app.received_retention = 5000;
+    value = option_string(uci, section, "sent_retention", "1000");
+    app.sent_retention = atoi(value);
+    if (app.sent_retention < 1)
+        app.sent_retention = 1000;
+out:
+    if (package)
+        uci_unload(uci, package);
+    if (uci)
+        uci_free_context(uci);
 }
 
 static int load_config(const char *section_name, struct modem_config *cfg)
@@ -203,22 +259,26 @@ static int prepare_database_mode(const struct modem_config *cfg)
     return sms_db_migration_error(&app.db, cfg->section, error, sizeof(error)) > 0 ? -1 : 0;
 }
 
-static int set_uci_option(const char *section, const char *option, const char *value)
+static int set_uci_options(const char *section_name, const char **options,
+                           const char **values, size_t count)
 {
     struct uci_context *uci = uci_alloc_context();
-    struct uci_ptr ptr = { 0 };
     struct uci_package *package = NULL;
-    char expression[256];
+    struct uci_section *section;
     int result = -1;
 
-    if (!uci || !valid_id(section) || !valid_id(option) || !value ||
-        snprintf(expression, sizeof(expression), "qmodem.%s.%s=%s",
-                 section, option, value) >= (int)sizeof(expression))
+    if (!uci || !valid_id(section_name) ||
+        uci_load(uci, "qmodem", &package) != UCI_OK)
         goto out;
-    if (uci_lookup_ptr(uci, &ptr, expression, true) != UCI_OK ||
-        uci_set(uci, &ptr) != UCI_OK)
+    section = uci_lookup_section(uci, package, section_name);
+    if (!section)
         goto out;
-    package = ptr.p;
+    for (size_t i = 0; i < count; i++) {
+        struct uci_ptr ptr = { .p = package, .s = section,
+                               .option = options[i], .value = values[i] };
+        if (!valid_id(options[i]) || !values[i] || uci_set(uci, &ptr) != UCI_OK)
+            goto out;
+    }
     if (uci_commit(uci, &package, false) != UCI_OK)
         goto out;
     result = 0;
@@ -234,6 +294,7 @@ static int read_child_output(char *const argv[], char **output)
     pid_t child;
     char *buffer = NULL;
     size_t used = 0, capacity = 0;
+    int64_t deadline = monotonic_ms() + 15000;
 
     *output = NULL;
     if (pipe2(pipefd, O_CLOEXEC) != 0)
@@ -250,8 +311,10 @@ static int read_child_output(char *const argv[], char **output)
         close(pipefd[0]);
         return -1;
     }
+    (void)fcntl(pipefd[0], F_SETFL, fcntl(pipefd[0], F_GETFL) | O_NONBLOCK);
     for (;;) {
         ssize_t count;
+        struct pollfd pfd = { .fd = pipefd[0], .events = POLLIN };
         if (capacity - used < 4096) {
             char *grown;
             capacity = capacity ? capacity * 2 : 8192;
@@ -259,9 +322,18 @@ static int read_child_output(char *const argv[], char **output)
             if (!grown) { free(buffer); close(pipefd[0]); kill(child, SIGKILL); waitpid(child, NULL, 0); return -1; }
             buffer = grown;
         }
+        int64_t remaining = deadline - monotonic_ms();
+        if (remaining <= 0 || poll(&pfd, 1, (int)remaining) == 0) {
+            kill(child, SIGKILL);
+            waitpid(child, &status, 0);
+            free(buffer); close(pipefd[0]);
+            *output = strdup("child command timed out");
+            return -1;
+        }
         count = read(pipefd[0], buffer + used, capacity - used - 1);
         if (count > 0) { used += (size_t)count; continue; }
         if (count < 0 && errno == EINTR) continue;
+        if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) continue;
         break;
     }
     close(pipefd[0]);
@@ -346,6 +418,8 @@ static int sync_modem(const char *section, const char *trigger, int *imported,
         snprintf(app.last_sync_error, sizeof(app.last_sync_error), "legacy SMS database migration failed");
         return -1;
     }
+    sms_db_set_multipart_windows(&app.db, app.multipart_wait,
+                                 app.late_fragment_window);
     (void)trigger;
     if (run_tom(&cfg, "r", NULL, -1, NULL, &output) != 0)
         goto out;
@@ -400,8 +474,11 @@ static int sync_modem(const char *section, const char *trigger, int *imported,
                                    &expired) != 0)
             goto out;
     }
+    if (sms_db_finish_scan(&app.db, section, cfg.storage, started_at) != 0)
+        goto out;
     app.last_sync_imported = *imported;
-    if (sms_db_prune(&app.db, section, 5000, 1000) != 0)
+    if (sms_db_prune(&app.db, section, app.received_retention,
+                     app.sent_retention) != 0)
         goto out;
     result = 0;
 out:
@@ -423,9 +500,19 @@ static int status_method(struct ubus_context *ctx, struct ubus_object *obj,
     (void)obj; (void)method; (void)msg;
     blob_buf_init(&b, 0);
     blobmsg_add_string(&b, "status", "ready");
+    blobmsg_add_u32(&b, "api_version", 2);
     blobmsg_add_string(&b, "database", app.db_path);
     blobmsg_add_string(&b, "default_mode", "database_poll");
     blobmsg_add_u32(&b, "default_poll_interval", 300);
+    {
+        void *modes = blobmsg_open_array(&b, "modes");
+        blobmsg_add_string(&b, NULL, "direct");
+        blobmsg_add_string(&b, NULL, "database_poll");
+        blobmsg_add_string(&b, NULL, "database_urc");
+        blobmsg_close_array(&b, modes);
+    }
+    blobmsg_add_u8(&b, "event_gap_resync", 1);
+    blobmsg_add_u8(&b, "idempotent_import", 1);
     ubus_send_reply(ctx, req, b.head);
     blob_buf_free(&b);
     return UBUS_STATUS_OK;
@@ -481,7 +568,9 @@ static int configure_method(struct ubus_context *ctx, struct ubus_object *obj,
     struct modem_config cfg;
     struct blob_buf b = {};
     const char *section, *mode_name;
+    const char *options[5], *values[5];
     char number[24];
+    size_t option_count = 0;
     int pending = 0;
     (void)obj; (void)method;
     blobmsg_parse(policy, __ARG_MAX, tb, blob_data(msg), blob_len(msg));
@@ -492,25 +581,27 @@ static int configure_method(struct ubus_context *ctx, struct ubus_object *obj,
         if (strcmp(mode_name, "direct") && strcmp(mode_name, "database_poll") &&
             strcmp(mode_name, "database_urc"))
             return UBUS_STATUS_INVALID_ARGUMENT;
-        if (set_uci_option(section, "sms_mode", mode_name) != 0)
-            goto error;
-        if (!strcmp(mode_name, "database_urc") &&
-            set_uci_option(section, "use_ubus", "1") != 0)
-            goto error;
+        options[option_count] = "sms_mode"; values[option_count++] = mode_name;
+        if (!strcmp(mode_name, "database_urc")) {
+            options[option_count] = "use_ubus"; values[option_count++] = "1";
+        }
     }
     if (tb[ARG_POLL_INTERVAL]) {
         int interval = blobmsg_get_u32(tb[ARG_POLL_INTERVAL]);
         if (interval < 60 || interval > 3600)
             return UBUS_STATUS_INVALID_ARGUMENT;
         snprintf(number, sizeof(number), "%d", interval);
-        if (set_uci_option(section, "sms_poll_interval", number) != 0)
-            goto error;
+        options[option_count] = "sms_poll_interval"; values[option_count++] = number;
     }
-    if (tb[ARG_FORWARDING] && set_uci_option(section, "sms_forwarding",
-            blobmsg_get_bool(tb[ARG_FORWARDING]) ? "1" : "0") != 0)
-        goto error;
-    if (tb[ARG_AUTO_DELETE] && set_uci_option(section, "sms_auto_delete_from_sim",
-            blobmsg_get_bool(tb[ARG_AUTO_DELETE]) ? "1" : "0") != 0)
+    if (tb[ARG_FORWARDING]) {
+        options[option_count] = "sms_forwarding";
+        values[option_count++] = blobmsg_get_bool(tb[ARG_FORWARDING]) ? "1" : "0";
+    }
+    if (tb[ARG_AUTO_DELETE]) {
+        options[option_count] = "sms_auto_delete_from_sim";
+        values[option_count++] = blobmsg_get_bool(tb[ARG_AUTO_DELETE]) ? "1" : "0";
+    }
+    if (option_count && set_uci_options(section, options, values, option_count) != 0)
         goto error;
     if (load_config(section, &cfg) != 0)
         goto error;
@@ -704,7 +795,7 @@ static int send_method(struct ubus_context *ctx, struct ubus_object *obj,
         return UBUS_STATUS_INVALID_ARGUMENT;
     if (load_config(blobmsg_get_string(tb[ARG_MODEM]), &cfg) != 0)
         goto error;
-    if (prepare_database_mode(&cfg) != 0)
+    if (strcmp(cfg.mode, "direct") && prepare_database_mode(&cfg) != 0)
         goto error;
     recipient = blobmsg_get_string(tb[ARG_RECIPIENT]);
     content = blobmsg_get_string(tb[ARG_CONTENT]);
@@ -871,12 +962,14 @@ static int storage_set_method(struct ubus_context *ctx, struct ubus_object *obj,
         (strcmp(mem2, "SM") && strcmp(mem2, "ME")) ||
         (strcmp(mem3, "SM") && strcmp(mem3, "ME")))
         return UBUS_STATUS_INVALID_ARGUMENT;
-    if (set_uci_option(section, "sms_storage_mem1", mem1) != 0 ||
-        set_uci_option(section, "sms_storage_mem2", mem2) != 0 ||
-        set_uci_option(section, "sms_storage_mem3", mem3) != 0 ||
+    {
+        const char *options[] = { "sms_storage_mem1", "sms_storage_mem2", "sms_storage_mem3" };
+        const char *values[] = { mem1, mem2, mem3 };
+        if (set_uci_options(section, options, values, 3) != 0 ||
         load_config(section, &cfg) != 0) {
-        reply_error(ctx, req, "failed to save storage configuration");
-        return UBUS_STATUS_OK;
+            reply_error(ctx, req, "failed to save storage configuration");
+            return UBUS_STATUS_OK;
+        }
     }
     blob_buf_init(&b, 0);
     if (!cfg.use_ubus)
@@ -1038,11 +1131,13 @@ error:
 static void urc_event(struct ubus_context *ctx, struct ubus_event_handler *handler,
                       const char *type, struct blob_attr *msg)
 {
-    enum { URC_PORT, URC_OWNER, URC_ID, __URC_MAX };
+    enum { URC_PORT, URC_OWNER, URC_ID, URC_EPOCH, URC_SEQUENCE, __URC_MAX };
     static const struct blobmsg_policy urc_policy[] = {
         [URC_PORT] = { .name = "port", .type = BLOBMSG_TYPE_STRING },
         [URC_OWNER] = { .name = "owner", .type = BLOBMSG_TYPE_STRING },
         [URC_ID] = { .name = "urc_id", .type = BLOBMSG_TYPE_STRING },
+        [URC_EPOCH] = { .name = "restart_epoch", .type = BLOBMSG_TYPE_INT64 },
+        [URC_SEQUENCE] = { .name = "sequence", .type = BLOBMSG_TYPE_INT64 },
     };
     struct blob_attr *tb[__URC_MAX];
     struct uci_context *uci; struct uci_package *package = NULL; struct uci_element *element;
@@ -1055,16 +1150,38 @@ static void urc_event(struct ubus_context *ctx, struct ubus_event_handler *handl
     if (!uci || uci_load(uci, "qmodem", &package) != UCI_OK) goto out;
     uci_foreach_element(&package->sections, element) {
         struct uci_section *section = uci_to_section(element);
-        int imported, deleted;
-        if (!strcmp(option_string(uci, section, "at_port", ""), blobmsg_get_string(tb[URC_PORT])) &&
+        int imported, deleted, gap = 0;
+        if (!strcmp(option_string(uci, section, "override_at_port",
+                option_string(uci, section, "sms_at_port",
+                option_string(uci, section, "at_port", ""))),
+                blobmsg_get_string(tb[URC_PORT])) &&
             !strcmp(option_string(uci, section, "sms_mode", "database_poll"), "database_urc")) {
-            sync_modem(section->e.name, "urc", &imported, &deleted);
+            if (tb[URC_EPOCH] && tb[URC_SEQUENCE])
+                (void)sms_db_record_event(&app.db, section->e.name,
+                    blobmsg_get_u64(tb[URC_EPOCH]), blobmsg_get_u64(tb[URC_SEQUENCE]), &gap);
+            sync_modem(section->e.name, gap ? "urc_gap" : "urc", &imported, &deleted);
             break;
         }
     }
 out:
     if (package) uci_unload(uci, package);
     if (uci) uci_free_context(uci);
+}
+
+static void control_event(struct ubus_context *ctx, struct ubus_event_handler *handler,
+                          const char *type, struct blob_attr *msg)
+{
+    enum { CONTROL_MODEM, __CONTROL_MAX };
+    static const struct blobmsg_policy control_policy[] = {
+        [CONTROL_MODEM] = { .name = "modem_id", .type = BLOBMSG_TYPE_STRING },
+    };
+    struct blob_attr *tb[__CONTROL_MAX];
+    int imported, deleted;
+    (void)ctx; (void)handler; (void)type;
+    blobmsg_parse(control_policy, __CONTROL_MAX, tb, blob_data(msg), blob_len(msg));
+    if (tb[CONTROL_MODEM] && valid_id(blobmsg_get_string(tb[CONTROL_MODEM])))
+        (void)sync_modem(blobmsg_get_string(tb[CONTROL_MODEM]), "settings_reapplied",
+                         &imported, &deleted);
 }
 
 static void scheduler_cb(struct uloop_timeout *timeout)
@@ -1090,7 +1207,8 @@ static void scheduler_cb(struct uloop_timeout *timeout)
         if (!strcmp(cfg.mode, "database_urc")) {
             continue;
         }
-        if (strcmp(cfg.mode, "database_poll") || !cfg.forwarding || !cfg.use_ubus)
+		/* Polling imports SMS independently of optional forwarding sinks. */
+		if (strcmp(cfg.mode, "database_poll") || !cfg.use_ubus)
             continue;
         if (sqlite3_prepare_v2(app.db.sql,
                 "SELECT COALESCE(last_sync_at,0) FROM modems WHERE id=?", -1,
@@ -1134,8 +1252,10 @@ static struct ubus_object_type object_type = UBUS_OBJECT_TYPE("qmodem.sms", meth
 
 int main(int argc, char **argv)
 {
-    const char *db_path = argc > 1 ? argv[1] : DEFAULT_DB;
+    char db_path[256];
     memset(&app, 0, sizeof(app));
+    snprintf(db_path, sizeof(db_path), "%s", argc > 1 ? argv[1] : DEFAULT_DB);
+    load_service_config(db_path, sizeof(db_path), argc <= 1);
     snprintf(app.db_path, sizeof(app.db_path), "%s", db_path);
     umask(0077);
     uloop_init();
@@ -1143,6 +1263,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "qmodem-smsd: database open failed: %s\n", sms_db_error(&app.db));
         return 1;
     }
+    sms_db_set_multipart_windows(&app.db, app.multipart_wait,
+                                 app.late_fragment_window);
     app.ubus = ubus_connect(NULL);
     if (!app.ubus) { sms_db_close(&app.db); return 1; }
     ubus_add_uloop(app.ubus);
@@ -1153,6 +1275,8 @@ int main(int argc, char **argv)
     }
     app.urc_handler.cb = urc_event;
     ubus_register_event_handler(app.ubus, &app.urc_handler, "qmodem.at.urc");
+    app.control_handler.cb = control_event;
+    ubus_register_event_handler(app.ubus, &app.control_handler, "qmodem.sms.control");
     app.scheduler.cb = scheduler_cb;
     uloop_timeout_set(&app.scheduler, 1000);
     uloop_run();

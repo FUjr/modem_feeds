@@ -7,6 +7,8 @@
 
 typedef struct {
     sqlite3 *sql;
+    int multipart_wait;
+    int late_fragment_window;
 } sms_db_t;
 
 typedef struct {
@@ -32,6 +34,8 @@ typedef struct {
 } sms_import_result_t;
 
 int sms_db_open(sms_db_t *db, const char *path);
+void sms_db_set_multipart_windows(sms_db_t *db, int wait_seconds,
+                                  int late_seconds);
 void sms_db_close(sms_db_t *db);
 const char *sms_db_error(sms_db_t *db);
 int sms_db_import_segment(sms_db_t *db, const sms_segment_t *segment,
@@ -41,6 +45,10 @@ int sms_db_publish_expired(sms_db_t *db, const char *modem_id, int64_t now,
                            int forwarding_enabled, int *published_count);
 int sms_db_record_sync(sms_db_t *db, const char *modem_id, const char *trigger,
                        int64_t started_at, int imported, const char *error);
+int sms_db_finish_scan(sms_db_t *db, const char *modem_id, const char *storage,
+                       int64_t started_at);
+int sms_db_record_event(sms_db_t *db, const char *modem_id, int64_t epoch,
+                        int64_t sequence, int *gap);
 int sms_db_migration_error(sms_db_t *db, const char *modem_id,
                            char *error, size_t error_size);
 int sms_db_prune(sms_db_t *db, const char *modem_id,

@@ -60,19 +60,99 @@ static int exec_sql(sqlite3 *sql, const char *statement)
     return sqlite3_exec(sql, statement, NULL, NULL, NULL) == SQLITE_OK ? 0 : -1;
 }
 
+static int bind_text(sqlite3_stmt *stmt, int index, const char *value);
+static int ensure_modem(sqlite3 *sql, const char *modem_id);
+
+static int apply_migrations(sqlite3 *sql)
+{
+    sqlite3_stmt *stmt = NULL;
+    int version = 0, has_epoch = 0;
+    if (sqlite3_prepare_v2(sql, "SELECT COALESCE(MAX(version),0) FROM schema_migrations",
+                          -1, &stmt, NULL) != SQLITE_OK)
+        return -1;
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+        version = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    if (version < 2) {
+        if (sqlite3_prepare_v2(sql, "PRAGMA table_info(modems)", -1, &stmt, NULL) != SQLITE_OK)
+            return -1;
+        while (sqlite3_step(stmt) == SQLITE_ROW)
+            if (!strcmp((const char *)sqlite3_column_text(stmt, 1), "last_event_epoch"))
+                has_epoch = 1;
+        sqlite3_finalize(stmt); stmt = NULL;
+        if (exec_sql(sql, "BEGIN IMMEDIATE") != 0)
+            return -1;
+        if ((!has_epoch && exec_sql(sql,
+                "ALTER TABLE modems ADD COLUMN last_event_epoch INTEGER") != 0) ||
+            exec_sql(sql, "INSERT OR REPLACE INTO schema_migrations "
+                          "VALUES(2,strftime('%s','now'))") != 0 ||
+            exec_sql(sql, "COMMIT") != 0) {
+            exec_sql(sql, "ROLLBACK");
+            return -1;
+        }
+    }
+    return 0;
+}
+
 int sms_db_open(sms_db_t *db, const char *path)
 {
     memset(db, 0, sizeof(*db));
+    db->multipart_wait = MULTIPART_WAIT_SECONDS;
+    db->late_fragment_window = LATE_FRAGMENT_SECONDS;
     if (sqlite3_open_v2(path, &db->sql,
                         SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
                         NULL) != SQLITE_OK)
         return -1;
     sqlite3_busy_timeout(db->sql, 5000);
-    if (exec_sql(db->sql, schema_sql) != 0) {
+    if (exec_sql(db->sql, schema_sql) != 0 || apply_migrations(db->sql) != 0) {
         sms_db_close(db);
         return -1;
     }
     return 0;
+}
+
+int sms_db_record_event(sms_db_t *db, const char *modem_id, int64_t epoch,
+                        int64_t sequence, int *gap)
+{
+    sqlite3_stmt *stmt = NULL;
+    int64_t previous_epoch = 0, previous_sequence = 0;
+    *gap = 0;
+    if (ensure_modem(db->sql, modem_id) != 0 ||
+        sqlite3_prepare_v2(db->sql,
+            "SELECT COALESCE(last_event_epoch,0),COALESCE(last_event_sequence,0) "
+            "FROM modems WHERE id=?", -1, &stmt, NULL) != SQLITE_OK)
+        return -1;
+    bind_text(stmt, 1, modem_id);
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        previous_epoch = sqlite3_column_int64(stmt, 0);
+        previous_sequence = sqlite3_column_int64(stmt, 1);
+    }
+    sqlite3_finalize(stmt); stmt = NULL;
+    *gap = previous_epoch != 0 && (epoch != previous_epoch || sequence != previous_sequence + 1);
+    if (sqlite3_prepare_v2(db->sql,
+            "UPDATE modems SET last_event_epoch=?,last_event_sequence=? WHERE id=?",
+            -1, &stmt, NULL) != SQLITE_OK)
+        return -1;
+    sqlite3_bind_int64(stmt, 1, epoch);
+    sqlite3_bind_int64(stmt, 2, sequence);
+    bind_text(stmt, 3, modem_id);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
+void sms_db_set_multipart_windows(sms_db_t *db, int wait_seconds,
+                                  int late_seconds)
+{
+    if (!db)
+        return;
+    if (wait_seconds > 0)
+        db->multipart_wait = wait_seconds;
+    if (late_seconds > 0)
+        db->late_fragment_window = late_seconds;
 }
 
 void sms_db_close(sms_db_t *db)
@@ -106,20 +186,20 @@ static int ensure_modem(sqlite3 *sql, const char *modem_id)
     return result;
 }
 
-static int find_group(sqlite3 *sql, const sms_segment_t *segment, int64_t now,
+static int find_group(sms_db_t *db, const sms_segment_t *segment, int64_t now,
                       int64_t *group_id)
 {
     sqlite3_stmt *stmt = NULL;
     const char *query =
         "SELECT id FROM multipart_groups WHERE modem_id=? AND sender=? AND reference=? "
         "AND total_parts=? AND last_seen>=? ORDER BY last_seen DESC,id DESC LIMIT 1";
-    if (sqlite3_prepare_v2(sql, query, -1, &stmt, NULL) != SQLITE_OK)
+    if (sqlite3_prepare_v2(db->sql, query, -1, &stmt, NULL) != SQLITE_OK)
         return -1;
     bind_text(stmt, 1, segment->modem_id);
     bind_text(stmt, 2, segment->sender);
     sqlite3_bind_int(stmt, 3, segment->reference);
     sqlite3_bind_int(stmt, 4, segment->total_parts);
-    sqlite3_bind_int64(stmt, 5, now - LATE_FRAGMENT_SECONDS);
+    sqlite3_bind_int64(stmt, 5, now - db->late_fragment_window);
     if (sqlite3_step(stmt) == SQLITE_ROW)
         *group_id = sqlite3_column_int64(stmt, 0);
     else
@@ -127,7 +207,7 @@ static int find_group(sqlite3 *sql, const sms_segment_t *segment, int64_t now,
     sqlite3_finalize(stmt);
     if (*group_id)
         return 0;
-    if (sqlite3_prepare_v2(sql,
+    if (sqlite3_prepare_v2(db->sql,
             "INSERT INTO multipart_groups(modem_id,sender,reference,total_parts,first_seen,last_seen) "
             "VALUES(?,?,?,?,?,?)", -1, &stmt, NULL) != SQLITE_OK)
         return -1;
@@ -141,7 +221,7 @@ static int find_group(sqlite3 *sql, const sms_segment_t *segment, int64_t now,
         sqlite3_finalize(stmt);
         return -1;
     }
-    *group_id = sqlite3_last_insert_rowid(sql);
+    *group_id = sqlite3_last_insert_rowid(db->sql);
     sqlite3_finalize(stmt);
     return 0;
 }
@@ -355,6 +435,16 @@ int sms_db_import_segment(sms_db_t *db, const sms_segment_t *segment,
         result->safe_to_delete = sqlite3_column_int(stmt, 1) == 1;
         sqlite3_finalize(stmt);
         stmt = NULL;
+        if (sqlite3_prepare_v2(db->sql,
+                "UPDATE source_messages SET imported_at=? WHERE id=?",
+                -1, &stmt, NULL) != SQLITE_OK)
+            goto rollback;
+        sqlite3_bind_int64(stmt, 1, now);
+        sqlite3_bind_int64(stmt, 2, result->source_id);
+        if (sqlite3_step(stmt) != SQLITE_DONE)
+            goto rollback;
+        sqlite3_finalize(stmt);
+        stmt = NULL;
         if (exec_sql(db->sql, "COMMIT") != 0)
             return -1;
         return 0;
@@ -379,7 +469,7 @@ int sms_db_import_segment(sms_db_t *db, const sms_segment_t *segment,
 
     if (total > 1) {
         if (segment->part_number < 1 || segment->part_number > total ||
-            find_group(db->sql, segment, now, &group_id) != 0)
+            find_group(db, segment, now, &group_id) != 0)
             goto rollback;
         if (sqlite3_prepare_v2(db->sql,
                 "INSERT OR IGNORE INTO segments(group_id,source_id,part_number,timestamp,content) VALUES(?,?,?,?,?)",
@@ -457,7 +547,7 @@ int sms_db_publish_expired(sms_db_t *db, const char *modem_id, int64_t now,
             -1, &stmt, NULL) != SQLITE_OK)
         goto out;
     bind_text(stmt, 1, modem_id);
-    sqlite3_bind_int64(stmt, 2, now - MULTIPART_WAIT_SECONDS);
+    sqlite3_bind_int64(stmt, 2, now - db->multipart_wait);
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         int64_t *grown = realloc(groups, (count + 1) * sizeof(*groups));
         if (!grown)
@@ -531,6 +621,27 @@ out:
     return -1;
 }
 
+int sms_db_finish_scan(sms_db_t *db, const char *modem_id, const char *storage,
+                       int64_t started_at)
+{
+    sqlite3_stmt *stmt = NULL;
+    int rc = -1;
+
+    if (sqlite3_prepare_v2(db->sql,
+            "DELETE FROM source_messages WHERE modem_id=? AND storage=? "
+            "AND committed=1 AND imported_at<? AND NOT EXISTS "
+            "(SELECT 1 FROM segments WHERE source_id=source_messages.id)",
+            -1, &stmt, NULL) != SQLITE_OK)
+        return -1;
+    bind_text(stmt, 1, modem_id);
+    bind_text(stmt, 2, storage);
+    sqlite3_bind_int64(stmt, 3, started_at);
+    if (sqlite3_step(stmt) == SQLITE_DONE)
+        rc = 0;
+    sqlite3_finalize(stmt);
+    return rc;
+}
+
 int sms_db_migration_error(sms_db_t *db, const char *modem_id,
                            char *error, size_t error_size)
 {
@@ -583,7 +694,12 @@ int sms_db_prune(sms_db_t *db, const char *modem_id,
             "DELETE FROM segments WHERE group_id IN (SELECT g.id FROM multipart_groups g "
             "LEFT JOIN messages m ON m.group_id=g.id WHERE m.id IS NULL);"
             "DELETE FROM multipart_groups WHERE id NOT IN "
-            "(SELECT group_id FROM messages WHERE group_id IS NOT NULL);") != 0) {
+            "(SELECT group_id FROM messages WHERE group_id IS NOT NULL);"
+            "DELETE FROM source_messages WHERE committed=1 AND deleted_at IS NOT NULL "
+            "AND deleted_at < strftime('%s','now')-604800 "
+            "AND NOT EXISTS (SELECT 1 FROM segments WHERE source_id=source_messages.id);"
+            "DELETE FROM sync_runs WHERE finished_at IS NOT NULL "
+            "AND finished_at < strftime('%s','now')-2592000;") != 0) {
         exec_sql(db->sql, "ROLLBACK");
         return -1;
     }

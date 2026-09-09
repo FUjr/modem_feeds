@@ -24,6 +24,7 @@ int main(void)
     sms_import_result_t result;
     int fd = mkstemp(path);
     int published = 0;
+    int gap = 0;
     sms_segment_t first = {
         .modem_id = "usb-1-1", .storage = "ME", .source_index = 7,
         .pdu = "PDU-A", .sender = "+100", .timestamp = 1000,
@@ -38,6 +39,11 @@ int main(void)
     assert(fd >= 0);
     close(fd);
     assert(sms_db_open(&db, path) == 0);
+    assert(scalar(db.sql, "SELECT MAX(version) FROM schema_migrations") == 2);
+    assert(sms_db_record_event(&db, "usb-1-1", 10, 1, &gap) == 0 && !gap);
+    assert(sms_db_record_event(&db, "usb-1-1", 10, 2, &gap) == 0 && !gap);
+    assert(sms_db_record_event(&db, "usb-1-1", 10, 4, &gap) == 0 && gap);
+    assert(sms_db_record_event(&db, "usb-1-1", 11, 1, &gap) == 0 && gap);
     assert(!strcmp((const char *)sqlite3_db_filename(db.sql, "main"), path));
     assert(sms_db_import_segment(&db, &first, 2000, 1, &result) == 0);
     assert(result.safe_to_delete && !result.published);
@@ -48,7 +54,8 @@ int main(void)
     assert(sms_db_import_segment(&db, &first, 2001, 1, &result) == 0);
     assert(result.duplicate && result.safe_to_delete);
     assert(scalar(db.sql, "SELECT count(*) FROM source_messages") == 1);
-    assert(sms_db_publish_expired(&db, "usb-1-1", 2301, 1, &published) == 0);
+    sms_db_set_multipart_windows(&db, 10, 3600);
+    assert(sms_db_publish_expired(&db, "usb-1-1", 2011, 1, &published) == 0);
     assert(published == 1);
     assert(scalar(db.sql, "SELECT complete FROM messages") == 0);
     assert(scalar(db.sql, "SELECT revision FROM messages") == 1);
@@ -81,6 +88,19 @@ int main(void)
     second.content = "new";
     assert(sms_db_import_segment(&db, &second, 7001, 0, &result) == 0);
     assert(scalar(db.sql, "SELECT count(*) FROM multipart_groups") == 1);
+    {
+        sms_segment_t single = {
+            .modem_id = "usb-1-1", .storage = "ME", .source_index = 10,
+            .pdu = "PDU-D", .sender = "+101", .timestamp = 7002,
+            .content = "single", .total_parts = 1, .part_number = 1,
+        };
+        assert(sms_db_import_segment(&db, &single, 7002, 0, &result) == 0);
+        assert(sms_db_finish_scan(&db, "usb-1-1", "ME", 7003) == 0);
+        assert(scalar(db.sql,
+            "SELECT count(*) FROM source_messages WHERE pdu='PDU-D'") == 0);
+        assert(scalar(db.sql,
+            "SELECT count(*) FROM source_messages WHERE pdu='PDU-C'") == 1);
+    }
     assert(scalar(db.sql, "PRAGMA foreign_keys") == 1);
     sms_db_close(&db);
     unlink(path);
