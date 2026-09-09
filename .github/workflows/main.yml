@@ -207,6 +207,7 @@ jobs:
       matrix:
         build_arch: ['arm64_ipk',"arm64_apk","x64_apk","x64_ipk","mmips_ipk","mmips_apk" ]
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Install packages
         run: |
@@ -217,7 +218,7 @@ jobs:
 
       
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: 'qmodem'
 
