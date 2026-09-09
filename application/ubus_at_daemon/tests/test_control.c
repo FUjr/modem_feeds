@@ -30,6 +30,13 @@ int main(void)
     assert(!strcmp(g_daemon_ctx.urcs->prefix, "+CMTI: "));
     assert(at_urc_unregister("/dev/ttyTEST0", "other", "sms-new") == -1);
     assert(at_urc_unregister("/dev/ttyTEST0", "qmodem.sms", "sms-new") == 0);
+    assert(at_urc_register("/dev/ttyTEST0", "qmodem.sms", "sms-new",
+                           "+CMTI:") == 0);
+    assert(at_urc_register("/dev/ttyTEST1", "qmodem.sms", "sms-new",
+                           "+CMTI: ") == 0);
+    assert(g_daemon_ctx.urcs != NULL && g_daemon_ctx.urcs->next == NULL);
+    assert(!strcmp(g_daemon_ctx.urcs->port, "/dev/ttyTEST1"));
+    assert(at_urc_unregister("/dev/ttyTEST1", "qmodem.sms", "sms-new") == 0);
     assert(at_lease_release("/dev/ttyTEST0", "qmodem.settings", token) == 0);
     assert(at_lease_authorize("/dev/ttyTEST0", NULL) == 0);
 

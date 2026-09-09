@@ -139,6 +139,7 @@ int at_urc_register(const char *port, const char *owner, const char *urc_id,
                     const char *prefix)
 {
     at_urc_registration_t *urc;
+    at_urc_registration_t **cursor;
 
     if (!valid_component(port, MAX_PORT_PATH_SIZE) ||
         !valid_component(owner, sizeof(urc->owner)) ||
@@ -146,13 +147,20 @@ int at_urc_register(const char *port, const char *owner, const char *urc_id,
         !valid_component(prefix, sizeof(urc->prefix)))
         return -1;
     pthread_mutex_lock(&g_daemon_ctx.control_mutex);
-    for (urc = g_daemon_ctx.urcs; urc; urc = urc->next) {
-        if (!strcmp(urc->port, port) && !strcmp(urc->owner, owner) &&
-            !strcmp(urc->urc_id, urc_id)) {
+    cursor = &g_daemon_ctx.urcs;
+    while (*cursor) {
+        urc = *cursor;
+        if (!strcmp(urc->owner, owner) && !strcmp(urc->urc_id, urc_id)) {
+            if (strcmp(urc->port, port)) {
+                *cursor = urc->next;
+                free(urc);
+                continue;
+            }
             snprintf(urc->prefix, sizeof(urc->prefix), "%s", prefix);
             pthread_mutex_unlock(&g_daemon_ctx.control_mutex);
             return 0;
         }
+        cursor = &urc->next;
     }
     urc = calloc(1, sizeof(*urc));
     if (!urc) {
