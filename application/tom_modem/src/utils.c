@@ -73,10 +73,22 @@ int decode_pdu(SMS_T *sms)
     int pdu_str_len;
     unsigned char hex_pdu[SMS_PDU_HEX_SIZE] = {0};
     pdu_str_len = strlen(sms->sms_pdu);
+    if (pdu_str_len == 0 || (pdu_str_len & 1) != 0 ||
+        pdu_str_len / 2 > (int)sizeof(hex_pdu))
+    {
+        err_msg("Invalid PDU length");
+        return -1;
+    }
     for (int i = 0; i < pdu_str_len; i += 2)
     {
-        hex_pdu[i / 2] = char_to_hex(sms->sms_pdu[i]) << 4;
-        hex_pdu[i / 2] |= char_to_hex(sms->sms_pdu[i + 1]);
+        int high = char_to_hex(sms->sms_pdu[i]);
+        int low = char_to_hex(sms->sms_pdu[i + 1]);
+        if (high < 0 || low < 0)
+        {
+            err_msg("Invalid hexadecimal digit in PDU");
+            return -1;
+        }
+        hex_pdu[i / 2] = (unsigned char)((high << 4) | low);
     }
     int sms_len = pdu_decode(hex_pdu, pdu_str_len/2,
                              &sms->timestamp,
@@ -100,16 +112,13 @@ int decode_pdu(SMS_T *sms)
         { 
             // GSM 7 bit
             sms->type = SMS_CHARSET_7BIT;
-            int i;
+            int i, offset = 0;
             i = skip_bytes;
             if (skip_bytes > 0)
                 i = (skip_bytes * 8 + 6) / 7;
             for (; i < strlen(sms_text); i++)
-            {
-                sprintf(sms->sms_text + i, "%c", sms_text[i]);
-            }
-            i++;
-            sprintf(sms->sms_text + i, "%c", '\0');
+                sms->sms_text[offset++] = sms_text[i];
+            sms->sms_text[offset] = '\0';
             break;
         }
     case 2:
@@ -524,11 +533,11 @@ int display_sms_in_json(SMS_T **sms,int num)
         char escaped_text[SMS_TEXT_SIZE];
         escape_json(sms[i]->sms_text, escaped_text);
         if (sms[i]->ref_number)
-            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\",\"reference\":%d,\"total\":%d,\"part\":%d},",
-                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text, sms[i]->ref_number, sms[i]->total_segments, sms[i]->segment_number);
+            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\",\"pdu\":\"%s\",\"reference\":%d,\"total\":%d,\"part\":%d},",
+                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text, sms[i]->sms_pdu, sms[i]->ref_number, sms[i]->total_segments, sms[i]->segment_number);
         else
-            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\"},",
-                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text);
+            offset += sprintf(msg_json + offset, "{\"index\":%d,\"sender\":\"%s\",\"timestamp\":%lld,\"content\":\"%s\",\"pdu\":\"%s\"},",
+                          sms[i]->sms_index, sms[i]->sender, (long long)sms[i]->timestamp, escaped_text, sms[i]->sms_pdu);
     }
     
     //if not empty msg_json,remove the last ','

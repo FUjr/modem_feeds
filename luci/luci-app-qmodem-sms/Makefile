@@ -13,7 +13,7 @@ LUCI_PKGARCH:=all
 PKG_LICENSE:=GPLv3
 PKG_LINCESE_FILES:=LICENSE
 PKG_MAINTAINER:=Tom <fjrcn@outlook.com>
-LUCI_DEPENDS:=+luci-app-qmodem +sms-forwarder
+LUCI_DEPENDS:=+luci-app-qmodem +qmodem-smsd +sms-forwarder-next +libubus-lua
 
 include $(TOPDIR)/feeds/luci/luci.mk
 

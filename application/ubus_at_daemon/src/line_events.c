@@ -147,6 +147,7 @@ static void publish_line_event(const at_line_event_t *event, void *opaque)
 {
     struct ubus_context *ctx = opaque;
     struct blob_buf b = {};
+    at_urc_registration_t *urc;
 
     blob_buf_init(&b, 0);
     blobmsg_add_string(&b, "port", event->port);
@@ -161,6 +162,32 @@ static void publish_line_event(const at_line_event_t *event, void *opaque)
     blobmsg_add_u64(&b, "drop_count", event->drop_count);
     ubus_send_event(ctx, "qmodem.at.line", b.head);
     blob_buf_free(&b);
+
+    if (event->correlation != AT_CORRELATION_IDLE)
+        return;
+
+    pthread_mutex_lock(&g_daemon_ctx.control_mutex);
+    for (urc = g_daemon_ctx.urcs; urc; urc = urc->next) {
+        size_t prefix_length;
+
+        if (strcmp(urc->port, event->port))
+            continue;
+        prefix_length = strlen(urc->prefix);
+        if (strncmp(event->line, urc->prefix, prefix_length))
+            continue;
+        blob_buf_init(&b, 0);
+        blobmsg_add_string(&b, "port", event->port);
+        blobmsg_add_string(&b, "owner", urc->owner);
+        blobmsg_add_string(&b, "urc_id", urc->urc_id);
+        blobmsg_add_field(&b, BLOBMSG_TYPE_STRING, "raw_line",
+                          event->line, event->line_len + 1U);
+        blobmsg_add_u64(&b, "restart_epoch", event->epoch);
+        blobmsg_add_u64(&b, "sequence", event->sequence);
+        blobmsg_add_u64(&b, "drop_count", event->drop_count);
+        ubus_send_event(ctx, "qmodem.at.urc", b.head);
+        blob_buf_free(&b);
+    }
+    pthread_mutex_unlock(&g_daemon_ctx.control_mutex);
 }
 
 static void publish_line_events(struct uloop_fd *fd, unsigned int events)

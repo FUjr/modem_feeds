@@ -1113,6 +1113,9 @@ void at_line_event(struct ubus_context *ubus,
 	if (values[5])
 		command_id = blobmsg_get_u64(values[5]);
 	correlation = values[4] ? blobmsg_get_string(values[4]) : NULL;
+	if (!values[5] || command_id == 0 ||
+	    qmodem_voip_correlation_parse(correlation) == QMODEM_VOIP_CORR_IDLE)
+		return;
 	app->command_failed = 0;
 	(void)qmodem_voip_line(&app->call, blobmsg_get_string(values[0]),
 			       blobmsg_get_u64(values[1]), blobmsg_get_u64(values[2]),
@@ -1126,6 +1129,41 @@ void at_line_event(struct ubus_context *ubus,
 		qmodem_voip_publish_event(&app->call, "fault", app);
 	}
 	(void)ubus;
+}
+
+void at_urc_event(struct ubus_context *ubus,
+		  struct ubus_event_handler *handler,
+		  const char *type, struct blob_attr *message)
+{
+	struct qmodem_voip_context *app = &qmodem_voip_ctxt;
+	static const struct blobmsg_policy policy[] = {
+		{ .name = "port", .type = BLOBMSG_TYPE_STRING },
+		{ .name = "owner", .type = BLOBMSG_TYPE_STRING },
+		{ .name = "raw_line", .type = BLOBMSG_TYPE_STRING },
+		{ .name = "restart_epoch", .type = BLOBMSG_TYPE_INT64 },
+		{ .name = "sequence", .type = BLOBMSG_TYPE_INT64 },
+		{ .name = "drop_count", .type = BLOBMSG_TYPE_INT64 }
+	};
+	struct blob_attr *values[ARRAY_SIZE(policy)] = { 0 };
+	(void)ubus;
+	(void)handler;
+	(void)type;
+	blobmsg_parse(policy, ARRAY_SIZE(policy), values, blob_data(message),
+		      blob_len(message));
+	if (!values[0] || !values[1] || !values[2] || !values[3] || !values[4] ||
+	    strcmp(blobmsg_get_string(values[1]), "qmodem.voip") != 0)
+		return;
+	app->command_failed = 0;
+	(void)qmodem_voip_line(&app->call, blobmsg_get_string(values[0]),
+			       blobmsg_get_u64(values[3]), blobmsg_get_u64(values[4]),
+			       blobmsg_get_string(values[2]), QMODEM_VOIP_CORR_IDLE, 0,
+			       values[5] ? blobmsg_get_u64(values[5]) : 0,
+			       qmodem_voip_issue_at, qmodem_voip_publish_event, app);
+	if (app->command_failed) {
+		app->call.state = QMODEM_VOIP_FAULT;
+		qmodem_voip_call_touch(&app->call);
+		qmodem_voip_publish_event(&app->call, "fault", app);
+	}
 }
 
 void qmodem_voip_call_timer(struct uloop_timeout *timeout)

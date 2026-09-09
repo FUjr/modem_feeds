@@ -6,8 +6,8 @@
 				"qmodem": [
 					"*"
 				],
-				"qmodem_sms": [
-					"*"
+				"qmodem.sms": [
+					"status", "config_get", "sync_status", "list", "get", "modem_list", "storage_get"
 				],
 				"rc" : [ "list" ,"init"],
 				"uci": [ "qmodem", "sms_forwarder" ]
@@ -35,15 +35,9 @@
 					"set_network_prefer",
 					"set_sms_storage"
 				],
-				"qmodem_sms": [
-					"send_sms",
-					"delete_sms",
-					"delete_sim_sms",
-					"mark_read",
-					"mark_forwarded",
-					"clear_sent_history",
-					"clear_received_history",
-					"set_sms_storage"
+				"qmodem.sms": [
+					"configure", "sync", "send", "delete", "mark_read",
+					"modem_delete", "storage_set"
 				],
 				"uci": [ "qmodem", "sms_forwarder" ]
 			},

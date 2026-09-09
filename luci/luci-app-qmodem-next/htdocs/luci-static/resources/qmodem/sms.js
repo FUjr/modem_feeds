@@ -1,338 +1,147 @@
 'use strict';
 'require rpc';
-'require qmodem.sms-pdu as pduParser';
 
-var callQmodemSms = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'list_sms',
-	params: ['config_section'],
-	expect: { }
-});
+var callList = rpc.declare({ object: 'qmodem.sms', method: 'list', params: [ 'modem_id', 'limit', 'offset' ], expect: { } });
+var callSync = rpc.declare({ object: 'qmodem.sms', method: 'sync', params: [ 'modem_id' ], expect: { } });
+var callSend = rpc.declare({ object: 'qmodem.sms', method: 'send', params: [ 'modem_id', 'recipient', 'content' ], expect: { } });
+var callDelete = rpc.declare({ object: 'qmodem.sms', method: 'delete', params: [ 'modem_id', 'id', 'index' ], expect: { } });
+var callMarkRead = rpc.declare({ object: 'qmodem.sms', method: 'mark_read', params: [ 'modem_id', 'id' ], expect: { } });
+var callStorageGet = rpc.declare({ object: 'qmodem.sms', method: 'storage_get', params: [ 'modem_id' ], expect: { } });
+var callStorageSet = rpc.declare({ object: 'qmodem.sms', method: 'storage_set', params: [ 'modem_id', 'mem1', 'mem2', 'mem3' ], expect: { } });
+var callConfigure = rpc.declare({ object: 'qmodem.sms', method: 'configure', params: [ 'modem_id', 'mode', 'poll_interval', 'forwarding', 'auto_delete' ], expect: { } });
+var callModemList = rpc.declare({ object: 'qmodem.sms', method: 'modem_list', expect: { } });
+var callConfigGet = rpc.declare({ object: 'qmodem.sms', method: 'config_get', params: [ 'modem_id' ], expect: { } });
 
-var callGetConversation = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'get_conversation',
-	params: ['config_section', 'contact'],
-	expect: { }
-});
+function messagesFrom(result) {
+	return (result.messages || result.msg || result.received || []).map(function(message) {
+		if (!message.type) message.type = 'received';
+		if (message.is_read == null) message.is_read = false;
+		if (message.success != null && message.is_success == null) message.is_success = message.success;
+		return message;
+	});
+}
 
-var callSendSms = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'send_sms',
-	params: ['config_section', 'recipient', 'pdu', 'content'],
-	expect: { }
-});
+function conversations(messages) {
+	var grouped = {};
+	messages.forEach(function(message) {
+		var contact = message.type === 'received' ? message.sender : message.recipient;
+		if (!grouped[contact]) grouped[contact] = { contact: contact, messages: [], last_timestamp: 0, unread_count: 0 };
+		grouped[contact].messages.push(message);
+		grouped[contact].last_timestamp = Math.max(grouped[contact].last_timestamp, message.timestamp || 0);
+		if (message.type === 'received' && !message.is_read) grouped[contact].unread_count++;
+	});
+	return Object.keys(grouped).map(function(key) { return grouped[key]; })
+		.sort(function(a, b) { return b.last_timestamp - a.last_timestamp; });
+}
 
-var callDeleteSms = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'delete_sms',
-	params: ['config_section', 'type', 'ids'],
-	expect: { }
-});
+function listRaw(modem) {
+	return callList(modem, 500, 0).then(function(result) {
+		if (result.status === 'error') return Promise.reject(new Error(result.error || 'SMS backend error'));
+		return result;
+	});
+}
 
-var callMarkRead = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'mark_read',
-	params: ['config_section', 'ids'],
-	expect: { }
-});
+function deleteMany(modem, ids) {
+	ids = Array.isArray(ids) ? ids : [ ids ];
+	return Promise.all(ids.map(function(id) { return callDelete(modem, id, id); })).then(function(results) {
+		return { success: results.every(function(result) { return result.status === 'success'; }), deleted: results.length };
+	});
+}
 
-var callGetSentHistory = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'get_sent_history',
-	params: ['config_section'],
-	expect: { }
-});
-
-var callClearSentHistory = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'clear_sent_history',
-	params: ['config_section'],
-	expect: { }
-});
-
-var callGetReceivedHistory = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'get_received_history',
-	params: ['config_section'],
-	expect: { }
-});
-
-var callClearReceivedHistory = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'clear_received_history',
-	params: ['config_section'],
-	expect: { }
-});
-
-var callGetSmsStorage = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'get_sms_storage',
-	params: ['config_section'],
-	expect: { }
-});
-
-var callSetSmsStorage = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'set_sms_storage',
-	params: ['config_section', 'mem1', 'mem2', 'mem3'],
-	expect: { }
-});
-
-var callGetSimSms = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'get_sim_sms',
-	params: ['config_section'],
-	expect: { }
-});
-
-var callDeleteSimSms = rpc.declare({
-	object: 'qmodem_sms',
-	method: 'delete_sim_sms',
-	params: ['config_section', 'index'],
-	expect: { }
-});
+function parseStorage(result) {
+	var storage = { mem1: result.configured || 'SM', mem2: 'SM', mem3: 'SM', ME: { used: 0, total: 0 }, SM: { used: 0, total: 0 } };
+	var match = (result.response || '').match(/\+CPMS:\s*"?([^",]+)"?,(\d+),(\d+),"?([^",]+)"?,(\d+),(\d+)(?:,"?([^",]+)"?,(\d+),(\d+))?/);
+	if (!match) return storage;
+	storage.mem1 = match[1]; storage.mem2 = match[4]; storage.mem3 = match[7] || match[4];
+	[ [ match[1], match[2], match[3] ], [ match[4], match[5], match[6] ], [ match[7], match[8], match[9] ] ].forEach(function(values) {
+		if (values[0] === 'SM' || values[0] === 'ME') storage[values[0]] = { used: +values[1] || 0, total: +values[2] || 0 };
+	});
+	return storage;
+}
 
 return L.Class.extend({
-	/**
-	 * List all SMS conversations
-	 * @param {string} configSection - The modem configuration section
-	 * @returns {Promise} Promise resolving to conversations list
-	 */
+	getModems: function() {
+		return callModemList().then(function(result) {
+			return (result.modems || []).map(function(modem) {
+				return { id: modem.modem_id, name: modem.name || modem.modem_id, enabled: !!modem.enabled };
+			});
+		});
+	},
+	getConfig: function(configSection) { return callConfigGet(configSection || 'modem_1'); },
+	configure: function(configSection, mode, pollInterval, forwarding, autoDelete) {
+		var modem = configSection || 'modem_1';
+		return callConfigGet(modem).then(function(current) {
+			return callConfigure(modem, mode, pollInterval,
+				forwarding == null ? !!current.forwarding : forwarding, autoDelete);
+		}).then(function(result) {
+			if (result.status === 'error') return Promise.reject(new Error(result.error || 'SMS configuration failed'));
+			return result;
+		});
+	},
 	listSms: function(configSection) {
-		return callQmodemSms(configSection || 'modem_1');
+		var modem = configSection || 'modem_1';
+		return listRaw(modem).then(function(first) {
+			var refresh = first.mode === 'database_poll' ? callSync(modem) : Promise.resolve();
+			return refresh.catch(function() {}).then(function() { return first.mode === 'database_poll' ? listRaw(modem) : first; });
+		}).then(function(result) {
+			var messages = messagesFrom(result);
+			return { conversations: conversations(messages), total: messages.length, mode: result.mode };
+		});
 	},
-
-	/**
-	 * Get conversation details with a specific contact
-	 * @param {string} configSection - The modem configuration section
-	 * @param {string} contact - The contact phone number
-	 * @returns {Promise} Promise resolving to conversation details
-	 */
 	getConversation: function(configSection, contact) {
-		return callGetConversation(configSection || 'modem_1', contact);
+		return this.listSms(configSection).then(function(result) {
+			var found = result.conversations.filter(function(item) { return item.contact === contact; })[0];
+			return { messages: found ? found.messages : [] };
+		});
 	},
-
-	/**
-	 * Send SMS message
-	 * @param {string} configSection - The modem configuration section
-	 * @param {string} recipient - Recipient phone number
-	 * @param {string} message - Message content
-	 * @param {string} encoding - Encoding type ('7bit' or '16bit')
-	 * @returns {Promise} Promise resolving to send result
-	 */
-	sendSms: function(configSection, recipient, message, encoding) {
-		// Generate PDU using sms-pdu.js
-		encoding = encoding || '16bit';  // Default to 16bit for better compatibility
-		
-		
-		try {
-			var pdus = pduParser.generate({
-				receiver: recipient,
-				text: message,
-				encoding: encoding
-			});
-
-
-			if (!pdus || pdus.length === 0) {
-				console.error('Failed to generate PDU');
-				return Promise.reject(new Error('Failed to generate PDU'));
-			}
-
-			// For multi-part messages, we need to send all parts
-			// For now, we'll send the first PDU and handle multi-part in the future
-			var pdu = pdus[0];
-
-			return callSendSms(configSection || 'modem_1', recipient, pdu, message).then(function(result) {
-				return result;
-			}).catch(function(error) {
-				console.error('SMS send error:', error);
-				throw error;
-			});
-		} catch (e) {
-			console.error('Exception in sendSms:', e);
-			return Promise.reject(e);
-		}
+	sync: function(configSection) { return callSync(configSection || 'modem_1'); },
+	sendSms: function(configSection, recipient, message) {
+		return callSend(configSection || 'modem_1', recipient, message).then(function(result) { result.success = result.status === 'success'; return result; });
 	},
-
-	/**
-	 * Delete SMS message(s) by ID
-	 * @param {string} configSection - The modem configuration section
-	 * @param {string} type - Message type ('received' or 'sent')
-	 * @param {string|number|array} ids - Message ID(s) to delete (can be single ID or array)
-	 * @returns {Promise} Promise resolving to delete result
-	 */
-	deleteSms: function(configSection, type, ids) {
-		return callDeleteSms(
-			configSection || 'modem_1',
-			type,
-			ids
-		);
-	},
-
-	/**
-	 * Mark SMS as read by ID(s)
-	 * @param {string} configSection - The modem configuration section
-	 * @param {string|number|array} ids - Message ID(s) to mark as read (can be single ID or array)
-	 * @returns {Promise} Promise resolving to mark read result
-	 */
+	deleteSms: function(configSection, type, ids) { return deleteMany(configSection || 'modem_1', ids); },
 	markRead: function(configSection, ids) {
-		return callMarkRead(configSection || 'modem_1', ids);
+		var modem = configSection || 'modem_1'; ids = Array.isArray(ids) ? ids : [ ids ];
+		return Promise.all(ids.map(function(id) { return callMarkRead(modem, id); })).then(function() { return { success: true, marked: ids.length }; });
 	},
-
-	/**
-	 * Get sent SMS history
-	 * @param {string} configSection - The modem configuration section
-	 * @returns {Promise} Promise resolving to sent SMS history
-	 */
 	getSentHistory: function(configSection) {
-		return callGetSentHistory(configSection || 'modem_1');
+		return listRaw(configSection || 'modem_1').then(function(result) { return { messages: messagesFrom(result).filter(function(message) { return message.type === 'sent'; }) }; });
 	},
-
-	/**
-	 * Clear sent SMS history
-	 * @param {string} configSection - The modem configuration section
-	 * @returns {Promise} Promise resolving to clear result
-	 */
-	clearSentHistory: function(configSection) {
-		return callClearSentHistory(configSection || 'modem_1');
-	},
-
-	/**
-	 * Get received SMS history
-	 * @param {string} configSection - The modem configuration section
-	 * @returns {Promise} Promise resolving to received SMS history
-	 */
 	getReceivedHistory: function(configSection) {
-		return callGetReceivedHistory(configSection || 'modem_1');
+		return listRaw(configSection || 'modem_1').then(function(result) { return { messages: messagesFrom(result).filter(function(message) { return message.type === 'received'; }) }; });
 	},
-
-	/**
-	 * Clear received SMS history
-	 * @param {string} configSection - The modem configuration section
-	 * @returns {Promise} Promise resolving to clear result
-	 */
+	clearSentHistory: function(configSection) {
+		var modem = configSection || 'modem_1';
+		return this.getSentHistory(modem).then(function(result) { return deleteMany(modem, result.messages.map(function(message) { return message.id; })); });
+	},
 	clearReceivedHistory: function(configSection) {
-		return callClearReceivedHistory(configSection || 'modem_1');
+		var modem = configSection || 'modem_1';
+		return this.getReceivedHistory(modem).then(function(result) { return deleteMany(modem, result.messages.map(function(message) { return message.id; })); });
 	},
-
-	/**
-	 * Format timestamp to readable string
-	 * @param {number} timestamp - Unix timestamp
-	 * @returns {string} Formatted date string
-	 */
 	formatTimestamp: function(timestamp) {
-		var date = new Date(timestamp * 1000);
-		var now = new Date();
-		var diff = now - date;
-		var days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-		if (days === 0) {
-			// Today - show time
-			return String(date.getHours()).padStart(2, '0') + ':' + 
-			       String(date.getMinutes()).padStart(2, '0');
-		} else if (days === 1) {
-			// Yesterday
-			return _('Yesterday');
-		} else if (days < 7) {
-			// This week - show day name
-			var dayNames = [_('Sunday'), _('Monday'), _('Tuesday'), _('Wednesday'), 
-			                _('Thursday'), _('Friday'), _('Saturday')];
-			return dayNames[date.getDay()];
-		} else {
-			// Older - show date
-			return String(date.getFullYear()) + '-' + 
-			       String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-			       String(date.getDate()).padStart(2, '0');
-		}
+		var date = new Date(timestamp * 1000), now = new Date(), days = Math.floor((now - date) / 86400000);
+		if (days === 0) return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+		if (days === 1) return _('Yesterday');
+		if (days < 7) return [ _('Sunday'), _('Monday'), _('Tuesday'), _('Wednesday'), _('Thursday'), _('Friday'), _('Saturday') ][date.getDay()];
+		return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
 	},
-
-	/**
-	 * Format phone number for display
-	 * @param {string} number - Phone number
-	 * @returns {string} Formatted phone number
-	 */
 	formatPhoneNumber: function(number) {
 		if (!number) return '';
-		
-		// Remove non-digit characters
 		var digits = number.replace(/\D/g, '');
-		
-		// Format based on length
-		if (digits.length === 11 && digits.startsWith('1')) {
-			// Chinese mobile: 138 1234 5678
-			return digits.substring(0, 3) + ' ' + 
-			       digits.substring(3, 7) + ' ' + 
-			       digits.substring(7);
-		} else if (digits.length === 5) {
-			// Service numbers: 10086
-			return digits;
-		}
-		
-		// Default: return as-is
-		return number;
+		return digits.length === 11 && digits.startsWith('1') ? digits.substring(0, 3) + ' ' + digits.substring(3, 7) + ' ' + digits.substring(7) : number;
 	},
-
-	/**
-	 * Truncate message content for preview
-	 * @param {string} content - Message content
-	 * @param {number} maxLength - Maximum length
-	 * @returns {string} Truncated content
-	 */
-	truncateMessage: function(content, maxLength) {
-		if (!content) return '';
-		
-		maxLength = maxLength || 50;
-		
-		if (content.length <= maxLength) {
-			return content;
-		}
-		
-		return content.substring(0, maxLength) + '...';
+	truncateMessage: function(content, maximum) {
+		maximum = maximum || 50; return !content || content.length <= maximum ? (content || '') : content.substring(0, maximum) + '...';
 	},
-
-	/**
-	 * Get SMS storage capabilities
-	 * @param {string} configSection - The modem configuration section
-	 * @returns {Promise} Promise resolving to SMS storage info
-	 */
 	getSmsStorage: function(configSection) {
-		return callGetSmsStorage(configSection || 'modem_1');
+		return callStorageGet(configSection || 'modem_1').then(function(result) { return result.status === 'error' ? { error: result.error } : { storage: parseStorage(result) }; });
 	},
-
-	/**
-	 * Set SMS storage
-	 * @param {string} configSection - The modem configuration section
-	 * @param {string} mem1 - Reading storage (ME or SM)
-	 * @param {string} mem2 - Writing storage (ME or SM)
-	 * @param {string} mem3 - Other storage (ME or SM, optional)
-	 * @returns {Promise} Promise resolving to set storage result
-	 */
 	setSmsStorage: function(configSection, mem1, mem2, mem3) {
-		return callSetSmsStorage(
-			configSection || 'modem_1',
-			mem1,
-			mem2,
-			mem3 || ''
-		);
+		return callStorageSet(configSection || 'modem_1', mem1, mem2, mem3 || mem2).then(function(result) { result.success = result.status !== 'error'; return result; });
 	},
-
-	/**
-	 * Get SMS directly from SIM card
-	 * @param {string} configSection - The modem configuration section
-	 * @returns {Promise} Promise resolving to SIM SMS list
-	 */
 	getSimSms: function(configSection) {
-		return callGetSimSms(configSection || 'modem_1');
+		return listRaw(configSection || 'modem_1').then(function(result) { return { messages: result.msg || result.received || result.messages || [] }; });
 	},
-
-	/**
-	 * Delete SMS from SIM card by index
-	 * @param {string} configSection - The modem configuration section
-	 * @param {number} index - SMS index on SIM card
-	 * @returns {Promise} Promise resolving to delete result
-	 */
 	deleteSimSms: function(configSection, index) {
-		return callDeleteSimSms(configSection || 'modem_1', index);
+		return callDelete(configSection || 'modem_1', index, index).then(function(result) { result.success = result.status === 'success'; return result; });
 	}
 });

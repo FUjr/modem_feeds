@@ -1,0 +1,246 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+SUPPORTS=/usr/share/qmodem/modem_support.json
+STATE_DIR=/var/run/qmodem/settings
+OWNER=qmodem.settings
+LOCK_DIR=/var/run/qmodem/settings.lock
+
+valid_id()
+{
+	case "$1" in ''|*[!A-Za-z0-9_-]*) return 1;; esac
+}
+
+write_state()
+{
+	local section="$1" state="$2" detail="$3" tmp
+	mkdir -p "$STATE_DIR" || return 1
+	tmp="$STATE_DIR/$section.json.$$"
+	json_init
+	json_add_string modem_id "$section"
+	json_add_string state "$state"
+	json_add_string detail "$detail"
+	json_add_int updated_at "$(date +%s)"
+	json_dump >"$tmp" && mv "$tmp" "$STATE_DIR/$section.json"
+}
+
+payload_port()
+{
+	json_init
+	json_add_string at_port "$at_port"
+}
+
+send_at()
+{
+	local command="$1" result status
+	json_init
+	json_add_string at_port "$at_port"
+	json_add_string at_cmd "$command"
+	json_add_string owner "$OWNER"
+	json_add_int timeout 10
+	result=$(ubus call at-daemon sendat "$(json_dump)") || return 1
+	status=$(printf '%s' "$result" | jsonfilter -e '@.status')
+	[ "$status" = success ] || return 1
+	printf '%s' "$result"
+}
+
+apply_command()
+{
+	[ -n "$1" ] || return 0
+	send_at "$1" >/dev/null || degraded=post_init_command_failed
+}
+
+release_lease()
+{
+	local result status
+	[ -n "$lease_token" ] || return 0
+	json_init
+	json_add_string at_port "$at_port"
+	json_add_string owner "$OWNER"
+	json_add_string token "$lease_token"
+	result=$(ubus call at-daemon lease_release "$(json_dump)" 2>/dev/null) || return 1
+	status=$(printf '%s' "$result" | jsonfilter -e '@.status')
+	lease_token=
+	[ "$status" = success ]
+}
+
+renew_lease()
+{
+	local result status
+	json_init
+	json_add_string at_port "$at_port"
+	json_add_string owner "$OWNER"
+	json_add_string token "$lease_token"
+	json_add_int ttl 300
+	result=$(ubus call at-daemon lease_renew "$(json_dump)" 2>/dev/null) || return 1
+	status=$(printf '%s' "$result" | jsonfilter -e '@.status')
+	[ "$status" = success ]
+}
+
+register_urc()
+{
+	local owner="$1" urc_id="$2" urc_prefix="$3" result status
+	[ -n "$urc_id" ] && [ -n "$urc_prefix" ] || return 1
+	json_init
+	json_add_string at_port "$at_port"
+	json_add_string owner "$owner"
+	json_add_string urc_id "$urc_id"
+	json_add_string prefix "$urc_prefix"
+	result=$(ubus call at-daemon urc_register "$(json_dump)" 2>/dev/null) || return 1
+	status=$(printf '%s' "$result" | jsonfilter -e '@.status')
+	[ "$status" = success ]
+}
+
+request_sms_resync()
+{
+	json_init
+	json_add_string modem_id "$1"
+	json_add_string reason settings_reapplied
+	ubus send qmodem.sms.control "$(json_dump)" >/dev/null 2>&1
+}
+
+apply_one()
+{
+	local section="$1" model mode use_ubus mem1 mem2 mem3 firmware setup prefix result status delay
+	local degraded=
+	lease_token=
+	valid_id "$section" || return 1
+	config_get model "$section" name
+	config_get at_port "$section" override_at_port
+	[ -n "$at_port" ] || config_get at_port "$section" sms_at_port
+	[ -n "$at_port" ] || config_get at_port "$section" at_port
+	config_get mode "$section" sms_mode database_poll
+	config_get use_ubus "$section" use_ubus 0
+	config_get mem1 "$section" sms_storage_mem1 SM
+	config_get mem2 "$section" sms_storage_mem2 SM
+	config_get mem3 "$section" sms_storage_mem3 "$mem2"
+	[ -n "$at_port" ] || { write_state "$section" ready_degraded missing_at_port; return 1; }
+	if [ "$mode" = database_urc ] && [ "$use_ubus" != 1 ]; then
+		uci -q set "qmodem.$section.use_ubus=1" || return 1
+		uci -q commit qmodem || return 1
+		use_ubus=1
+	fi
+	write_state "$section" pending applying
+	[ "$use_ubus" = 1 ] || { write_state "$section" pending legacy_transport; return 0; }
+	config_get delay "$section" post_init_delay 0
+	case "$delay" in ''|*[!0-9]*) delay=0;; esac
+	payload_port
+	json_add_int baudrate 115200
+	result=$(ubus call at-daemon open "$(json_dump)") || result=
+	status=$(printf '%s' "$result" | jsonfilter -e '@.status')
+	[ "$status" = success ] || { write_state "$section" ready_degraded at_port_open_failed; return 1; }
+	json_init
+	json_add_string at_port "$at_port"
+	json_add_string owner "$OWNER"
+	json_add_int ttl 300
+	result=$(ubus call at-daemon lease_acquire "$(json_dump)") || result=
+	lease_token=$(printf '%s' "$result" | jsonfilter -e '@.token')
+	[ -n "$lease_token" ] || { write_state "$section" ready_degraded at_port_busy; return 1; }
+	[ "$delay" -eq 0 ] || sleep "$delay"
+
+	case "$mem1:$mem2:$mem3" in
+		SM:SM:SM|SM:SM:ME|SM:ME:SM|SM:ME:ME|ME:SM:SM|ME:SM:ME|ME:ME:SM|ME:ME:ME) ;;
+		*) degraded=invalid_sms_storage;;
+	esac
+	[ -n "$degraded" ] || send_at "AT+CPMS=\"$mem1\",\"$mem2\",\"$mem3\"" >/dev/null || degraded=sms_storage_failed
+	config_list_foreach "$section" post_init_at_cmds apply_command
+	config_get status "$section" lockcell_boot_hook_enabled 0
+	case "$status" in
+		1|on|true|yes|enabled)
+			config_get delay "$section" lockcell_boot_hook_delay 15
+			case "$delay" in ''|*[!0-9]*) delay=15;; esac
+			[ "$delay" -eq 0 ] || sleep "$delay"
+			renew_lease || degraded=lease_renew_failed
+			config_list_foreach "$section" lockcell_boot_hook_at_cmds apply_command
+			;;
+	esac
+
+	if [ "$mode" = database_urc ]; then
+		result=$(send_at 'AT+CGMR') || degraded=firmware_query_failed
+		firmware=$(printf '%s' "$result" | jsonfilter -e '@.response')
+		setup=$(jq -r --arg model "$model" '.modem_support.usb[$model].settings.urc.sms.setup // empty' "$SUPPORTS")
+		prefix=$(jq -r --arg model "$model" '.modem_support.usb[$model].settings.urc.sms.prefix // empty' "$SUPPORTS")
+		status=$(jq -r --arg model "$model" '.modem_support.usb[$model].settings.urc.sms.firmware // empty' "$SUPPORTS")
+		if [ -z "$setup" ] || [ -z "$prefix" ] || [ -z "$status" ]; then
+			degraded=sms_urc_unsupported
+		elif ! printf '%s' "$firmware" | grep -Fq "$status"; then
+			degraded=sms_urc_firmware_mismatch
+		elif ! send_at "$setup" >/dev/null; then
+			degraded=sms_urc_setup_failed
+			else
+				register_urc qmodem.sms sms-new "$prefix" || degraded=sms_urc_register_failed
+				[ "$degraded" = sms_urc_register_failed ] || request_sms_resync "$section"
+			fi
+	fi
+	if [ "$(uci -q get qmodem_voip.main.enabled)" = 1 ]; then
+		for status in 0 1 2; do
+			setup=$(jq -r --arg model "$model" --argjson index "$status" '.modem_support.usb[$model].settings.urc.voice[$index].id // empty' "$SUPPORTS")
+			prefix=$(jq -r --arg model "$model" --argjson index "$status" '.modem_support.usb[$model].settings.urc.voice[$index].prefix // empty' "$SUPPORTS")
+			[ -z "$setup" ] || register_urc qmodem.voip "$setup" "$prefix" || degraded=voice_urc_register_failed
+		done
+	fi
+	release_lease || degraded=lease_release_failed
+	if [ -n "$degraded" ]; then
+		write_state "$section" ready_degraded "$degraded"
+		return 1
+	fi
+	write_state "$section" ready complete
+}
+
+apply_all()
+{
+	config_foreach apply_one modem-device
+}
+
+mark_direct_ready()
+{
+	local section="$1"
+	valid_id "$section" || return 1
+	write_state "$section" ready direct_transport
+}
+
+run_locked()
+{
+	local rc
+	mkdir "$LOCK_DIR" 2>/dev/null || return 1
+	trap 'release_lease >/dev/null 2>&1 || true; rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT INT TERM
+	"$@"
+	rc=$?
+	trap - EXIT INT TERM
+	rmdir "$LOCK_DIR" 2>/dev/null || true
+	return $rc
+}
+
+watch_daemon()
+{
+	local snapshot= state= previous=
+	while true; do
+		snapshot=$(ubus -S call at-daemon list 2>/dev/null) || snapshot=
+		if [ -n "$snapshot" ]; then
+			state=$(printf '%s' "$snapshot" |
+				jq -c '[.ports[] | {port: .port, restart_epoch: .restart_epoch}] | sort_by(.port)' 2>/dev/null)
+			state="ready:${state:-invalid}"
+		else
+			state=unavailable
+		fi
+		if [ "$state" != unavailable ] && [ "$state" != "$previous" ]; then
+			previous=$state
+			run_locked apply_all >/dev/null 2>&1 || true
+		fi
+		sleep 5
+	done
+}
+
+config_load qmodem
+case "$1" in
+	apply) run_locked apply_one "$2";;
+	apply-all) run_locked apply_all;;
+	direct-ready) mark_direct_ready "$2";;
+	watch) watch_daemon;;
+	status)
+		valid_id "$2" && [ -f "$STATE_DIR/$2.json" ] && cat "$STATE_DIR/$2.json"
+		;;
+	*) echo "Usage: qmodem-settings apply <modem-id> | apply-all | direct-ready <modem-id> | watch | status <modem-id>" >&2; exit 2;;
+esac

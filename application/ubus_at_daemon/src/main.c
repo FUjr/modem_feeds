@@ -32,6 +32,7 @@ enum {
     SENDAT_AT_CMD,
     SENDAT_RAW_AT_CONTENT,
     SENDAT_SENDONLY,
+    SENDAT_OWNER,
     __SENDAT_MAX
 };
 
@@ -42,6 +43,26 @@ static const struct blobmsg_policy sendat_policy[] = {
     [SENDAT_AT_CMD] = { .name = "at_cmd", .type = BLOBMSG_TYPE_STRING },
     [SENDAT_RAW_AT_CONTENT] = { .name = "raw_at_content", .type = BLOBMSG_TYPE_STRING },
     [SENDAT_SENDONLY] = { .name = "sendonly", .type = BLOBMSG_TYPE_BOOL },
+    [SENDAT_OWNER] = { .name = "owner", .type = BLOBMSG_TYPE_STRING },
+};
+
+enum {
+    CONTROL_AT_PORT,
+    CONTROL_OWNER,
+    CONTROL_TOKEN,
+    CONTROL_TTL,
+    CONTROL_URC_ID,
+    CONTROL_PREFIX,
+    __CONTROL_MAX
+};
+
+static const struct blobmsg_policy control_policy[] = {
+    [CONTROL_AT_PORT] = { .name = JSON_AT_PORT, .type = BLOBMSG_TYPE_STRING },
+    [CONTROL_OWNER] = { .name = "owner", .type = BLOBMSG_TYPE_STRING },
+    [CONTROL_TOKEN] = { .name = "token", .type = BLOBMSG_TYPE_STRING },
+    [CONTROL_TTL] = { .name = "ttl", .type = BLOBMSG_TYPE_INT32 },
+    [CONTROL_URC_ID] = { .name = "urc_id", .type = BLOBMSG_TYPE_STRING },
+    [CONTROL_PREFIX] = { .name = "prefix", .type = BLOBMSG_TYPE_STRING },
 };
 
 // Policy for close method
@@ -141,6 +162,7 @@ static int ubus_sendat_method(struct ubus_context *ctx, struct ubus_object *obj,
                              struct blob_attr *msg) {
     struct blob_attr *tb[__SENDAT_MAX];
     const char *at_port, *at_cmd = NULL, *raw_at_content = NULL, *end_flag = NULL;
+    const char *owner = NULL;
     int timeout = DEFAULT_TIMEOUT;
     int is_raw = 0;
     int sendonly = 0;
@@ -159,6 +181,8 @@ static int ubus_sendat_method(struct ubus_context *ctx, struct ubus_object *obj,
         end_flag = blobmsg_get_string(tb[SENDAT_END_FLAG]);
     if (tb[SENDAT_SENDONLY])
         sendonly = blobmsg_get_bool(tb[SENDAT_SENDONLY]);
+    if (tb[SENDAT_OWNER])
+        owner = blobmsg_get_string(tb[SENDAT_OWNER]);
     
     if (tb[SENDAT_AT_CMD]) {
         at_cmd = blobmsg_get_string(tb[SENDAT_AT_CMD]);
@@ -182,6 +206,16 @@ static int ubus_sendat_method(struct ubus_context *ctx, struct ubus_object *obj,
     const char *cmd = is_raw ? raw_at_content : at_cmd;
     int result;
     at_response_t response;
+
+    if (at_lease_authorize(at_port, owner) != 0) {
+        struct blob_buf busy = {};
+        blob_buf_init(&busy, 0);
+        blobmsg_add_string(&busy, "status", "settings_pending");
+        blobmsg_add_string(&busy, "message", "AT port is leased for modem initialization");
+        ubus_send_reply(ctx, req, busy.head);
+        blob_buf_free(&busy);
+        return UBUS_STATUS_OK;
+    }
     
     if (sendonly) {
         // Send only without waiting for response
@@ -240,6 +274,156 @@ static int ubus_sendat_method(struct ubus_context *ctx, struct ubus_object *obj,
         }
     }
     
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    return UBUS_STATUS_OK;
+}
+
+static int reply_control_result(struct ubus_context *ctx,
+                                struct ubus_request_data *req, int result,
+                                const char *success, uint64_t expires_ms,
+                                const char *token)
+{
+    struct blob_buf b = {};
+    blob_buf_init(&b, 0);
+    if (result == 0) {
+        blobmsg_add_string(&b, "status", "success");
+        blobmsg_add_string(&b, "message", success);
+        if (token)
+            blobmsg_add_string(&b, "token", token);
+        if (expires_ms)
+            blobmsg_add_u64(&b, "expires_monotonic_ms", expires_ms);
+    } else if (result == -2) {
+        blobmsg_add_string(&b, "status", "busy");
+        blobmsg_add_string(&b, "message", "AT port already has an active lease");
+    } else {
+        blobmsg_add_string(&b, "status", "error");
+        blobmsg_add_string(&b, "message", "Invalid request or unknown registration");
+    }
+    ubus_send_reply(ctx, req, b.head);
+    blob_buf_free(&b);
+    return UBUS_STATUS_OK;
+}
+
+static int ubus_lease_acquire_method(struct ubus_context *ctx,
+                                     struct ubus_object *obj,
+                                     struct ubus_request_data *req,
+                                     const char *method, struct blob_attr *msg)
+{
+    struct blob_attr *tb[__CONTROL_MAX];
+    char token[96];
+    uint64_t expires_ms = 0;
+    unsigned int ttl = 60;
+    int result;
+    (void)obj; (void)method;
+    blobmsg_parse(control_policy, __CONTROL_MAX, tb, blob_data(msg), blob_len(msg));
+    if (!tb[CONTROL_AT_PORT] || !tb[CONTROL_OWNER])
+        return UBUS_STATUS_INVALID_ARGUMENT;
+    if (tb[CONTROL_TTL])
+        ttl = blobmsg_get_u32(tb[CONTROL_TTL]);
+    result = at_lease_acquire(blobmsg_get_string(tb[CONTROL_AT_PORT]),
+                              blobmsg_get_string(tb[CONTROL_OWNER]), ttl,
+                              token, sizeof(token), &expires_ms);
+    return reply_control_result(ctx, req, result, "Lease acquired", expires_ms,
+                                result == 0 ? token : NULL);
+}
+
+static int ubus_lease_renew_method(struct ubus_context *ctx,
+                                   struct ubus_object *obj,
+                                   struct ubus_request_data *req,
+                                   const char *method, struct blob_attr *msg)
+{
+    struct blob_attr *tb[__CONTROL_MAX];
+    uint64_t expires_ms = 0;
+    unsigned int ttl = 60;
+    int result;
+    (void)obj; (void)method;
+    blobmsg_parse(control_policy, __CONTROL_MAX, tb, blob_data(msg), blob_len(msg));
+    if (!tb[CONTROL_AT_PORT] || !tb[CONTROL_OWNER] || !tb[CONTROL_TOKEN])
+        return UBUS_STATUS_INVALID_ARGUMENT;
+    if (tb[CONTROL_TTL])
+        ttl = blobmsg_get_u32(tb[CONTROL_TTL]);
+    result = at_lease_renew(blobmsg_get_string(tb[CONTROL_AT_PORT]),
+                            blobmsg_get_string(tb[CONTROL_OWNER]),
+                            blobmsg_get_string(tb[CONTROL_TOKEN]), ttl,
+                            &expires_ms);
+    return reply_control_result(ctx, req, result, "Lease renewed", expires_ms, NULL);
+}
+
+static int ubus_lease_release_method(struct ubus_context *ctx,
+                                     struct ubus_object *obj,
+                                     struct ubus_request_data *req,
+                                     const char *method, struct blob_attr *msg)
+{
+    struct blob_attr *tb[__CONTROL_MAX];
+    int result;
+    (void)obj; (void)method;
+    blobmsg_parse(control_policy, __CONTROL_MAX, tb, blob_data(msg), blob_len(msg));
+    if (!tb[CONTROL_AT_PORT] || !tb[CONTROL_OWNER] || !tb[CONTROL_TOKEN])
+        return UBUS_STATUS_INVALID_ARGUMENT;
+    result = at_lease_release(blobmsg_get_string(tb[CONTROL_AT_PORT]),
+                              blobmsg_get_string(tb[CONTROL_OWNER]),
+                              blobmsg_get_string(tb[CONTROL_TOKEN]));
+    return reply_control_result(ctx, req, result, "Lease released", 0, NULL);
+}
+
+static int ubus_urc_register_method(struct ubus_context *ctx,
+                                    struct ubus_object *obj,
+                                    struct ubus_request_data *req,
+                                    const char *method, struct blob_attr *msg)
+{
+    struct blob_attr *tb[__CONTROL_MAX];
+    int result;
+    (void)obj; (void)method;
+    blobmsg_parse(control_policy, __CONTROL_MAX, tb, blob_data(msg), blob_len(msg));
+    if (!tb[CONTROL_AT_PORT] || !tb[CONTROL_OWNER] || !tb[CONTROL_URC_ID] ||
+        !tb[CONTROL_PREFIX])
+        return UBUS_STATUS_INVALID_ARGUMENT;
+    result = at_urc_register(blobmsg_get_string(tb[CONTROL_AT_PORT]),
+                             blobmsg_get_string(tb[CONTROL_OWNER]),
+                             blobmsg_get_string(tb[CONTROL_URC_ID]),
+                             blobmsg_get_string(tb[CONTROL_PREFIX]));
+    return reply_control_result(ctx, req, result, "URC registered", 0, NULL);
+}
+
+static int ubus_urc_unregister_method(struct ubus_context *ctx,
+                                      struct ubus_object *obj,
+                                      struct ubus_request_data *req,
+                                      const char *method, struct blob_attr *msg)
+{
+    struct blob_attr *tb[__CONTROL_MAX];
+    int result;
+    (void)obj; (void)method;
+    blobmsg_parse(control_policy, __CONTROL_MAX, tb, blob_data(msg), blob_len(msg));
+    if (!tb[CONTROL_AT_PORT] || !tb[CONTROL_OWNER] || !tb[CONTROL_URC_ID])
+        return UBUS_STATUS_INVALID_ARGUMENT;
+    result = at_urc_unregister(blobmsg_get_string(tb[CONTROL_AT_PORT]),
+                               blobmsg_get_string(tb[CONTROL_OWNER]),
+                               blobmsg_get_string(tb[CONTROL_URC_ID]));
+    return reply_control_result(ctx, req, result, "URC unregistered", 0, NULL);
+}
+
+static int ubus_urc_list_method(struct ubus_context *ctx, struct ubus_object *obj,
+                                struct ubus_request_data *req, const char *method,
+                                struct blob_attr *msg)
+{
+    struct blob_buf b = {};
+    at_urc_registration_t *urc;
+    void *array;
+    (void)obj; (void)method; (void)msg;
+    blob_buf_init(&b, 0);
+    array = blobmsg_open_array(&b, "registrations");
+    pthread_mutex_lock(&g_daemon_ctx.control_mutex);
+    for (urc = g_daemon_ctx.urcs; urc; urc = urc->next) {
+        void *entry = blobmsg_open_table(&b, NULL);
+        blobmsg_add_string(&b, "port", urc->port);
+        blobmsg_add_string(&b, "owner", urc->owner);
+        blobmsg_add_string(&b, "urc_id", urc->urc_id);
+        blobmsg_add_string(&b, "prefix", urc->prefix);
+        blobmsg_close_table(&b, entry);
+    }
+    pthread_mutex_unlock(&g_daemon_ctx.control_mutex);
+    blobmsg_close_array(&b, array);
     ubus_send_reply(ctx, req, b.head);
     blob_buf_free(&b);
     return UBUS_STATUS_OK;
@@ -355,6 +539,12 @@ static const struct ubus_method at_daemon_methods[] = {
     UBUS_METHOD("sendat", ubus_sendat_method, sendat_policy),
     UBUS_METHOD_NOARG("list", ubus_list_method),
     UBUS_METHOD("close", ubus_close_method, close_policy),
+    UBUS_METHOD("lease_acquire", ubus_lease_acquire_method, control_policy),
+    UBUS_METHOD("lease_renew", ubus_lease_renew_method, control_policy),
+    UBUS_METHOD("lease_release", ubus_lease_release_method, control_policy),
+    UBUS_METHOD("urc_register", ubus_urc_register_method, control_policy),
+    UBUS_METHOD("urc_unregister", ubus_urc_unregister_method, control_policy),
+    UBUS_METHOD_NOARG("urc_list", ubus_urc_list_method),
 };
 
 static struct ubus_object_type at_daemon_object_type =
@@ -412,8 +602,10 @@ int main(int argc, char **argv) {
                                 (uint64_t)started.tv_nsec;
     g_daemon_ctx.ports = NULL;
     pthread_mutex_init(&g_daemon_ctx.ports_mutex, NULL);
+    pthread_mutex_init(&g_daemon_ctx.control_mutex, NULL);
     if (at_line_events_init(&g_daemon_ctx.line_events) != 0) {
         fprintf(stderr, "Failed to initialize AT line event queue\n");
+        pthread_mutex_destroy(&g_daemon_ctx.control_mutex);
         pthread_mutex_destroy(&g_daemon_ctx.ports_mutex);
         return 1;
     }
@@ -432,6 +624,8 @@ int main(int argc, char **argv) {
     
     pthread_mutex_destroy(&g_daemon_ctx.ports_mutex);
     at_line_events_cleanup(&g_daemon_ctx.line_events);
+    at_control_cleanup();
+    pthread_mutex_destroy(&g_daemon_ctx.control_mutex);
     
     return 0;
 }

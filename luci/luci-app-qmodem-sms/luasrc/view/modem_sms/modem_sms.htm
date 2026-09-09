@@ -673,20 +673,10 @@ class ModemSMS {
     }
 
     send_raw_pdu(){
-        var pdu = pduParser.generate(
-            {
-                text: this.message_content.value,
-                encoding: "16bit",
-                receiver: this.phone_number.value,
-            }
-        )
-        //if pdu is array,send first pdu
-        if (Array.isArray(pdu)) {
-            pdu = pdu[0];
-        }
         XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "send_sms")%>',{
             "cfg": this.cfg_id,
-            "pdu": pdu,
+			"phone_number": this.phone_number.value,
+			"message_content": this.message_content.value,
         },(x,data)=>{
             this.update();
             data.result.status == 1 ? this.log_msg("<%:Send SMS Success%>",3000) : this.warn_msg("<%:Send SMS Failed%>",3000);
@@ -704,10 +694,9 @@ class ModemSMS {
             "mem2": mem2,
             "mem3": mem3,
         }
-        XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "modem_ctrl")%>', {
-            "cfg": this.cfg_id,
-            "action":"set_sms_storage",
-            "params": JSON.stringify(JSON.stringify(payload))
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "qmodem", "sms_storage")%>', {
+			"cfg": this.cfg_id,
+			"storage": JSON.stringify(payload)
         },(x,data)=>{
             this.update();
         });

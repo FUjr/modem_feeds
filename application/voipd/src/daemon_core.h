@@ -17,6 +17,7 @@ struct qmodem_voip_context {
 	struct ubus_context *ubus;
 	struct ubus_object object;
 	struct ubus_event_handler at_events;
+	struct ubus_event_handler urc_events;
 	struct qmodem_voip_call call;
 	struct qmodem_voip_media_engine media;
 	struct qmodem_voip_rtp_transport rtp;
@@ -91,6 +92,9 @@ int qmodem_voip_session_is_authorized(const char *session_id);
 void at_line_event(struct ubus_context *ubus,
 		   struct ubus_event_handler *handler,
 		   const char *type, struct blob_attr *message);
+void at_urc_event(struct ubus_context *ubus,
+		  struct ubus_event_handler *handler,
+		  const char *type, struct blob_attr *message);
 
 /* Media manager interface (media_manager.c). */
 void qmodem_voip_media_sync(void);

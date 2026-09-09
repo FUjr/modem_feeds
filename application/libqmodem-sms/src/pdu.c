@@ -9,7 +9,7 @@
 //  SMS encoding/decoding functions, which are based on examples from:
 //  http://www.dreamfabric.com/sms/
 
-#include "pdu.h"
+#include "qmodem-sms/pdu.h"
 
 #include <string.h>
 #include <time.h>
@@ -142,19 +142,126 @@ static const unsigned char gsm7bits_extend_to_latin1[128] = {
     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 };
 
+/* 3GPP TS 23.038 Turkish National Language Single Shift table.
+ * Only used when the PDU's UDH explicitly selects it (IEI 0x24/0x25,
+ * language identifier 0x01 = Turkish) -- see udh_has_turkish_shift().
+ * Non-Turkish messages must never be decoded through this table. */
+static const unsigned char turkish_extend_to_latin1[128] = {
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,'\f',   0,   0,   0,   0,   0,
+    0,   0,   0,   0, '^',   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0, '{', '}',   0,   0,   0,   0,   0,'\\',
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, '[', '~', ']',   0,
+  '|',   0,   0, 0xC7,   0,   0,   0, 0xD0,   0, 0xDD,   0,   0,   0,   0,   0,   0,
+    0,   0,   0, 0xDE,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0, 0xE7,   0,   0,   0, 0xF0,   0, 0xFD,   0,   0,   0,   0,   0,   0,
+    0,   0,   0, 0xFE,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+};
+
+/* Walks the PDU's User Data Header looking for a National Language
+ * Locking Shift (IEI 0x24) or Single Shift (IEI 0x25) IE whose data
+ * byte selects Turkish (0x01, per 3GPP TS 23.038 table 6.2.1.2.5).
+ * Returns 1 only if such an IE is present; every other message keeps
+ * using the standard extension table. */
+struct udh_info {
+	int present;
+	int bytes;
+	int turkish_locking;
+	int turkish_single;
+	int concat_ref;
+	int concat_total;
+	int concat_part;
+};
+
+/* Parse every IE in the UDH.  Concatenation is not required to be the last
+ * IE; language shift IEs and application IEs may follow it. */
 static int
-G7bitToAscii(char* buffer, int buffer_length)
+parse_udh(const unsigned char *buffer, int buffer_length, int sms_start,
+		  struct udh_info *info)
+{
+	memset(info, 0, sizeof(*info));
+	if (sms_start < 0 || sms_start + 1 >= buffer_length ||
+	    !(buffer[sms_start] & 0x40))
+		return 0;
+	const int udhl = buffer[sms_start + 1];
+	const int first = sms_start + 2;
+	const int end = first + udhl;
+	if (end > buffer_length)
+		return -1;
+	info->present = 1;
+	info->bytes = udhl + 1;
+	for (int pos = first; pos < end;) {
+		if (pos + 2 > end)
+			return -1;
+		const unsigned char iei = buffer[pos];
+		const unsigned char iedl = buffer[pos + 1];
+		if (pos + 2 + iedl > end)
+			return -1;
+		if (iei == 0x24 && iedl >= 1 && buffer[pos + 2] == 0x01)
+			info->turkish_locking = 1;
+		if (iei == 0x25 && iedl >= 1 && buffer[pos + 2] == 0x01)
+			info->turkish_single = 1;
+		if (iei == 0x00 && iedl == 3) {
+			info->concat_ref = buffer[pos + 2];
+			info->concat_total = buffer[pos + 3];
+			info->concat_part = buffer[pos + 4];
+		} else if (iei == 0x08 && iedl == 4) {
+			info->concat_ref = (buffer[pos + 2] << 8) | buffer[pos + 3];
+			info->concat_total = buffer[pos + 4];
+			info->concat_part = buffer[pos + 5];
+		}
+		pos += 2 + iedl;
+	}
+	if (info->concat_total <= 1) {
+		info->concat_ref = info->concat_total = info->concat_part = 0;
+	}
+	return 0;
+}
+
+static unsigned char
+gsm7_locking_to_latin1(unsigned char value)
+{
+	switch (value) {
+	case 0x07: return 0xFD; /* dotless i */
+	case 0x0B: return 0xD0; /* G */
+	case 0x0C: return 0xF0; /* g */
+	case 0x1C: return 0xDE; /* S */
+	case 0x1D: return 0xFE; /* s */
+	case 0x40: return 0xDD; /* I with dot */
+	case 0x5B: return 0xC4;
+	case 0x5C: return 0xD6;
+	case 0x5D: return 0xD1;
+	case 0x5E: return 0xDC;
+	case 0x60: return 0xE7;
+	case 0x7B: return 0xE4;
+	case 0x7C: return 0xF6;
+	case 0x7D: return 0xF1;
+	case 0x7E: return 0xFC;
+	case 0x7F: return 0xE0;
+	default: return gsm7bits_to_latin1[value];
+	}
+}
+
+static int
+G7bitToAscii(char* buffer, int buffer_length, int use_turkish_locking,
+		     int use_turkish_single)
 {
 	int i;
+	const unsigned char *ext_table = use_turkish_single ? turkish_extend_to_latin1 : gsm7bits_extend_to_latin1;
 
-	for (i = 0; i<buffer_length; i++) {
-		if (buffer[i] < 128) {
+	for (i = 0; i < buffer_length; i++) {
+		if ((unsigned char)buffer[i] < 128) {
 			if (buffer[i] == GSM_7BITS_ESCAPE) {
-				buffer[i] = gsm7bits_extend_to_latin1[buffer[i + 1]];
-				memmove(&buffer[i + 1], &buffer[i + 2], buffer_length - i - 1);
+				if (i + 1 >= buffer_length) {
+					buffer_length--;
+					break;
+				}
+				buffer[i] = ext_table[(unsigned char)buffer[i + 1]];
+				if (i + 2 < buffer_length)
+					memmove(&buffer[i + 1], &buffer[i + 2], buffer_length - i - 2);
 				buffer_length--;
 			} else {
-				buffer[i] = gsm7bits_to_latin1[buffer[i]];
+				buffer[i] = use_turkish_locking ? gsm7_locking_to_latin1((unsigned char)buffer[i]) :
+					gsm7bits_to_latin1[(unsigned char)buffer[i]];
 			}
 		}
 	}
@@ -306,12 +413,12 @@ pdu_encode(const char* service_center_number, const char* phone_number, const ch
 
 	// 5. SMS message.
 	int sms_text_length = strlen(sms_text);
-	char sms_text_7bit[2*SMS_MAX_7BIT_TEXT_LENGTH];
+	unsigned char sms_text_7bit[2*SMS_MAX_7BIT_TEXT_LENGTH];
 	sms_text_length = AsciiToG7bit(sms_text, sms_text_length, sms_text_7bit);
 	if (sms_text_length > SMS_MAX_7BIT_TEXT_LENGTH)
 		return -1;
 	output_buffer[output_buffer_length++] = sms_text_length;
-	length = EncodePDUMessage(sms_text_7bit, sms_text_length,
+	length = EncodePDUMessage((const char *)sms_text_7bit, sms_text_length,
 				  output_buffer + output_buffer_length, 
 				  buffer_size - output_buffer_length);
 	if (length < 0)
@@ -319,6 +426,107 @@ pdu_encode(const char* service_center_number, const char* phone_number, const ch
 	output_buffer_length += length;
 
 	return output_buffer_length;
+}
+
+static int utf8_to_utf16(const char *text, unsigned short *units, int capacity)
+{
+	const unsigned char *p = (const unsigned char *)text;
+	int count = 0;
+	while (*p) {
+		unsigned int cp;
+		int bytes;
+		if (*p < 0x80) { cp = *p; bytes = 1; }
+		else if ((*p & 0xe0) == 0xc0 && p[1] && (p[1] & 0xc0) == 0x80) {
+			cp = ((unsigned int)(p[0] & 0x1f) << 6) | (p[1] & 0x3f); bytes = 2;
+			if (cp < 0x80) return -1;
+		} else if ((*p & 0xf0) == 0xe0 && p[1] && p[2] && (p[1] & 0xc0) == 0x80 &&
+			   (p[2] & 0xc0) == 0x80) {
+			cp = ((unsigned int)(p[0] & 0x0f) << 12) |
+			     ((unsigned int)(p[1] & 0x3f) << 6) | (p[2] & 0x3f); bytes = 3;
+			if (cp < 0x800 || (cp >= 0xd800 && cp <= 0xdfff)) return -1;
+		} else if ((*p & 0xf8) == 0xf0 && p[1] && p[2] && p[3] && (p[1] & 0xc0) == 0x80 &&
+			   (p[2] & 0xc0) == 0x80 && (p[3] & 0xc0) == 0x80) {
+			cp = ((unsigned int)(p[0] & 0x07) << 18) |
+			     ((unsigned int)(p[1] & 0x3f) << 12) |
+			     ((unsigned int)(p[2] & 0x3f) << 6) | (p[3] & 0x3f); bytes = 4;
+			if (cp < 0x10000 || cp > 0x10ffff) return -1;
+		} else return -1;
+		if (cp <= 0xffff) {
+			if (count >= capacity) return -1;
+			units[count++] = (unsigned short)cp;
+		} else {
+			if (count + 1 >= capacity) return -1;
+			cp -= 0x10000;
+			units[count++] = (unsigned short)(0xd800 | (cp >> 10));
+			units[count++] = (unsigned short)(0xdc00 | (cp & 0x3ff));
+		}
+		p += bytes;
+	}
+	return count;
+}
+
+int pdu_encode_ucs2_parts(const char *phone_number, const char *utf8_text,
+			  unsigned char pdus[][SMS_MAX_PDU_LENGTH], int lengths[],
+			  int max_parts, unsigned int reference)
+{
+	unsigned short units[SMS_MAX_PARTS * 67];
+	int unit_count, total, offset = 0;
+	if (!phone_number || !*phone_number || !utf8_text || !pdus || !lengths ||
+	    max_parts < 1 || max_parts > SMS_MAX_PARTS)
+		return -1;
+	unit_count = utf8_to_utf16(utf8_text, units, (int)(sizeof(units) / sizeof(units[0])));
+	if (unit_count < 0)
+		return -1;
+	if (unit_count <= 70) {
+		total = 1;
+	} else {
+		int position = 0;
+		total = 0;
+		while (position < unit_count) {
+			int take = unit_count - position < 67 ? unit_count - position : 67;
+			if (position + take < unit_count && units[position + take - 1] >= 0xd800 &&
+			    units[position + take - 1] <= 0xdbff)
+				take--;
+			position += take;
+			total++;
+		}
+	}
+	if (total > max_parts)
+		return -1;
+	for (int part = 0; part < total; part++) {
+		unsigned char *out = pdus[part];
+		int length, limit = total == 1 ? 70 : 67;
+		int take = unit_count - offset < limit ? unit_count - offset : limit;
+		if (offset + take < unit_count && take > 0 &&
+		    units[offset + take - 1] >= 0xd800 && units[offset + take - 1] <= 0xdbff)
+			take--;
+		out[0] = 0;
+		out[1] = SMS_SUBMIT | (total > 1 ? 0x40 : 0);
+		out[2] = 0;
+		out[3] = (unsigned char)strlen(phone_number);
+		out[4] = strlen(phone_number) < 6 ? TYPE_OF_ADDRESS_UNKNOWN : TYPE_OF_ADDRESS_INTERNATIONAL_PHONE;
+		length = EncodePhoneNumber(phone_number, out + 5, SMS_MAX_PDU_LENGTH - 5);
+		if (length < 0)
+			return -1;
+		length += 5;
+		out[length++] = 0;
+		out[length++] = 0x08;
+		out[length++] = 0xb0;
+		out[length++] = (unsigned char)(take * 2 + (total > 1 ? 6 : 0));
+		if (total > 1) {
+			out[length++] = 5; out[length++] = 0; out[length++] = 3;
+			out[length++] = (unsigned char)reference;
+			out[length++] = (unsigned char)total;
+			out[length++] = (unsigned char)(part + 1);
+		}
+		for (int i = 0; i < take; i++) {
+			out[length++] = (unsigned char)(units[offset + i] >> 8);
+			out[length++] = (unsigned char)units[offset + i];
+		}
+		lengths[part] = length;
+		offset += take;
+	}
+	return total;
 }
 
 int pdu_decode(const unsigned char* buffer, int buffer_length,
@@ -339,8 +547,6 @@ int pdu_decode(const unsigned char* buffer, int buffer_length,
 	if (sms_deliver_start + 1 > buffer_length)
 		return -2;
 
-	const int user_data_header_length = (buffer[sms_deliver_start]>>4);
-
 	const int sender_number_length = buffer[sms_deliver_start + 1];
 	if (sender_number_length + 1 > sender_phone_number_size)
 		return -3;  // Buffer too small to hold decoded phone number.
@@ -348,7 +554,7 @@ int pdu_decode(const unsigned char* buffer, int buffer_length,
 	const int sender_type_of_address = buffer[sms_deliver_start + 2];
 	if (sender_type_of_address == TYPE_OF_ADDRESS_ALPHANUMERIC) {
 		int sender_len1 = DecodePDUMessage_GSM_7bit(buffer + sms_deliver_start + 3, (sender_number_length + 1) / 2, output_sender_phone_number, sender_number_length);
-		int sender_len2 = G7bitToAscii(output_sender_phone_number, sender_len1 - 1);
+		int sender_len2 = G7bitToAscii(output_sender_phone_number, sender_len1 - 1, 0, 0);
 		output_sender_phone_number[sender_len2] = 0;
 	} else {
 		DecodePhoneNumber(buffer + sms_deliver_start + 3, sender_number_length, output_sender_phone_number);
@@ -367,22 +573,15 @@ int pdu_decode(const unsigned char* buffer, int buffer_length,
 	(*output_sms_time) = timegm(&sms_broken_time);
 
 	const int sms_start = sms_pid_start + 2 + 7;
-	if (sms_start + 1 > buffer_length) return -1;  // Invalid input buffer.
+	if (sms_start + 1 >= buffer_length) return -1;  // Invalid input buffer.
 
-	int tmp;
-	if((user_data_header_length&0x04)==0x04) {
-		tmp = buffer[sms_start + 1] + 1;
-		*skip_bytes = tmp;
-		*ref_number = 0x000000FF&buffer[sms_start + tmp - 2];
-		*total_parts = 0x000000FF&buffer[sms_start + tmp - 1];
-		*part_number = 0x000000FF&buffer[sms_start + tmp];
-	} else {
-		tmp = 0;
-		*skip_bytes = tmp;
-		*ref_number = tmp;
-		*total_parts = tmp;
-		*part_number = tmp;
-	}
+	struct udh_info udh;
+	if (parse_udh(buffer, buffer_length, sms_start, &udh) < 0)
+		return -1;
+	*skip_bytes = udh.present ? udh.bytes : 0;
+	*ref_number = udh.concat_ref;
+	*total_parts = udh.concat_total;
+	*part_number = udh.concat_part;
 
 	int output_sms_text_length = buffer[sms_start];
 	if (sms_text_size < output_sms_text_length) return -1;  // Cannot hold decoded buffer.
@@ -398,7 +597,14 @@ int pdu_decode(const unsigned char* buffer, int buffer_length,
 				int decoded_sms_text_size = DecodePDUMessage_GSM_7bit(buffer + sms_start + 1, buffer_length - (sms_start + 1),
 							   output_sms_text, output_sms_text_length);
 				if (decoded_sms_text_size != output_sms_text_length) return -1;  // Decoder length is not as expected.
-				output_sms_text_length = G7bitToAscii(output_sms_text, output_sms_text_length);
+				int skip_septets = 0;
+				if (*skip_bytes > 0)
+					skip_septets = (*skip_bytes * 8 + 6) / 7;
+				if (skip_septets > output_sms_text_length)
+					return -1;
+				output_sms_text_length = skip_septets + G7bitToAscii(output_sms_text + skip_septets,
+					output_sms_text_length - skip_septets, udh.turkish_locking,
+					udh.turkish_single);
 				break;
 			}
 		case 2:

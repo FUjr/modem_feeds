@@ -6,7 +6,7 @@ TIMEOUT ?= timeout 10s
 .PHONY: all baseline clean
 
 all: baseline test_terminal_matching test_line_event_queue test_reader_flood test_port_lifecycle \
-	test_port_concurrency test_production_reader_lifecycle test_uloop_adapter
+	test_port_concurrency test_production_reader_lifecycle test_uloop_adapter test_control
 	$(TIMEOUT) ./test_terminal_matching
 	$(TIMEOUT) ./test_line_event_queue
 	$(TIMEOUT) ./test_reader_flood
@@ -14,6 +14,7 @@ all: baseline test_terminal_matching test_line_event_queue test_reader_flood tes
 	$(TIMEOUT) ./test_port_concurrency
 	$(TIMEOUT) ./test_production_reader_lifecycle
 	$(TIMEOUT) ./test_uloop_adapter
+	$(TIMEOUT) ./test_control
 
 baseline: test_response_baseline
 	$(TIMEOUT) ./test_response_baseline
@@ -45,6 +46,10 @@ test_uloop_adapter: test_uloop_adapter.c
 	$(CC) $(filter-out -DQMODEM_HOST_TEST,$(CFLAGS)) -Wno-unused-function \
 		-Ifakes -I$(SRC) $< -o $@ -pthread
 
+test_control: test_control.c $(SRC)/control.c
+	$(CC) $(CFLAGS) -I$(SRC) $^ -o $@ -pthread
+
 clean:
 	rm -f test_response_baseline test_terminal_matching test_line_event_queue test_reader_flood \
-		test_port_lifecycle test_port_concurrency test_production_reader_lifecycle test_uloop_adapter
+		test_port_lifecycle test_port_concurrency test_production_reader_lifecycle test_uloop_adapter \
+		test_control
