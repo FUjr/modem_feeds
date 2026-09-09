@@ -5,6 +5,7 @@
 
 at_daemon_ctx_t g_daemon_ctx;
 static size_t sent_events;
+static size_t sent_urcs;
 
 static fake_blob_field_t *field_by_name(struct blob_buf *b, const char *name)
 {
@@ -21,6 +22,14 @@ int ubus_send_event(struct ubus_context *ctx, const char *id,
 {
     struct blob_buf *b = (struct blob_buf *)msg;
     (void)ctx;
+    if (!strcmp(id, "qmodem.at.urc")) {
+        assert(b->count == 7);
+        assert(strcmp(field_by_name(b, "owner")->string, "qmodem.sms") == 0);
+        assert(strcmp(field_by_name(b, "urc_id")->string, "sms-new") == 0);
+        assert(strcmp(field_by_name(b, "raw_line")->string, "LINE-00") == 0);
+        sent_urcs++;
+        return 0;
+    }
     assert(strcmp(id, "qmodem.at.line") == 0);
     assert(b->count == 8);
     if (sent_events == 0) {
@@ -43,11 +52,18 @@ int ubus_send_event(struct ubus_context *ctx, const char *id,
 int main(void)
 {
     at_port_instance_t port = { 0 };
+    at_urc_registration_t urc = { 0 };
     struct pollfd pfd;
 
     strcpy(port.port_path, "/dev/ttyFAKE0");
     port.restart_epoch = 77;
     assert(pthread_mutex_init(&port.event_state_mutex, NULL) == 0);
+    assert(pthread_mutex_init(&g_daemon_ctx.control_mutex, NULL) == 0);
+    strcpy(urc.port, "/dev/ttyFAKE0");
+    strcpy(urc.owner, "qmodem.sms");
+    strcpy(urc.urc_id, "sms-new");
+    strcpy(urc.prefix, "LINE-00");
+    g_daemon_ctx.urcs = &urc;
     assert(at_line_events_init(&g_daemon_ctx.line_events) == 0);
     assert(at_line_events_register_uloop(&g_daemon_ctx.line_events) == 0);
     assert(g_daemon_ctx.line_events.notify_fd.registered == 1);
@@ -72,8 +88,10 @@ int main(void)
     g_daemon_ctx.line_events.notify_fd.cb(&g_daemon_ctx.line_events.notify_fd,
                                            ULOOP_READ);
     assert(sent_events == 65);
+    assert(sent_urcs == 1);
     assert(g_daemon_ctx.line_events.count == 0);
     at_line_events_cleanup(&g_daemon_ctx.line_events);
+    pthread_mutex_destroy(&g_daemon_ctx.control_mutex);
     pthread_mutex_destroy(&port.event_state_mutex);
     puts("PASS production ubus blob fields and 64-item uloop callback rearm");
     return 0;

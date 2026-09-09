@@ -91,6 +91,22 @@ typedef struct {
 typedef void (*at_line_event_publisher_t)(const at_line_event_t *event,
                                           void *opaque);
 
+typedef struct at_lease {
+    char port[MAX_PORT_PATH_SIZE];
+    char owner[64];
+    char token[96];
+    uint64_t expires_ms;
+    struct at_lease *next;
+} at_lease_t;
+
+typedef struct at_urc_registration {
+    char port[MAX_PORT_PATH_SIZE];
+    char owner[64];
+    char urc_id[64];
+    char prefix[MAX_PREFIX_SIZE];
+    struct at_urc_registration *next;
+} at_urc_registration_t;
+
 // AT port instance
 typedef struct at_port_instance {
     char port_path[MAX_PORT_PATH_SIZE];
@@ -181,11 +197,27 @@ typedef struct {
     pthread_mutex_t ports_mutex;
     at_line_event_queue_t line_events;
     uint64_t daemon_epoch;
+    pthread_mutex_t control_mutex;
+    at_lease_t *leases;
+    at_urc_registration_t *urcs;
+    uint64_t next_lease_id;
     
     // Port monitoring thread
     pthread_t monitor_thread;
     int monitor_should_stop;
 } at_daemon_ctx_t;
+
+uint64_t at_monotonic_ms(void);
+int at_lease_acquire(const char *port, const char *owner, unsigned int ttl,
+                     char *token, size_t token_size, uint64_t *expires_ms);
+int at_lease_renew(const char *port, const char *owner, const char *token,
+                   unsigned int ttl, uint64_t *expires_ms);
+int at_lease_release(const char *port, const char *owner, const char *token);
+int at_lease_authorize(const char *port, const char *owner);
+int at_urc_register(const char *port, const char *owner, const char *urc_id,
+                    const char *prefix);
+int at_urc_unregister(const char *port, const char *owner, const char *urc_id);
+void at_control_cleanup(void);
 
 // Function declarations
 at_port_instance_t *find_port_instance(const char *port_path);
