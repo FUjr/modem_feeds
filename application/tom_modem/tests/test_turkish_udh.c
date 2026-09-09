@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "../src/extlib/pdu.c"
+#include "../../libqmodem-sms/src/pdu.c"
 
 int main(void)
 {

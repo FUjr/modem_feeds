@@ -11,7 +11,7 @@
 #include <sys/select.h>
 #include <errno.h>
 #include "modem_types.h"
-#include "extlib/pdu.h"
+#include <qmodem-sms/pdu.h>
 #include "time.h"
 
 #ifdef USE_SEMAPHORE

@@ -14,7 +14,7 @@ define Package/$(PKG_NAME)
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=Fujr Modem Communite Tool
-  DEPENDS:=+libubus +libubox +libjson-c +libblobmsg-json
+  DEPENDS:=+libubus +libubox +libjson-c +libblobmsg-json +libqmodem-sms
 endef
 
 define Package/$(PKG_NAME)/config

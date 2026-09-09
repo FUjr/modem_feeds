@@ -9,7 +9,7 @@
 //  SMS encoding/decoding functions, which are based on examples from:
 //  http://www.dreamfabric.com/sms/
 
-#include "pdu.h"
+#include "qmodem-sms/pdu.h"
 
 #include <string.h>
 #include <time.h>
@@ -413,12 +413,12 @@ pdu_encode(const char* service_center_number, const char* phone_number, const ch
 
 	// 5. SMS message.
 	int sms_text_length = strlen(sms_text);
-	char sms_text_7bit[2*SMS_MAX_7BIT_TEXT_LENGTH];
+	unsigned char sms_text_7bit[2*SMS_MAX_7BIT_TEXT_LENGTH];
 	sms_text_length = AsciiToG7bit(sms_text, sms_text_length, sms_text_7bit);
 	if (sms_text_length > SMS_MAX_7BIT_TEXT_LENGTH)
 		return -1;
 	output_buffer[output_buffer_length++] = sms_text_length;
-	length = EncodePDUMessage(sms_text_7bit, sms_text_length,
+	length = EncodePDUMessage((const char *)sms_text_7bit, sms_text_length,
 				  output_buffer + output_buffer_length, 
 				  buffer_size - output_buffer_length);
 	if (length < 0)
