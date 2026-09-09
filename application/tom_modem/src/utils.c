@@ -73,10 +73,22 @@ int decode_pdu(SMS_T *sms)
     int pdu_str_len;
     unsigned char hex_pdu[SMS_PDU_HEX_SIZE] = {0};
     pdu_str_len = strlen(sms->sms_pdu);
+    if (pdu_str_len == 0 || (pdu_str_len & 1) != 0 ||
+        pdu_str_len / 2 > (int)sizeof(hex_pdu))
+    {
+        err_msg("Invalid PDU length");
+        return -1;
+    }
     for (int i = 0; i < pdu_str_len; i += 2)
     {
-        hex_pdu[i / 2] = char_to_hex(sms->sms_pdu[i]) << 4;
-        hex_pdu[i / 2] |= char_to_hex(sms->sms_pdu[i + 1]);
+        int high = char_to_hex(sms->sms_pdu[i]);
+        int low = char_to_hex(sms->sms_pdu[i + 1]);
+        if (high < 0 || low < 0)
+        {
+            err_msg("Invalid hexadecimal digit in PDU");
+            return -1;
+        }
+        hex_pdu[i / 2] = (unsigned char)((high << 4) | low);
     }
     int sms_len = pdu_decode(hex_pdu, pdu_str_len/2,
                              &sms->timestamp,
