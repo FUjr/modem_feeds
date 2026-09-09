@@ -5,7 +5,7 @@
 | 标签 | 分支 | 状态 | 迁移说明 | 反馈入口 |
 | --- | --- | --- | --- | --- |
 | `v3.3.0` | `stable` | 稳定发布 | 从旧版本升级前备份 UCI；短信数据库由后端维护，升级后首次同步可能较慢 | [3.3.0 issues](https://github.com/FUjr/QModem/issues?q=is%3Aissue+label%3Av3.3.0) |
-| `v3.4.0-rc.1` | `main` | 预发布、社区测试 | 含 QModem 设置服务、事件触发短信同步和 VoIP 变更；不建议作为生产固件 | [3.4.0-rc.1 issues](https://github.com/FUjr/QModem/issues?q=is%3Aissue+label%3Av3.4.0-rc.1) |
+| `v3.4.0-rc.2` | `main` | 预发布、社区测试 | 含 QModem 设置服务、事件触发短信同步和 VoIP 变更；不建议作为生产固件 | [3.4.0-rc.2 issues](https://github.com/FUjr/QModem/issues?q=is%3Aissue+label%3Av3.4.0-rc.2) |
 
 Issue 链接是按版本标签筛选的稳定入口。实际发布时为每个标签创建一个置顶 Issue，
 标题包含完整标签，正文固定列出已知问题、升级注意事项和反馈格式；新版本置顶后取消
@@ -27,6 +27,6 @@ Issue。
 
 ## Issue 模板
 
-请在标题中写明 `[v3.3.0]` 或 `[v3.4.0-rc.1]`，并提供路由器型号、模组型号及固件、
+请在标题中写明 `[v3.3.0]` 或 `[v3.4.0-rc.2]`，并提供路由器型号、模组型号及固件、
 QModem 完整提交 SHA、复现步骤和脱敏日志。版本相关的行为先在对应标签的置顶 Issue
 下反馈，确认属于新问题后再单独开 issue。
