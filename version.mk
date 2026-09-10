@@ -21,5 +21,7 @@ endef
 QMODEM_COMMITCOUNT = $(if $(DUMP),0,$(call qmodem_commitcount))
 QMODEM_AUTORELEASE = $(if $(DUMP),0,$(call qmodem_commitcount,1))
 
-QMODEM_VERSION:=3.4.0-rc.3
+# apk-tools accepts prerelease suffixes in _rcN form. PKG_RELEASE must remain
+# numeric because OpenWrt appends it as -rN to the package version.
+QMODEM_VERSION:=3.4.0_rc3
 QMODEM_RELEASE:=$(QMODEM_AUTORELEASE)
