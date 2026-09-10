@@ -179,7 +179,6 @@ jobs:
           esac
 
       - name: Checkout
-        if: 
         uses: actions/checkout@v4
         with:
           path: 'qmodem'
@@ -326,10 +325,9 @@ jobs:
     name: Release Artifacts
     needs: [job_build_qmodem, job_prepare]
     runs-on: ubuntu-latest
-    # A tag push is the authoritative release signal. Keep this job alive
-    # when a matrix leg is allowed to fail so successful artifacts still get
-    # published and the failure remains visible in the run summary.
-    if: ${{ always() && startsWith(github.ref, 'refs/tags/v') && needs.job_prepare.result == 'success' }}
+    # job_prepare recognizes both direct tag pushes and tags created by
+    # job_auto_tag during a stable branch run.
+    if: ${{ always() && needs.job_prepare.result == 'success' && needs.job_prepare.outputs.push_type == 'tag' }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -356,7 +354,7 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2.2.2
-        if: ${{ always() && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ always() && needs.job_prepare.outputs.push_type == 'tag' }}
         with:
           body_path: release_note/release_note.md
           generate_release_notes: true
