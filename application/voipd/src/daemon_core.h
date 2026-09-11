@@ -24,8 +24,6 @@ struct qmodem_voip_context {
 	struct qmodem_voip_browser_media browser;
 	struct qmodem_voip_media_socket media_sock;
 	char media_socket_path[QMODEM_VOIP_MEDIA_SOCKET_PATH_MAX];
-	char sip_username[64];
-	int sip_configured;
 	struct uloop_timeout browser_timer;
 	struct uloop_timeout call_timer;
 	struct uloop_timeout activation_timer;

@@ -82,6 +82,7 @@ get_modem_config() {
     pdp_index=$(uci get qmodem.$section.pdp_index 2>/dev/null)
     [ -z "$pdp_index" ] && pdp_index=$(uci get qmodem.$section.suggest_pdp_index 2>/dev/null)
     use_ubus=$(uci get qmodem.$section.use_ubus 2>/dev/null)
+    use_ubus=${use_ubus:-1}
     modem_path=$(uci get qmodem.$section.path 2>/dev/null)
     modem_slot=$(basename "$modem_path" 2>/dev/null)
     
@@ -103,6 +104,7 @@ get_at_port_config() {
     fi
     
     use_ubus=$(uci get qmodem.$section.use_ubus 2>/dev/null)
+    use_ubus=${use_ubus:-1}
     [ "$use_ubus" = "1" ] && use_ubus_flag="-u"
 }
 

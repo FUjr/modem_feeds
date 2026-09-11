@@ -61,7 +61,8 @@ for i1,v1 in ipairs(avalible_ports) do
 end
 
 use_ubus = s:taboption("general",Flag, "use_ubus",translate("Use Ubus"))
-use_ubus.default = "0"
+use_ubus.default = "1"
+use_ubus.rmempty = false
 
 at_port.placeholder = translate("Not null")
 at_port.rmempty = false

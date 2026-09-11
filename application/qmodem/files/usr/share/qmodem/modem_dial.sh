@@ -491,7 +491,7 @@ update_config()
     config_get at_port $modem_config at_port
     config_get manufacturer $modem_config manufacturer
     config_get platform $modem_config platform
-    config_get use_ubus $modem_config use_ubus
+    config_get use_ubus $modem_config use_ubus 1
     config_get force_set_apn $modem_config force_set_apn
     config_get pdp_index $modem_config pdp_index
     [ -n "$pdp_index" ] && userset_pdp_index="1" || userset_pdp_index="0"

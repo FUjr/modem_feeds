@@ -1131,6 +1131,7 @@ static int add_modem(const char *slot, const char *slot_type)
 		snprintf(key, sizeof(key), "qmodem.%s.path", section); uci_set(key, res.modem_path);
 		snprintf(key, sizeof(key), "qmodem.%s.data_interface", section); uci_set(key, slot_type);
 		snprintf(key, sizeof(key), "qmodem.%s.enable_dial", section); uci_set(key, "1");
+		snprintf(key, sizeof(key), "qmodem.%s.use_ubus", section); uci_set(key, "1");
 		snprintf(key, sizeof(key), "qmodem.%s.soft_reboot", section); uci_set(key, "1");
 		snprintf(key, sizeof(key), "qmodem.%s.extend_prefix", section); uci_set(key, "1");
 		snprintf(key, sizeof(key), "qmodem.%s.pdp_type", section); uci_set(key, "ipv4v6");

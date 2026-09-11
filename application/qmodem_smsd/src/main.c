@@ -1,5 +1,6 @@
 #include "sms_db.h"
 #include "legacy_migrate.h"
+#include "tom_response.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -84,6 +85,7 @@ enum {
     ARG_DELIVERY_ID,
     ARG_SUCCESS,
     ARG_ERROR,
+    ARG_REQUEST_ID,
     __ARG_MAX
 };
 
@@ -95,16 +97,17 @@ static const struct blobmsg_policy policy[] = {
     [ARG_AUTO_DELETE] = { .name = "auto_delete", .type = BLOBMSG_TYPE_BOOL },
     [ARG_LIMIT] = { .name = "limit", .type = BLOBMSG_TYPE_INT32 },
     [ARG_OFFSET] = { .name = "offset", .type = BLOBMSG_TYPE_INT32 },
-    [ARG_ID] = { .name = "id", .type = BLOBMSG_TYPE_INT64 },
+    [ARG_ID] = { .name = "id", .type = BLOBMSG_TYPE_UNSPEC },
     [ARG_RECIPIENT] = { .name = "recipient", .type = BLOBMSG_TYPE_STRING },
     [ARG_CONTENT] = { .name = "content", .type = BLOBMSG_TYPE_STRING },
     [ARG_INDEX] = { .name = "index", .type = BLOBMSG_TYPE_INT32 },
     [ARG_MEM1] = { .name = "mem1", .type = BLOBMSG_TYPE_STRING },
     [ARG_MEM2] = { .name = "mem2", .type = BLOBMSG_TYPE_STRING },
     [ARG_MEM3] = { .name = "mem3", .type = BLOBMSG_TYPE_STRING },
-    [ARG_DELIVERY_ID] = { .name = "delivery_id", .type = BLOBMSG_TYPE_INT64 },
+    [ARG_DELIVERY_ID] = { .name = "delivery_id", .type = BLOBMSG_TYPE_UNSPEC },
     [ARG_SUCCESS] = { .name = "success", .type = BLOBMSG_TYPE_BOOL },
     [ARG_ERROR] = { .name = "error", .type = BLOBMSG_TYPE_STRING },
+    [ARG_REQUEST_ID] = { .name = "request_id", .type = BLOBMSG_TYPE_STRING },
 };
 
 static int valid_id(const char *value)
@@ -116,6 +119,34 @@ static int valid_id(const char *value)
               (*value >= '0' && *value <= '9') || *value == '_' || *value == '-'))
             return 0;
     return 1;
+}
+
+static int blobmsg_get_positive_i64(struct blob_attr *attr, int64_t *value)
+{
+    uint64_t parsed;
+
+    if (!attr || !value)
+        return -1;
+    switch (blobmsg_type(attr)) {
+    case BLOBMSG_TYPE_INT8:
+        parsed = blobmsg_get_u8(attr);
+        break;
+    case BLOBMSG_TYPE_INT16:
+        parsed = blobmsg_get_u16(attr);
+        break;
+    case BLOBMSG_TYPE_INT32:
+        parsed = blobmsg_get_u32(attr);
+        break;
+    case BLOBMSG_TYPE_INT64:
+        parsed = blobmsg_get_u64(attr);
+        break;
+    default:
+        return -1;
+    }
+    if (!parsed || parsed > INT64_MAX)
+        return -1;
+    *value = (int64_t)parsed;
+    return 0;
 }
 
 static const char *option_string(struct uci_context *uci, struct uci_section *section,
@@ -192,7 +223,7 @@ static int load_config(const char *section_name, struct modem_config *cfg)
              option_string(uci, section, "sms_storage_mem1", "SM"));
     snprintf(cfg->legacy_dir, sizeof(cfg->legacy_dir), "%s",
              option_string(uci, section, "sms_db_path", "/etc/qmodem"));
-    cfg->use_ubus = !strcmp(option_string(uci, section, "use_ubus", "0"), "1");
+    cfg->use_ubus = !strcmp(option_string(uci, section, "use_ubus", "1"), "1");
     cfg->auto_delete = strcmp(option_string(uci, section,
                               "sms_auto_delete_from_sim", "1"), "0") != 0;
     cfg->forwarding = !strcmp(option_string(uci, section, "sms_forwarding", "0"), "1");
@@ -509,7 +540,7 @@ static int status_method(struct ubus_context *ctx, struct ubus_object *obj,
     (void)obj; (void)method; (void)msg;
     blob_buf_init(&b, 0);
     blobmsg_add_string(&b, "status", "ready");
-    blobmsg_add_u32(&b, "api_version", 2);
+    blobmsg_add_u32(&b, "api_version", 3);
     blobmsg_add_string(&b, "database", app.db_path);
     blobmsg_add_string(&b, "default_mode", "database_poll");
     blobmsg_add_u32(&b, "default_poll_interval", 300);
@@ -744,17 +775,18 @@ static int get_method(struct ubus_context *ctx, struct ubus_object *obj,
     sqlite3_stmt *stmt = NULL;
     struct blob_buf b = {};
     const char *section;
+    int64_t id;
     (void)obj; (void)method;
 
     blobmsg_parse(policy, __ARG_MAX, tb, blob_data(msg), blob_len(msg));
-    if (!tb[ARG_MODEM] || !tb[ARG_ID])
+    if (!tb[ARG_MODEM] || blobmsg_get_positive_i64(tb[ARG_ID], &id) != 0)
         return UBUS_STATUS_INVALID_ARGUMENT;
     section = blobmsg_get_string(tb[ARG_MODEM]);
     if (sqlite3_prepare_v2(app.db.sql,
             "SELECT id,direction,sender,recipient,timestamp,content,complete,revision,is_read,send_success "
             "FROM messages WHERE id=? AND modem_id=?", -1, &stmt, NULL) != SQLITE_OK)
         goto error;
-    sqlite3_bind_int64(stmt, 1, blobmsg_get_u64(tb[ARG_ID]));
+    sqlite3_bind_int64(stmt, 1, id);
     sqlite3_bind_text(stmt, 2, section, -1, SQLITE_TRANSIENT);
     if (sqlite3_step(stmt) != SQLITE_ROW) {
         sqlite3_finalize(stmt);
@@ -793,17 +825,28 @@ static int send_method(struct ubus_context *ctx, struct ubus_object *obj,
     unsigned char pdus[SMS_MAX_PARTS][SMS_MAX_PDU_LENGTH];
     int lengths[SMS_MAX_PARTS];
     char hex[SMS_MAX_PDU_LENGTH * 2 + 1];
-    const char *recipient, *content, *number;
-    int parts, success = 1;
+    const char *recipient, *content, *number, *request_id = NULL;
+    int parts, success = 1, managed, managed_record_created = 0;
     char *output = NULL;
     sqlite3_stmt *stmt = NULL;
     struct blob_buf b = {};
-    (void)obj; (void)method;
+    (void)obj;
+    managed = !strcmp(method, "send_managed");
     blobmsg_parse(policy, __ARG_MAX, tb, blob_data(msg), blob_len(msg));
     if (!tb[ARG_MODEM] || !tb[ARG_RECIPIENT] || !tb[ARG_CONTENT])
         return UBUS_STATUS_INVALID_ARGUMENT;
     if (load_config(blobmsg_get_string(tb[ARG_MODEM]), &cfg) != 0)
         goto error;
+    if (managed && !strcmp(cfg.mode, "direct")) {
+        reply_error(ctx, req, "managed send requires database mode");
+        return UBUS_STATUS_OK;
+    }
+    if (managed) {
+        if (!tb[ARG_REQUEST_ID] ||
+            !valid_id(blobmsg_get_string(tb[ARG_REQUEST_ID])))
+            return UBUS_STATUS_INVALID_ARGUMENT;
+        request_id = blobmsg_get_string(tb[ARG_REQUEST_ID]);
+    }
     if (strcmp(cfg.mode, "direct") && prepare_database_mode(&cfg) != 0)
         goto error;
     recipient = blobmsg_get_string(tb[ARG_RECIPIENT]);
@@ -818,12 +861,60 @@ static int send_method(struct ubus_context *ctx, struct ubus_object *obj,
                                   (unsigned int)time(NULL));
     if (parts < 1)
         goto error;
+    if (managed) {
+        if (sqlite3_prepare_v2(app.db.sql,
+                "INSERT OR IGNORE INTO managed_sends(request_id,modem_id,recipient,content,state,created_at,updated_at) "
+                "VALUES(?,?,?,?,'sending',strftime('%s','now'),strftime('%s','now'))",
+                -1, &stmt, NULL) != SQLITE_OK)
+            goto error;
+        sqlite3_bind_text(stmt, 1, request_id, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 2, cfg.section, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 3, recipient, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 4, content, -1, SQLITE_TRANSIENT);
+        if (sqlite3_step(stmt) != SQLITE_DONE)
+            goto error;
+        managed_record_created = sqlite3_changes(app.db.sql) > 0;
+        sqlite3_finalize(stmt); stmt = NULL;
+        if (!managed_record_created) {
+            const char *stored_modem, *stored_recipient, *stored_content, *state;
+            int stored_parts;
+            if (sqlite3_prepare_v2(app.db.sql,
+                    "SELECT modem_id,recipient,content,state,parts FROM managed_sends WHERE request_id=?",
+                    -1, &stmt, NULL) != SQLITE_OK)
+                goto error;
+            sqlite3_bind_text(stmt, 1, request_id, -1, SQLITE_TRANSIENT);
+            if (sqlite3_step(stmt) != SQLITE_ROW)
+                goto error;
+            stored_modem = (const char *)sqlite3_column_text(stmt, 0);
+            stored_recipient = (const char *)sqlite3_column_text(stmt, 1);
+            stored_content = (const char *)sqlite3_column_text(stmt, 2);
+            state = (const char *)sqlite3_column_text(stmt, 3);
+            stored_parts = sqlite3_column_int(stmt, 4);
+            if (strcmp(stored_modem, cfg.section) || strcmp(stored_recipient, recipient) ||
+                strcmp(stored_content, content)) {
+                sqlite3_finalize(stmt);
+                reply_error(ctx, req, "request_id payload conflict");
+                return UBUS_STATUS_OK;
+            }
+            blob_buf_init(&b, 0);
+            blobmsg_add_string(&b, "status", !strcmp(state, "success") ? "success" : "error");
+            blobmsg_add_u32(&b, "parts", stored_parts);
+            blobmsg_add_u8(&b, "replayed", 1);
+            if (!strcmp(state, "sending"))
+                blobmsg_add_string(&b, "error", "request is already in progress");
+            ubus_send_reply(ctx, req, b.head);
+            blob_buf_free(&b);
+            sqlite3_finalize(stmt);
+            return UBUS_STATUS_OK;
+        }
+    }
     for (int part = 0; part < parts; part++) {
         free(output); output = NULL;
         for (int i = 0; i < lengths[part]; i++)
             snprintf(hex + i * 2, 3, "%02X", pdus[part][i]);
         hex[lengths[part] * 2] = '\0';
-        if (run_tom(&cfg, "s", hex, -1, NULL, &output) != 0) {
+        if (run_tom(&cfg, "s", hex, -1, NULL, &output) != 0 ||
+            !tom_sms_send_succeeded(output)) {
             success = 0;
             break;
         }
@@ -842,6 +933,22 @@ static int send_method(struct ubus_context *ctx, struct ubus_object *obj,
             goto error;
         sqlite3_finalize(stmt); stmt = NULL;
     }
+    if (managed) {
+        if (sqlite3_prepare_v2(app.db.sql,
+                "UPDATE managed_sends SET state=?,parts=?,error=?,updated_at=strftime('%s','now') WHERE request_id=?",
+                -1, &stmt, NULL) != SQLITE_OK)
+            goto error;
+        sqlite3_bind_text(stmt, 1, success ? "success" : "error", -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 2, parts);
+        if (success)
+            sqlite3_bind_null(stmt, 3);
+        else
+            sqlite3_bind_text(stmt, 3, "modem send failed", -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 4, request_id, -1, SQLITE_TRANSIENT);
+        if (sqlite3_step(stmt) != SQLITE_DONE)
+            goto error;
+        sqlite3_finalize(stmt); stmt = NULL;
+    }
     blob_buf_init(&b, 0);
     blobmsg_add_string(&b, "status", success ? "success" : "error");
     blobmsg_add_u32(&b, "parts", parts);
@@ -853,6 +960,14 @@ static int send_method(struct ubus_context *ctx, struct ubus_object *obj,
     return UBUS_STATUS_OK;
 error:
     sqlite3_finalize(stmt);
+    if (managed && managed_record_created && request_id && app.db.sql &&
+        sqlite3_prepare_v2(app.db.sql,
+            "UPDATE managed_sends SET state='error',error='internal send failure',updated_at=strftime('%s','now') WHERE request_id=?",
+            -1, &stmt, NULL) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, request_id, -1, SQLITE_TRANSIENT);
+        (void)sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
     free(output);
     reply_error(ctx, req, "SMS encoding, transport, or history write failed");
     return UBUS_STATUS_OK;
@@ -866,6 +981,7 @@ static int delete_method(struct ubus_context *ctx, struct ubus_object *obj,
     struct modem_config cfg;
     struct blob_buf b = {};
     int changed = 0;
+    int64_t id;
     char *output = NULL;
     (void)obj; (void)method;
     blobmsg_parse(policy, __ARG_MAX, tb, blob_data(msg), blob_len(msg));
@@ -877,8 +993,8 @@ static int delete_method(struct ubus_context *ctx, struct ubus_object *obj,
             goto error;
         changed = 1;
     } else {
-        if (!tb[ARG_ID] || sms_db_delete_message(&app.db, cfg.section,
-                blobmsg_get_u64(tb[ARG_ID]), &changed) != 0)
+        if (blobmsg_get_positive_i64(tb[ARG_ID], &id) != 0 ||
+            sms_db_delete_message(&app.db, cfg.section, id, &changed) != 0)
             goto error;
     }
     blob_buf_init(&b, 0);
@@ -901,15 +1017,16 @@ static int mark_read_method(struct ubus_context *ctx, struct ubus_object *obj,
     struct blob_attr *tb[__ARG_MAX];
     sqlite3_stmt *stmt = NULL;
     struct blob_buf b = {};
+    int64_t id;
     (void)obj; (void)method;
     blobmsg_parse(policy, __ARG_MAX, tb, blob_data(msg), blob_len(msg));
-    if (!tb[ARG_MODEM] || !tb[ARG_ID])
+    if (!tb[ARG_MODEM] || blobmsg_get_positive_i64(tb[ARG_ID], &id) != 0)
         return UBUS_STATUS_INVALID_ARGUMENT;
     if (sqlite3_prepare_v2(app.db.sql,
             "UPDATE messages SET is_read=1,updated_at=strftime('%s','now') WHERE id=? AND modem_id=? AND direction='received'",
             -1, &stmt, NULL) != SQLITE_OK)
         goto error;
-    sqlite3_bind_int64(stmt, 1, blobmsg_get_u64(tb[ARG_ID]));
+    sqlite3_bind_int64(stmt, 1, id);
     sqlite3_bind_text(stmt, 2, blobmsg_get_string(tb[ARG_MODEM]), -1, SQLITE_TRANSIENT);
     if (sqlite3_step(stmt) != SQLITE_DONE)
         goto error;
@@ -1019,7 +1136,7 @@ static int modem_list_method(struct ubus_context *ctx, struct ubus_object *obj,
         blobmsg_add_string(&b, "modem_id", section->e.name);
         blobmsg_add_string(&b, "name", option_string(uci, section, "name", section->e.name));
         blobmsg_add_string(&b, "mode", option_string(uci, section, "sms_mode", "database_poll"));
-        blobmsg_add_u8(&b, "use_ubus", !strcmp(option_string(uci, section, "use_ubus", "0"), "1"));
+        blobmsg_add_u8(&b, "use_ubus", !strcmp(option_string(uci, section, "use_ubus", "1"), "1"));
         blobmsg_add_u8(&b, "enabled", strcmp(option_string(uci, section, "enabled", "1"), "0") != 0);
         snprintf(state_path, sizeof(state_path), "/var/run/qmodem/settings/%s.json", section->e.name);
         state = json_object_from_file(state_path);
@@ -1116,9 +1233,11 @@ static int delivery_complete_method(struct ubus_context *ctx, struct ubus_object
 {
     struct blob_attr *tb[__ARG_MAX]; sqlite3_stmt *stmt = NULL; struct blob_buf b = {};
     const char *state, *error = NULL;
+    int64_t delivery_id;
     (void)obj; (void)method;
     blobmsg_parse(policy, __ARG_MAX, tb, blob_data(msg), blob_len(msg));
-    if (!tb[ARG_DELIVERY_ID] || !tb[ARG_SUCCESS]) return UBUS_STATUS_INVALID_ARGUMENT;
+    if (blobmsg_get_positive_i64(tb[ARG_DELIVERY_ID], &delivery_id) != 0 ||
+        !tb[ARG_SUCCESS]) return UBUS_STATUS_INVALID_ARGUMENT;
     state = blobmsg_get_bool(tb[ARG_SUCCESS]) ? "done" : "pending";
     if (tb[ARG_ERROR]) error = blobmsg_get_string(tb[ARG_ERROR]);
     if (sqlite3_prepare_v2(app.db.sql,
@@ -1129,7 +1248,7 @@ static int delivery_complete_method(struct ubus_context *ctx, struct ubus_object
     sqlite3_bind_text(stmt, 2, state, -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 3, state, -1, SQLITE_TRANSIENT);
     if (error) sqlite3_bind_text(stmt, 4, error, -1, SQLITE_TRANSIENT); else sqlite3_bind_null(stmt, 4);
-    sqlite3_bind_int64(stmt, 5, blobmsg_get_u64(tb[ARG_DELIVERY_ID]));
+    sqlite3_bind_int64(stmt, 5, delivery_id);
     if (sqlite3_step(stmt) != SQLITE_DONE) goto error;
     sqlite3_finalize(stmt); blob_buf_init(&b, 0); blobmsg_add_string(&b, "status", "success");
     ubus_send_reply(ctx, req, b.head); blob_buf_free(&b); return UBUS_STATUS_OK;
@@ -1247,6 +1366,7 @@ static const struct ubus_method methods[] = {
     UBUS_METHOD("list", list_method, policy),
     UBUS_METHOD("get", get_method, policy),
     UBUS_METHOD("send", send_method, policy),
+    UBUS_METHOD("send_managed", send_method, policy),
     UBUS_METHOD("delete", delete_method, policy),
     UBUS_METHOD("mark_read", mark_read_method, policy),
     UBUS_METHOD_NOARG("modem_list", modem_list_method),

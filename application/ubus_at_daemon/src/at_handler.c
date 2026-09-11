@@ -164,13 +164,19 @@ int send_at_command_with_response(at_port_instance_t *port, const char *cmd, int
     size_t send_len;
     
     if (is_raw) {
+        size_t hex_len = strlen(cmd);
+        if (hex_len == 0 || hex_len % 2 != 0) {
+            pthread_mutex_unlock(&port->write_mutex);
+            port->waiting_for_response = 0;
+            return -1;
+        }
         send_data = hex_to_string(cmd);
         if (!send_data) {
             pthread_mutex_unlock(&port->write_mutex);
             port->waiting_for_response = 0;
             return -1;
         }
-        send_len = strlen(send_data);
+        send_len = hex_len / 2;
     } else {
         send_len = strlen(cmd) + strlen(AT_CMD_TERMINATOR);
         send_data = malloc(send_len + 1);
@@ -254,12 +260,17 @@ int send_at_command_only(at_port_instance_t *port, const char *cmd, int is_raw) 
     size_t send_len;
     
     if (is_raw) {
+        size_t hex_len = strlen(cmd);
+        if (hex_len == 0 || hex_len % 2 != 0) {
+            pthread_mutex_unlock(&port->write_mutex);
+            return -1;
+        }
         send_data = hex_to_string(cmd);
         if (!send_data) {
             pthread_mutex_unlock(&port->write_mutex);
             return -1;
         }
-        send_len = strlen(send_data);
+        send_len = hex_len / 2;
     } else {
         send_len = strlen(cmd);
         send_data = malloc(send_len + 1);
@@ -394,6 +405,30 @@ void *reader_thread_func(void *arg) {
                     }
                     
                     line_start = line_end + 2;
+                }
+
+                /* SMS input prompts are not terminated by CRLF. Consume the
+                 * standalone prompt once it matches the requested end flag. */
+                if (line_start[0] != '\0') {
+                    char matched_flag[64];
+                    int matched_prompt = 0;
+
+                    pthread_mutex_lock(&port->response_mutex);
+                    if (port->waiting_for_response &&
+                        check_end_flags(port, line_start, matched_flag) &&
+                        !strcmp(matched_flag, ">")) {
+                        clock_gettime(CLOCK_REALTIME, &port->current_response.end_time);
+                        strcpy(port->current_response.end_flag_matched, matched_flag);
+                        port->current_response.status = 0;
+                        port->waiting_for_response = 0;
+                        pthread_cond_signal(&port->response_cond);
+                        matched_prompt = 1;
+                    }
+                    pthread_mutex_unlock(&port->response_mutex);
+
+                    if (matched_prompt) {
+                        line_start += strlen(line_start);
+                    }
                 }
                 
                 // Move remaining data to beginning of buffer

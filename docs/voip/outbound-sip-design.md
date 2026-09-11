@@ -13,18 +13,18 @@ the policy and distribution point.
 
 ## Configuration model
 
-`qmodem_voip.sip.mode` selects `lan` (the current local consumer/registrar) or
-`outbound`. Outbound settings are isolated under the same UCI section:
+`qmodem_sip.inbound` and `qmodem_sip.outbound` are independent UCI sections.
+Both directions may run concurrently. Outbound settings use these option names:
 
 | Option | Meaning |
 | --- | --- |
-| `outbound_server` | Asterisk hostname or IP, validated to a safe token |
-| `outbound_port` | SIP TLS destination port, normally 5061 |
-| `outbound_transport` | `tls`; other values fail validation |
-| `outbound_username` | SIP auth username |
-| `outbound_password` | SIP auth secret; never logged |
-| `outbound_realm` | Optional digest realm; learned when empty |
-| `outbound_register_interval` | Refresh interval in seconds |
+| `server` | Asterisk hostname or IP, validated to a safe token |
+| `port` | SIP TLS destination port, normally 5061 |
+| `transport` | `tls`; other values fail validation |
+| `username` | SIP auth username |
+| `password` | SIP auth secret; never logged |
+| `realm` | Optional digest realm; learned when empty |
+| `register_interval` | Refresh interval in seconds |
 
 The local `interface` option continues to select the source address for SIP
 and RTP. It must resolve to an address present on the device (for example

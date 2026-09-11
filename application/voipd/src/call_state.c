@@ -44,7 +44,8 @@ uint64_t qmodem_voip_call_duration_seconds(const struct qmodem_voip_call *call)
 static int endpoint_is_source(enum qmodem_voip_endpoint endpoint)
 {
 	return endpoint == QMODEM_VOIP_ENDPOINT_BROWSER ||
-	       endpoint == QMODEM_VOIP_ENDPOINT_LAN_SIP;
+	       endpoint == QMODEM_VOIP_ENDPOINT_LAN_SIP ||
+	       endpoint == QMODEM_VOIP_ENDPOINT_EXTERNAL_SIP;
 }
 
 static int valid_number(const char *number)

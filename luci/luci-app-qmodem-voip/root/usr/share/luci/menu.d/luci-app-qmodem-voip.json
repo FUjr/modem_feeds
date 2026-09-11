@@ -10,6 +10,17 @@
 			"acl": [ "luci-app-qmodem-voip" ]
 		}
 	},
+	"admin/modem/qmodem/qmodem-sipd": {
+		"title": "SIP Service",
+		"order": 98,
+		"action": {
+			"type": "view",
+			"path": "qmodem-voip/sip"
+		},
+		"depends": {
+			"acl": [ "luci-app-qmodem-voip" ]
+		}
+	},
 	"admin/modem/advanced/qmodem-voip": {
 		"action": {
 			"type": "alias",

@@ -12,6 +12,7 @@ platform=$(uci -q get qmodem.$config_section.platform)
 pdp_index=$(uci -q get qmodem.$config_section.pdp_index)
 [ -z "$pdp_index" ] && pdp_index=$(uci -q get qmodem.$config_section.suggest_pdp_index)
 use_ubus=$(uci -q get qmodem.$config_section.use_ubus)
+[ -n "$use_ubus" ] || use_ubus=1
 modem_path=$(uci -q get qmodem.$config_section.path)
 modem_slot=$(basename $modem_path)
 
@@ -19,7 +20,7 @@ modem_slot=$(basename $modem_path)
     pdp_index="1"
 }
 
-[ "${use_ubus:-0}" -eq 1 ] && use_ubus_flag="-u"
+[ "$use_ubus" -eq 1 ] && use_ubus_flag="-u"
 
 #please update dynamic_load.json to add new vendor
 vendor_script_prefix="$qmodem_home/vendor"

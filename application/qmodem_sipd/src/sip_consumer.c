@@ -54,7 +54,7 @@
 #define MAX_SIP_BODY 2048
 #define RATE_SLOTS 32
 #define UBUS_ACTION_TIMEOUT_MS 30000
-#define PIDFILE "/var/run/qmodem_voip_sip_consumer.pid"
+#define DEFAULT_PIDFILE "/var/run/qmodem_voip_sip_consumer.pid"
 #define MEDIA_ATTACH_RETRY_MS 250
 #define MEDIA_ATTACH_RETRY_MAX 20
 #define EVENT_LOOP_SLICE_MS 10
@@ -112,9 +112,23 @@ struct consumer {
 	char outbound_aor[320];
 	char outbound_password[128];
 	char outbound_realm[128];
+	char incoming_number[64];
+	int incoming_caller_id_withheld;
 	unsigned outbound_port;
 	unsigned outbound_interval;
 	int outbound_registered;
+	char direction[9];
+	char pidfile[128];
+	char sms_modem[64];
+	unsigned listen_port;
+	struct ubus_object ubus_object;
+	char ubus_object_name[32];
+	struct {
+		struct ubus_request_data request;
+		struct uloop_timeout timeout;
+		int active;
+		int auth_retried;
+	} pending_message;
 };
 
 static int g711_bridge_encode(enum qmodem_voip_media_codec codec,
@@ -190,7 +204,7 @@ static int outbound_setup_registration(void)
 	if (!app.outbound || !app.outbound_server[0] || !app.outbound_password[0])
 		return -1;
 	(void)snprintf(contact, sizeof(contact), "<sip:%s@%s:%u;transport=tls>",
-		app.username, app.lan_address, 5061U);
+		app.username, app.lan_address, app.listen_port);
 	contact_str = pj_str(contact);
 	if (pjsip_regc_create(app.endpoint, NULL, &outbound_regc_cb, &app.regc) != PJ_SUCCESS ||
 		pjsip_regc_init(app.regc, &server, &aor, &aor, 1, &contact_str,
@@ -477,7 +491,8 @@ static int ubus_action(const char *action, const char *number)
 	if (!app.ubus || ubus_lookup_id(app.ubus, "qmodem_voip", &object) != 0)
 		return -1;
 	blob_buf_init(&buffer, 0);
-	blobmsg_add_string(&buffer, "endpoint", "lan_sip");
+	blobmsg_add_string(&buffer, "endpoint",
+		app.outbound ? "external_sip" : "lan_sip");
 	if (number)
 		blobmsg_add_string(&buffer, "number", number);
 	result = ubus_invoke(app.ubus, object, action, buffer.head, NULL, NULL,
@@ -617,7 +632,7 @@ static int set_lan_answer(pjsip_rx_data *request, pjsip_tx_data *response,
 	if (to->tag.slen == 0)
 		pj_create_unique_string(response->pool, &to->tag);
 	length = snprintf(contact_value, sizeof(contact_value),
-		"sip:qmodem_voip@%s:%u%s", address, app.outbound ? 5061U : 5060U,
+		"sip:qmodem_voip@%s:%u%s", address, app.listen_port,
 		app.outbound ? ";transport=tls" : "");
 	if (length < 0 || length >= (int)sizeof(contact_value))
 		return -1;
@@ -904,7 +919,7 @@ static void send_incoming_invite(void)
 {
 	pjsip_method method;
 	pjsip_tx_data *request;
-	char address[64];
+	char address[384];
 	pj_str_t target = pj_str(app.binding);
 	pj_str_t from;
 	pj_str_t to = pj_str(app.binding);
@@ -916,16 +931,22 @@ static void send_incoming_invite(void)
 	if (!binding_active() || app.call.active)
 		return;
 	(void)snprintf(address, sizeof(address), "%s:%s@%s:%u%s",
-		app.outbound ? "sips" : "sip",
-		app.outbound ? app.username : "cellular", app.lan_address,
-		app.outbound ? 5061U : 5060U, app.outbound ? ";transport=tls" : "");
+		app.outbound ? "sips" : "sip", app.username, app.lan_address,
+		app.listen_port, app.outbound ? ";transport=tls" : "");
 	from = pj_str(address);
 	contact = pj_str(address);
 	pjsip_method_set(&method, PJSIP_INVITE_METHOD);
 	if (pjsip_endpt_create_request(app.endpoint, &method, &target, &from, &to,
-				      &contact, NULL, 1, NULL, &request) != PJ_SUCCESS ||
-	    set_incoming_offer(request) != 0)
+					      &contact, NULL, 1, NULL, &request) != PJ_SUCCESS ||
+		set_incoming_offer(request) != 0)
 		return;
+	if (!app.incoming_caller_id_withheld && app.incoming_number[0] &&
+		strspn(app.incoming_number, "0123456789+") == strlen(app.incoming_number)) {
+		char asserted_identity[160];
+		(void)snprintf(asserted_identity, sizeof(asserted_identity), "<sip:%s@%s>",
+			app.incoming_number, app.lan_address);
+		add_string_header(request, "P-Asserted-Identity", asserted_identity);
+	}
 	cid = (pjsip_cid_hdr *)pjsip_msg_find_hdr(request->msg, PJSIP_H_CALL_ID, NULL);
 	if (!cid || copy_pj_string(call_id, sizeof(call_id), &cid->id) != 0 ||
 	    qmodem_voip_sip_call_begin(&app.call, QMODEM_VOIP_SIP_CALL_CELLULAR,
@@ -1056,6 +1077,259 @@ static void end_call(pjsip_rx_data *request, int cancel)
 	send_response(request, status, PJ_FALSE, PJ_FALSE);
 }
 
+static int sms_send_ok;
+
+static void sms_send_reply(struct ubus_request *request, int type,
+			   struct blob_attr *message)
+{
+	static const struct blobmsg_policy reply_policy[] = {
+		{ .name = "status", .type = BLOBMSG_TYPE_STRING }
+	};
+	struct blob_attr *values[ARRAY_SIZE(reply_policy)] = { 0 };
+	(void)request; (void)type;
+	blobmsg_parse(reply_policy, ARRAY_SIZE(reply_policy), values,
+		blob_data(message), blob_len(message));
+	sms_send_ok = values[0] && !strcmp(blobmsg_get_string(values[0]), "success");
+}
+
+static int message_request_id(pjsip_rx_data *request, char output[64])
+{
+	const pj_str_t *call_id;
+	size_t offset = 0;
+	if (!request->msg_info.cid || !request->msg_info.cseq)
+		return -1;
+	call_id = &request->msg_info.cid->id;
+	for (pj_ssize_t i = 0; i < call_id->slen && offset < 44; i++) {
+		unsigned char c = (unsigned char)call_id->ptr[i];
+		output[offset++] = ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '_' || c == '-') ? (char)c : '_';
+	}
+	(void)snprintf(output + offset, 64 - offset, "-%ld-%s",
+		(long)request->msg_info.cseq->cseq, app.direction);
+	return 0;
+}
+
+static void message_to_sms(pjsip_rx_data *request)
+{
+	struct blob_buf buffer = { 0 };
+	struct pjsip_msg_body *body = request->msg_info.msg->body;
+	uint32_t object;
+	char number[64], request_id[64], content[MAX_SIP_BODY + 1];
+	if (!trusted_outbound_request(request) && !authenticate(request))
+		return;
+	if (!app.sms_modem[0] || ubus_lookup_id(app.ubus, "qmodem.sms", &object) != 0) {
+		send_response(request, PJSIP_SC_TEMPORARILY_UNAVAILABLE, PJ_FALSE, PJ_FALSE);
+		return;
+	}
+	if (!body || !str_equal(&body->content_type.type, "text") ||
+	    !str_equal(&body->content_type.subtype, "plain")) {
+		send_response(request, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE, PJ_FALSE, PJ_FALSE);
+		return;
+	}
+	if (body->len <= 0 || body->len > MAX_SIP_BODY) {
+		send_response(request, PJSIP_SC_REQUEST_ENTITY_TOO_LARGE, PJ_FALSE, PJ_FALSE);
+		return;
+	}
+	if (sip_number(request, number) != 0 || message_request_id(request, request_id) != 0) {
+		send_response(request, PJSIP_SC_BAD_REQUEST, PJ_FALSE, PJ_FALSE);
+		return;
+	}
+	memcpy(content, body->data, (size_t)body->len);
+	content[body->len] = '\0';
+	blob_buf_init(&buffer, 0);
+	blobmsg_add_string(&buffer, "modem_id", app.sms_modem);
+	blobmsg_add_string(&buffer, "recipient", number);
+	blobmsg_add_string(&buffer, "content", content);
+	blobmsg_add_string(&buffer, "request_id", request_id);
+	sms_send_ok = 0;
+	if (ubus_invoke(app.ubus, object, "send_managed", buffer.head, sms_send_reply,
+		NULL, UBUS_ACTION_TIMEOUT_MS) != 0 || !sms_send_ok)
+		send_response(request, PJSIP_SC_SERVICE_UNAVAILABLE, PJ_FALSE, PJ_FALSE);
+	else
+		send_response(request, PJSIP_SC_OK, PJ_FALSE, PJ_FALSE);
+	blob_buf_free(&buffer);
+	memset(content, 0, sizeof(content));
+}
+
+enum {
+	MESSAGE_DIRECTION, MESSAGE_RECIPIENT, MESSAGE_SENDER, MESSAGE_TIMESTAMP,
+	MESSAGE_CONTENT, MESSAGE_ID, MESSAGE_REVISION, MESSAGE_MODEM, MESSAGE_MAX
+};
+
+static const struct blobmsg_policy message_policy[MESSAGE_MAX] = {
+	[MESSAGE_DIRECTION] = { .name = "direction", .type = BLOBMSG_TYPE_STRING },
+	[MESSAGE_RECIPIENT] = { .name = "recipient_uri", .type = BLOBMSG_TYPE_STRING },
+	[MESSAGE_SENDER] = { .name = "sender", .type = BLOBMSG_TYPE_STRING },
+	[MESSAGE_TIMESTAMP] = { .name = "timestamp", .type = BLOBMSG_TYPE_UNSPEC },
+	[MESSAGE_CONTENT] = { .name = "content", .type = BLOBMSG_TYPE_STRING },
+	[MESSAGE_ID] = { .name = "message_id", .type = BLOBMSG_TYPE_STRING },
+	[MESSAGE_REVISION] = { .name = "revision", .type = BLOBMSG_TYPE_UNSPEC },
+	[MESSAGE_MODEM] = { .name = "modem_id", .type = BLOBMSG_TYPE_STRING }
+};
+
+static void complete_message(const char *status, int sip_status, const char *error)
+{
+	struct blob_buf buffer = { 0 };
+	if (!app.pending_message.active)
+		return;
+	uloop_timeout_cancel(&app.pending_message.timeout);
+	blob_buf_init(&buffer, 0);
+	blobmsg_add_string(&buffer, "status", status);
+	blobmsg_add_u32(&buffer, "sip_status", (uint32_t)sip_status);
+	if (error)
+		blobmsg_add_string(&buffer, "error", error);
+	ubus_send_reply(app.ubus, &app.pending_message.request, buffer.head);
+	ubus_complete_deferred_request(app.ubus, &app.pending_message.request,
+		UBUS_STATUS_OK);
+	blob_buf_free(&buffer);
+	app.pending_message.active = 0;
+	app.pending_message.auth_retried = 0;
+}
+
+static void message_timeout(struct uloop_timeout *timeout)
+{
+	(void)timeout;
+	complete_message("error", 408, "SIP MESSAGE timed out");
+}
+
+static void message_response(void *token, pjsip_event *event)
+{
+	pjsip_transaction *transaction;
+	pjsip_tx_data *retry = NULL;
+	pj_status_t status;
+	(void)token;
+	if (!event || event->type != PJSIP_EVENT_TSX_STATE)
+		return;
+	transaction = event->body.tsx_state.tsx;
+	if (!transaction || transaction->status_code < 200)
+		return;
+	if (app.outbound && !app.pending_message.auth_retried &&
+	    event->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
+	    (transaction->status_code == PJSIP_SC_UNAUTHORIZED ||
+	     transaction->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED)) {
+		app.pending_message.auth_retried = 1;
+		status = pjsip_auth_clt_reinit_req(&app.outbound_auth,
+			event->body.tsx_state.src.rdata, transaction->last_tx, &retry);
+		if (status == PJ_SUCCESS) {
+			PJSIP_MSG_CSEQ_HDR(retry->msg)->cseq++;
+			status = pjsip_endpt_send_request(app.endpoint, retry,
+				UBUS_ACTION_TIMEOUT_MS, NULL, message_response);
+		}
+		if (status == PJ_SUCCESS)
+			return;
+		complete_message("error", 503, "SIP MESSAGE authentication failed");
+		return;
+	}
+	if (transaction->status_code >= 200 && transaction->status_code < 300)
+		complete_message("success", transaction->status_code, NULL);
+	else
+		complete_message("error", transaction->status_code,
+			"remote SIP endpoint rejected MESSAGE");
+}
+
+static int send_message_method(struct ubus_context *context, struct ubus_object *object,
+	struct ubus_request_data *request, const char *method, struct blob_attr *message)
+{
+	struct blob_attr *values[MESSAGE_MAX] = { 0 };
+	pjsip_tx_data *tx = NULL;
+	pjsip_uri *parsed;
+	pjsip_method message_method;
+	pj_str_t target, from, to, contact, type, subtype, text;
+	pj_str_t message_name = pj_str((char *)"MESSAGE");
+	char local_uri[384], target_uri[384], reply_uri[384] = { 0 };
+	const char *recipient, *content;
+	const char *sender = NULL;
+	(void)context; (void)object; (void)method;
+	blobmsg_parse(message_policy, MESSAGE_MAX, values, blob_data(message), blob_len(message));
+	if (!values[MESSAGE_RECIPIENT] || !values[MESSAGE_CONTENT] ||
+	    !values[MESSAGE_ID] || app.pending_message.active)
+		return UBUS_STATUS_INVALID_ARGUMENT;
+	recipient = blobmsg_get_string(values[MESSAGE_RECIPIENT]);
+	content = blobmsg_get_string(values[MESSAGE_CONTENT]);
+	if (values[MESSAGE_SENDER])
+		sender = blobmsg_get_string(values[MESSAGE_SENDER]);
+	if (!*content || strlen(content) > MAX_SIP_BODY || strlen(recipient) >= sizeof(target_uri))
+		return UBUS_STATUS_INVALID_ARGUMENT;
+	if (!binding_active())
+		return UBUS_STATUS_NOT_FOUND;
+	(void)snprintf(target_uri, sizeof(target_uri), "%s",
+		app.outbound ? recipient : app.binding);
+	parsed = pjsip_parse_uri(app.pool, target_uri, strlen(target_uri), 0);
+	if (!parsed)
+		return UBUS_STATUS_INVALID_ARGUMENT;
+	(void)snprintf(local_uri, sizeof(local_uri), "%s:%s@%s:%u%s",
+		app.outbound ? "sips" : "sip", app.username, app.lan_address,
+		app.listen_port, app.outbound ? ";transport=tls" : "");
+	/* Keep From bound to the authenticated SIP account, and advertise the
+	 * cellular sender as the standard logical return URI. */
+	if (sender && *sender && strspn(sender, "0123456789+*#,p") == strlen(sender) &&
+		strlen(sender) < sizeof(reply_uri)) {
+		(void)snprintf(reply_uri, sizeof(reply_uri), "%s:%s@%s:%u%s",
+			app.outbound ? "sips" : "sip", sender, app.lan_address,
+			app.listen_port, app.outbound ? ";transport=tls" : "");
+	}
+	target = pj_str(target_uri);
+	from = pj_str(local_uri);
+	to = pj_str((char *)recipient);
+	contact = pj_str(local_uri);
+	pjsip_method_init_np(&message_method, &message_name);
+	if (pjsip_endpt_create_request(app.endpoint, &message_method, &target,
+		&from, &to, &contact, NULL, -1, NULL, &tx) != PJ_SUCCESS)
+		return UBUS_STATUS_UNKNOWN_ERROR;
+	type = pj_str((char *)"text");
+	subtype = pj_str((char *)"plain");
+	text = pj_str((char *)content);
+	tx->msg->body = pjsip_msg_body_create(tx->pool, &type, &subtype, &text);
+	if (!tx->msg->body) {
+		pjsip_tx_data_dec_ref(tx);
+		return UBUS_STATUS_UNKNOWN_ERROR;
+	}
+	if (reply_uri[0])
+		add_string_header(tx, "Reply-To", reply_uri);
+	if (values[MESSAGE_SENDER])
+		add_string_header(tx, "X-QModem-SMS-From", blobmsg_get_string(values[MESSAGE_SENDER]));
+	add_string_header(tx, "X-QModem-Message-ID", blobmsg_get_string(values[MESSAGE_ID]));
+	ubus_defer_request(app.ubus, request, &app.pending_message.request);
+	app.pending_message.active = 1;
+	app.pending_message.auth_retried = 0;
+	app.pending_message.timeout.cb = message_timeout;
+	uloop_timeout_set(&app.pending_message.timeout, UBUS_ACTION_TIMEOUT_MS);
+	if (pjsip_endpt_send_request(app.endpoint, tx, UBUS_ACTION_TIMEOUT_MS,
+		NULL, message_response) != PJ_SUCCESS) {
+		complete_message("error", 503, "SIP MESSAGE could not be sent");
+	}
+	return UBUS_STATUS_OK;
+}
+
+static int sip_status_method(struct ubus_context *context, struct ubus_object *object,
+	struct ubus_request_data *request, const char *method, struct blob_attr *message)
+{
+	struct blob_buf buffer = { 0 };
+	uint32_t id;
+	(void)object; (void)method; (void)message;
+	blob_buf_init(&buffer, 0);
+	blobmsg_add_string(&buffer, "status", "ok");
+	blobmsg_add_string(&buffer, "direction", app.direction);
+	blobmsg_add_u8(&buffer, "registered",
+		app.outbound ? app.outbound_registered : binding_active());
+	blobmsg_add_u8(&buffer, "voipd_available",
+		ubus_lookup_id(context, "qmodem_voip", &id) == 0);
+	blobmsg_add_u8(&buffer, "smsd_available",
+		ubus_lookup_id(context, "qmodem.sms", &id) == 0);
+	blobmsg_add_u8(&buffer, "sms_enabled", app.sms_modem[0] != '\0');
+	ubus_send_reply(context, request, buffer.head);
+	blob_buf_free(&buffer);
+	return UBUS_STATUS_OK;
+}
+
+static const struct ubus_method sip_methods[] = {
+	UBUS_METHOD_NOARG("status", sip_status_method),
+	UBUS_METHOD("send_message", send_message_method, message_policy)
+};
+
+static struct ubus_object_type sip_object_type =
+	UBUS_OBJECT_TYPE("qmodem.sip.direction", sip_methods);
+
 static pj_bool_t on_request(pjsip_rx_data *request)
 {
 	pjsip_method *method = &request->msg_info.msg->line.req.method;
@@ -1082,6 +1356,10 @@ static pj_bool_t on_request(pjsip_rx_data *request)
 		return PJ_TRUE;
 	}
 	if (method->id == PJSIP_ACK_METHOD) {
+		return PJ_TRUE;
+	}
+	if (method->id == PJSIP_OTHER_METHOD && str_equal(&method->name, "MESSAGE")) {
+		message_to_sms(request);
 		return PJ_TRUE;
 	}
 	if (method->id == PJSIP_OTHER_METHOD && str_equal(&method->name, "OPTIONS")) {
@@ -1420,7 +1698,9 @@ static void consumer_event(struct ubus_context *context,
 	static const struct blobmsg_policy policy[] = {
 		{ .name = "event", .type = BLOBMSG_TYPE_STRING },
 		{ .name = "state", .type = BLOBMSG_TYPE_STRING },
-		{ .name = "revision", .type = BLOBMSG_TYPE_UNSPEC }
+		{ .name = "revision", .type = BLOBMSG_TYPE_UNSPEC },
+		{ .name = "remote_number", .type = BLOBMSG_TYPE_STRING },
+		{ .name = "caller_id_withheld", .type = BLOBMSG_TYPE_UNSPEC }
 	};
 	struct blob_attr *values[ARRAY_SIZE(policy)] = { 0 };
 	(void)context;
@@ -1430,6 +1710,11 @@ static void consumer_event(struct ubus_context *context,
 		      blob_len(message));
 	if (!values[0] || !values[1])
 		return;
+	if (values[3])
+		(void)snprintf(app.incoming_number, sizeof(app.incoming_number), "%s",
+			blobmsg_get_string(values[3]));
+	if (values[4])
+		app.incoming_caller_id_withheld = blobmsg_get_u8(values[4]);
 	if (values[2]) {
 		if (blobmsg_type(values[2]) == BLOBMSG_TYPE_INT64)
 			app.media_revision = blobmsg_get_u64(values[2]);
@@ -1444,6 +1729,8 @@ static void consumer_event(struct ubus_context *context,
 			uloop_timeout_set(&app.media_attach_timeout, 0);
 		}
 	} else if (strcmp(blobmsg_get_string(values[0]), "release") == 0) {
+		app.incoming_number[0] = '\0';
+		app.incoming_caller_id_withheld = 0;
 		uloop_timeout_cancel(&app.media_attach_timeout);
 		if (app.pending_lan_response) {
 			app.pending_lan_response->msg->line.status.code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
@@ -1556,6 +1843,9 @@ int main(int argc, char **argv)
 	pj_time_val delay = {0, 0};
 	const char *outbound_config = NULL;
 	int i;
+	(void)snprintf(app.direction, sizeof(app.direction), "%s", "inbound");
+	(void)snprintf(app.pidfile, sizeof(app.pidfile), "%s", DEFAULT_PIDFILE);
+	app.listen_port = 5060;
 	if (argc < 7 || strcmp(argv[1], "--listen-address") != 0 ||
 	    strcmp(argv[3], "--advertise-address") != 0 ||
 	    strcmp(argv[5], "--media-socket-path") != 0 ||
@@ -1574,9 +1864,28 @@ int main(int argc, char **argv)
 			app.outbound = strcmp(argv[++i], "outbound") == 0;
 		else if (strcmp(argv[i], "--outbound-config") == 0 && i + 1 < argc)
 			outbound_config = argv[++i];
+		else if (strcmp(argv[i], "--direction") == 0 && i + 1 < argc) {
+			if (copy_config_value(app.direction, sizeof(app.direction), argv[++i]) != 0 ||
+			    (strcmp(app.direction, "inbound") && strcmp(app.direction, "outbound")))
+				return 2;
+		} else if (strcmp(argv[i], "--pidfile") == 0 && i + 1 < argc) {
+			if (copy_config_value(app.pidfile, sizeof(app.pidfile), argv[++i]) != 0)
+				return 2;
+		} else if (strcmp(argv[i], "--sms-modem") == 0 && i + 1 < argc) {
+			if (copy_config_value(app.sms_modem, sizeof(app.sms_modem), argv[++i]) != 0)
+				return 2;
+		} else if (strcmp(argv[i], "--listen-port") == 0 && i + 1 < argc) {
+			char *end = NULL;
+			unsigned long port = strtoul(argv[++i], &end, 10);
+			if (!end || *end || port < 1 || port > 65535)
+				return 2;
+			app.listen_port = (unsigned)port;
+		}
 		else
 			return 2;
 	}
+	if (app.outbound != !strcmp(app.direction, "outbound"))
+		return 2;
 	app.media_sock.fd = -1;
 	app.media_fd_event.fd = -1;
 	app.rtp_fd_event.fd = -1;
@@ -1620,7 +1929,7 @@ int main(int argc, char **argv)
 	}
 	pj_bzero(&address, sizeof(address));
 	address.sin_family = pj_AF_INET();
-	address.sin_port = pj_htons(5060);
+	address.sin_port = pj_htons((pj_uint16_t)app.listen_port);
 	address.sin_addr = pj_inet_addr(&((pj_str_t){argv[2],
 		(pj_ssize_t)strlen(argv[2])}));
 	if (!app.outbound) {
@@ -1633,7 +1942,7 @@ int main(int argc, char **argv)
 		pjsip_tls_setting_default(&tls);
 		tls.ca_list_file = pj_str((char *)"/etc/ssl/certs/ca-certificates.crt");
 		tls.verify_server = PJ_TRUE;
-		address.sin_port = pj_htons(5061);
+		address.sin_port = pj_htons((pj_uint16_t)app.listen_port);
 		if (pjsip_tls_transport_start(app.endpoint, &tls, &address, NULL, 1, NULL) != PJ_SUCCESS)
 			return 1;
 	}
@@ -1643,6 +1952,14 @@ int main(int argc, char **argv)
 	if (uloop_init() != 0)
 		return 1;
 	ubus_add_uloop(app.ubus);
+	(void)snprintf(app.ubus_object_name, sizeof(app.ubus_object_name),
+		"qmodem.sip.%s", app.direction);
+	app.ubus_object.name = app.ubus_object_name;
+	app.ubus_object.type = &sip_object_type;
+	app.ubus_object.methods = sip_object_type.methods;
+	app.ubus_object.n_methods = sip_object_type.n_methods;
+	if (ubus_add_object(app.ubus, &app.ubus_object) != 0)
+		return 1;
 	app.call_events.cb = consumer_event;
 	if (ubus_register_event_handler(app.ubus, &app.call_events,
 				"qmodem_voip.call") != 0)
@@ -1655,7 +1972,7 @@ int main(int argc, char **argv)
 	signal(SIGTERM, stop_handler);
 	signal(SIGHUP, reload_handler);
 	{
-		FILE *pidfile = fopen(PIDFILE, "w");
+		FILE *pidfile = fopen(app.pidfile, "w");
 		unsigned long long start;
 		if (!pidfile)
 			return 1;
@@ -1667,7 +1984,7 @@ int main(int argc, char **argv)
 		(void)fclose(pidfile);
 	}
 	fprintf(stdout, "READY transport=%s listen=%s:%u advertise=%s realm=%s rtp=40000 socket=%s\n",
-		app.outbound ? "tls" : "udp,tcp", argv[2], app.outbound ? 5061U : 5060U,
+		app.outbound ? "tls" : "udp,tcp", argv[2], app.listen_port,
 		app.lan_address, app.outbound ? app.outbound_realm : REALM,
 		app.media_socket_path);
 	fflush(stdout);
@@ -1686,7 +2003,7 @@ int main(int argc, char **argv)
 		(void)uloop_run_timeout(EVENT_LOOP_SLICE_MS);
 		(void)pjsip_endpt_handle_events(app.endpoint, &delay);
 	}
-	(void)unlink(PIDFILE);
+	(void)unlink(app.pidfile);
 	uloop_timeout_cancel(&app.media_attach_timeout);
 	stop_media();
 	remember_outbound_invite(NULL);

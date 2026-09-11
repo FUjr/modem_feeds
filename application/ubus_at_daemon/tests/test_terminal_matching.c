@@ -71,6 +71,56 @@ static void *modem_worker(void *arg)
     return NULL;
 }
 
+static void *prompt_sender_worker(void *arg)
+{
+    sender_state_t *state = arg;
+    state->result = send_at_command_with_response(state->port, "AT+CMGS=4", 2,
+                                                   ">", 0, &state->response);
+    return NULL;
+}
+
+static void *prompt_modem_worker(void *arg)
+{
+    int fd = *(int *)arg;
+    char command[11];
+    size_t used = 0;
+
+    while (used < sizeof(command)) {
+        ssize_t count = read(fd, command + used, sizeof(command) - used);
+        assert(count > 0);
+        used += (size_t)count;
+    }
+    assert(memcmp(command, "AT+CMGS=4\r\n", sizeof(command)) == 0);
+    assert(write(fd, "\r\n> ", 4) == 4);
+    return NULL;
+}
+
+static void *raw_sender_worker(void *arg)
+{
+    sender_state_t *state = arg;
+    state->result = send_at_command_with_response(state->port, "0001021A", 2,
+                                                   "+CMGS:,ERROR", 1,
+                                                   &state->response);
+    return NULL;
+}
+
+static void *raw_modem_worker(void *arg)
+{
+    int fd = *(int *)arg;
+    const unsigned char expected[] = { 0x00, 0x01, 0x02, 0x1a };
+    unsigned char actual[sizeof(expected)];
+    size_t used = 0;
+
+    while (used < sizeof(actual)) {
+        ssize_t count = read(fd, actual + used, sizeof(actual) - used);
+        assert(count > 0);
+        used += (size_t)count;
+    }
+    assert(memcmp(actual, expected, sizeof(expected)) == 0);
+    assert(write(fd, "+CMGS: 7\r\n", 10) == 10);
+    return NULL;
+}
+
 static void init_port(at_port_instance_t *port, int fd)
 {
     memset(port, 0, sizeof(*port));
@@ -144,6 +194,27 @@ int main(void)
     assert(strcmp(event.line, "OK") == 0);
     assert(event.correlation == AT_CORRELATION_TERMINAL);
 
+    memset(&sender_state, 0, sizeof(sender_state));
+    sender_state.port = &port;
+    assert(pthread_create(&modem, NULL, prompt_modem_worker, &master_fd) == 0);
+    assert(pthread_create(&sender, NULL, prompt_sender_worker, &sender_state) == 0);
+    assert(pthread_join(sender, NULL) == 0);
+    assert(pthread_join(modem, NULL) == 0);
+    assert(sender_state.result == 0);
+    assert(sender_state.response.status == 0);
+    assert(strcmp(sender_state.response.end_flag_matched, ">") == 0);
+    assert(strcmp(port.read_buffer, "") == 0);
+
+    memset(&sender_state, 0, sizeof(sender_state));
+    sender_state.port = &port;
+    assert(pthread_create(&modem, NULL, raw_modem_worker, &master_fd) == 0);
+    assert(pthread_create(&sender, NULL, raw_sender_worker, &sender_state) == 0);
+    assert(pthread_join(sender, NULL) == 0);
+    assert(pthread_join(modem, NULL) == 0);
+    assert(sender_state.result == 0);
+    assert(sender_state.response.status == 0);
+    assert(strcmp(sender_state.response.end_flag_matched, "+CMGS:") == 0);
+
     pthread_mutex_lock(&port.state_mutex);
     port.should_stop = 1;
     pthread_mutex_unlock(&port.state_mutex);
@@ -158,6 +229,6 @@ int main(void)
     pthread_mutex_destroy(&port.lifecycle_mutex);
     close(slave_fd);
     close(master_fd);
-    puts("PASS delayed PTY BROKEN is response and exact OK is terminal");
+    puts("PASS line terminals and non-CRLF SMS prompt matching");
     return 0;
 }

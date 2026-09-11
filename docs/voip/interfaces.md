@@ -26,21 +26,23 @@ fields. Errors return:
 | `capabilities` | `{}` | Runs the read-only hardware probe and reports support/media fields |
 | `enable` | `{}` | Journals baseline, configures the modem, starts media, and begins reconciliation |
 | `disable` | `{}` | Restores baseline and releases browser/RTP/media resources |
-| `originate` | `{"endpoint":"browser|lan_sip","number":"..."}` | Requires `idle`, armed modem media, and a valid dial string |
-| `answer` | `{"endpoint":"browser|lan_sip"}` | First local answer wins |
-| `reject` | `{"endpoint":"browser|lan_sip"}` | Valid for incoming ringing/early media; termination is idempotent |
-| `hangup` | `{"endpoint":"browser|lan_sip"}` | Releases the active/setup call; termination is idempotent |
-| `generate_sip_credentials` | `{"username":"..."}` | Generates a password, stores the account in UCI, and returns the password once |
+| `originate` | `{"endpoint":"browser|lan_sip|external_sip","number":"..."}` | Requires `idle`, armed modem media, and a valid dial string |
+| `answer` | `{"endpoint":"browser|lan_sip|external_sip"}` | First local answer wins |
+| `reject` | `{"endpoint":"browser|lan_sip|external_sip"}` | Valid for incoming ringing/early media; termination is idempotent |
+| `hangup` | `{"endpoint":"browser|lan_sip|external_sip"}` | Releases the active/setup call; termination is idempotent |
 | `call_history` | `{}` | Returns up to 100 completed calls, newest first, including missed-call classification |
 | `issue_media_token` | session/revision/origin object below | Issues a single-use browser token for the active call |
 | `attach_rtp` | RTP negotiation object below | Internal registrar boundary; attaches PCMA/PCMU RTP to the call |
 | `release_rtp` | `{}` | Internal registrar boundary; detaches RTP idempotently |
 
-`external_sip` remains a reserved endpoint in the call-control API during the
-outbound SIP rollout. Unknown endpoints and client attempts to act as
-`cellular` are invalid. Outbound registration is selected by the UCI
-`qmodem_voip.sip.mode` setting described in
-[the outbound design](outbound-sip-design.md); it is not an ubus endpoint.
+`lan_sip` identifies the inbound sipd instance and `external_sip` identifies
+the outbound instance. Unknown endpoints and client attempts to act as
+`cellular` are invalid. Configuration belongs to `qmodem_sip`, as described in
+[the outbound design](outbound-sip-design.md).
+
+Object `qmodem.sip` exposes `status`, `generate_credentials`, and
+`send_message`. Per-direction `qmodem.sip.inbound` and `qmodem.sip.outbound`
+objects are runtime transport endpoints owned by sipd.
 
 ### Browser media token
 
@@ -96,8 +98,6 @@ granted to the LuCI ACL and should not be exposed as general browser RPCs.
 | `number_present` | boolean | A remote number is known |
 | `remote_number` | string | Remote number when known and not withheld |
 | `call_duration_seconds` | integer | Active call duration, otherwise zero |
-| `sip_configured` | boolean | Valid UCI SIP credentials were loaded |
-| `sip_username` | string | Configured local SIP username; password is never included |
 | `caller_id_withheld` | boolean | Incoming caller ID was withheld |
 | `revision` | uint64 | Monotonic call-state revision |
 | `restart_epoch` | uint64 | AT-daemon restart generation |
@@ -105,7 +105,7 @@ granted to the LuCI ACL and should not be exposed as general browser RPCs.
 | `drop_count` | uint64 | Observed event loss count |
 | `reconcile_pending` | boolean | A correlated `CLCC` snapshot is required |
 
-Endpoint values are `none`, `browser`, `lan_sip`, `cellular`, and the reserved
+Endpoint values are `none`, `browser`, `lan_sip`, `cellular`, and
 `external_sip`.
 
 ### Media fields
@@ -178,28 +178,28 @@ The LuCI package defines two roles:
 
 - read-only: `status`, `capabilities`, `call_history`;
 - administrator: the read methods plus `enable`, `disable`, `originate`,
-  `answer`, `reject`, `hangup`, `generate_sip_credentials`, and
-  `issue_media_token`.
+  `answer`, `reject`, `hangup`, `issue_media_token`, and the separate
+  `qmodem.sip generate_credentials` method.
 
 The ACL is the authorization boundary. Hiding or disabling a LuCI control is
 only presentation.
 
 ## UCI
 
-Package: `/etc/config/qmodem_voip`
+SIP package: `/etc/config/qmodem_sip`
 
 ```uci
-config sip 'sip'
+config direction 'inbound'
         option enabled '0'
 	option username 'qmodem'
 	option password '<generated>'
-        option interface 'wan'
-        option rtp_start '40000'
-        option rtp_end '40031'
+	option interface 'lan'
+	option voip_enabled '1'
+	option sms_enabled '0'
 ```
 
-`interface` selects the OpenWrt network interface used to discover the LAN
-address. The daemon generates the password from the kernel random source and
+`interface` selects the OpenWrt network interface used to discover the local
+address. Sipd generates the password from the kernel random source and
 stores the authoritative account in UCI with mode `0600`. It derives the SIP
 HA1 runtime file under `/var/run` at each start. SIP is disabled until valid
 credentials are generated. The firewall

@@ -4,7 +4,6 @@
 'require dom';
 'require ui';
 'require form';
-'require uci';
 'require rpc as luciRpc';
 'require qmodem-voip.rpc as rpc';
 'require qmodem-voip.reducer as reducer';
@@ -49,10 +48,9 @@ return view.extend({
 		});
 	},
 
-	async createServiceMap() {
-		await uci.load('network');
-		const map = new form.Map('qmodem_voip');
-		const section = map.section(form.NamedSection, 'main', 'main',
+	createServiceMap() {
+		const voiceMap = new form.Map('qmodem_voip');
+		const section = voiceMap.section(form.NamedSection, 'main', 'main',
 			_('Call service'),
 			_('Changes are stored in UCI and take effect after Save & Apply.'));
 		section.anonymous = true;
@@ -67,59 +65,9 @@ return view.extend({
 		webEnabled.default = '0';
 		webEnabled.rmempty = false;
 		webEnabled.description = _('Enables the uhttpd HTTPS listener used by browser WSS media.');
-		this.serviceMap = map;
+		this.serviceMap = voiceMap;
 		this.serviceOption = enabled;
-		const sip = map.section(form.NamedSection, 'sip', 'sip',
-			_('SIP connection'),
-			_('The selected network interface supplies the SIP and RTP address.'));
-		sip.anonymous = true;
-		sip.addremove = false;
-		const mode = sip.option(form.ListValue, 'mode', _('Connection mode'));
-		mode.value('lan', _('Local SIP'));
-		mode.value('outbound', _('Outbound Asterisk'));
-		mode.default = 'lan';
-		mode.rmempty = false;
-		const listener = sip.option(form.ListValue, 'interface', _('Listening interface'));
-		listener.default = 'wan';
-		listener.rmempty = false;
-		listener.description = _('Choose an OpenWrt network interface, such as wan for the lan4 port.');
-		const interfaces = uci.sections('network', 'interface') || [];
-		interfaces.forEach((network) => {
-			if (network['.name'])
-				listener.value(network['.name'], network['.name']);
-		});
-		if (!interfaces.some((network) => network['.name'] === 'wan'))
-			listener.value('wan', 'wan');
-		const server = sip.option(form.Value, 'outbound_server', _('Asterisk server'));
-		server.datatype = 'host';
-		server.rmempty = false;
-		server.depends('mode', 'outbound');
-		const port = sip.option(form.Value, 'outbound_port', _('Asterisk TLS port'));
-		port.datatype = 'port';
-		port.default = '5061';
-		port.rmempty = false;
-		port.depends('mode', 'outbound');
-		const transport = sip.option(form.ListValue, 'outbound_transport', _('Transport'));
-		transport.value('tls', _('TLS'));
-		transport.default = 'tls';
-		transport.rmempty = false;
-		transport.depends('mode', 'outbound');
-		const username = sip.option(form.Value, 'outbound_username', _('SIP account'));
-		username.rmempty = false;
-		username.depends('mode', 'outbound');
-		const password = sip.option(form.Value, 'outbound_password', _('SIP password'));
-		password.password = true;
-		password.rmempty = false;
-		password.depends('mode', 'outbound');
-		const realm = sip.option(form.Value, 'outbound_realm', _('SIP realm'));
-		realm.placeholder = 'asterisk';
-		realm.depends('mode', 'outbound');
-		const interval = sip.option(form.Value, 'outbound_register_interval', _('Registration interval'));
-		interval.datatype = 'range(60,3600)';
-		interval.default = '300';
-		interval.rmempty = false;
-		interval.depends('mode', 'outbound');
-		return map;
+		return voiceMap;
 	},
 
 	dispatch(action) {
@@ -193,16 +141,12 @@ return view.extend({
 		try {
 			const response = await rpc[action](...(Array.isArray(payload) ? payload : []));
 			if (response?.status === 'error') {
-				if (action === 'generateSipCredentials')
-					this.dispatch({ type: 'CREDENTIAL_RESULT', value: response });
 				if (action === 'issueMediaToken')
 					this.dispatch({ type: 'MEDIA_RESULT', value: response });
 				this.showError(response);
 				return null;
 			}
-			if (response && action === 'generateSipCredentials')
-				this.dispatch({ type: 'CREDENTIAL_RESULT', value: response });
-			else if (response && action === 'issueMediaToken')
+			if (response && action === 'issueMediaToken')
 				this.dispatch({ type: 'MEDIA_RESULT', value: response });
 			else if (response)
 				this.dispatch({ type: 'SNAPSHOT', value: response });
@@ -214,17 +158,6 @@ return view.extend({
 			this.showError({ error: error.code || 'unknown', message: error.message });
 			return null;
 		}
-	},
-
-	async generateCredentials(event) {
-		event.preventDefault();
-		if (!this.refs.sipUser.value.trim())
-			return;
-		await this.run('generateSipCredentials', [ this.refs.sipUser.value.trim() ], (response) => {
-			this.refs.generatedUsername.textContent = response.username || '';
-			this.refs.generatedPassword.textContent = response.password || '';
-			this.refs.generatedCredentials.hidden = false;
-		});
 	},
 
 	async originate(event) {
@@ -488,9 +421,6 @@ return view.extend({
 		this.refs.serviceDetail.textContent = model.enabled ? _('The runtime is ready for calls.') : _('Use the UCI switch below, then Save & Apply.');
 		if (this.refs.serviceSwitch)
 			this.refs.serviceSwitch.disabled = model.capabilityPending || (!model.supported && !this.refs.serviceSwitch.checked);
-		this.refs.sipStatus.textContent = this.state.credentialStatus === 'not_ready' ? _('SIP credential rotation is not ready in this backend.') : (model.registration === 'configured' ? _('Credentials configured. Registration is not reported by v1 status.') : _('SIP account is not configured. Registration is not reported by v1 status.'));
-		if (!this.refs.sipUser.value && this.state.credentialUsername)
-			this.refs.sipUser.value = this.state.credentialUsername;
 		this.refs.callStatus.textContent = statusText;
 		this.refs.callStatus.className = `label ${STATE_STYLES[model.state] || ''}`.trim();
 		const callVisible = model.callTimerVisible || model.canAnswer;
@@ -522,8 +452,7 @@ return view.extend({
 	},
 
 	async render() {
-		const serviceMap = await this.createServiceMap();
-		const serviceForm = await serviceMap.render();
+		const serviceForm = E('div', {}, await this.createServiceMap().render());
 		surface.build(this, serviceForm);
 		this.updateView();
 		this.updateHistory();

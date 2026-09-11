@@ -1,0 +1,14 @@
+services:
+  luci-browser-tests:
+    build:
+      context: .
+    image: qmodem-browser-tests:local
+    network_mode: host
+    environment:
+      QMODEM_BASE_URL: "${QMODEM_BASE_URL:-https://10.96.210.191}"
+      QMODEM_USERNAME: "${QMODEM_USERNAME:-admin}"
+      QMODEM_PASSWORD: "${QMODEM_PASSWORD:?set QMODEM_PASSWORD}"
+    volumes:
+      - ./test-results:/work/test-results
+    init: true
+    ipc: host

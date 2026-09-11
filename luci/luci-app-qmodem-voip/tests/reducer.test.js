@@ -7,7 +7,7 @@ global._ = (value) => value;
 const contract = require('../htdocs/luci-static/resources/qmodem-voip/contract.js');
 const reducer = require('../htdocs/luci-static/resources/qmodem-voip/reducer.js');
 
-assert.deepEqual(Object.values(contract.METHODS), [ 'status', 'capabilities', 'enable', 'disable', 'originate', 'answer', 'reject', 'hangup', 'send_dtmf', 'generate_sip_credentials', 'call_history', 'issue_media_token' ]);
+assert.deepEqual(Object.values(contract.METHODS), [ 'status', 'capabilities', 'enable', 'disable', 'originate', 'answer', 'reject', 'hangup', 'send_dtmf', 'call_history', 'issue_media_token' ]);
 assert.deepEqual(contract.PARAMS.status, []);
 assert.deepEqual(contract.PARAMS.capabilities, []);
 assert.deepEqual(contract.PARAMS.enable, []);
@@ -17,7 +17,6 @@ assert.deepEqual(contract.PARAMS.answer, [ 'endpoint' ]);
 assert.deepEqual(contract.PARAMS.reject, [ 'endpoint' ]);
 assert.deepEqual(contract.PARAMS.hangup, [ 'endpoint' ]);
 assert.deepEqual(contract.PARAMS.sendDtmf, [ 'endpoint', 'digit' ]);
-assert.deepEqual(contract.PARAMS.generateSipCredentials, [ 'username' ]);
 assert.deepEqual(contract.PARAMS.callHistory, []);
 assert.deepEqual(contract.PARAMS.issueMediaToken, [ 'session_id', 'call_revision', 'https_origin' ]);
 assert.ok(contract.ERROR_CODES.includes('invalid_dtmf'));
@@ -68,10 +67,6 @@ state = reducer.reduce(state, { type: 'SNAPSHOT', value: snapshot('idle', 4, { r
 assert.equal(state.requiresResnapshot, false);
 state = reducer.reduce(state, { type: 'ERROR', value: { status: 'error', error: 'busy', message: 'another endpoint answered' } });
 assert.match(reducer.viewModel(state).errorText, /Another endpoint/);
-state = reducer.reduce(state, { type: 'CREDENTIAL_RESULT', value: { status: 'error', error: 'unsupported', message: 'not_ready' } });
-assert.equal(state.credentialStatus, 'not_ready');
-assert.match(reducer.errorMessage({ error: 'invalid_credentials' }), /credentials were rejected/);
-assert.match(reducer.errorMessage({ error: 'activation_failed' }), /could not be activated/);
 assert.match(reducer.errorMessage({ error: 'invalid_dtmf' }), /DTMF key/);
 
 const resourceDir = path.resolve(__dirname, '../htdocs/luci-static/resources');
@@ -92,7 +87,7 @@ assert.match(surfaceSource, /new ui\.Textfield/);
 assert.doesNotMatch(surfaceSource, /new ui\.Checkbox/);
 assert.match(surfaceSource, /ui\.showModal\(_\('Incoming call'\)/);
 assert.match(surfaceSource, /ui\.hideModal\(\)/);
-assert.match(surfaceSource, /Generate credentials'[\s\S]+null, 'submit'/);
+assert.doesNotMatch(surfaceSource, /Generate credentials|SIP account/);
 assert.match(surfaceSource, /Call history/);
 assert.match(surfaceSource, /dialForm\.addEventListener\('submit', \(event\) => context\.originate\(event\)\)/);
 assert.match(surfaceSource, /button\(_\('Call'\), 'action', null, 'submit'\)/);
@@ -109,13 +104,13 @@ assert.match(surfaceSource, /context\.refs\.remoteParty/);
 
 const viewSource = fs.readFileSync(path.resolve(__dirname, '../htdocs/luci-static/resources/view/qmodem-voip/call.js'), 'utf8');
 assert.match(viewSource, /'require rpc as luciRpc';/);
-assert.match(viewSource, /'require uci';/);
+assert.doesNotMatch(viewSource, /'require uci';/);
 assert.match(viewSource, /luciRpc\.getSessionID\(\)/);
 assert.match(viewSource, /rpc\[action\]\(\.\.\.\(Array\.isArray\(payload\) \? payload : \[\]\)\)/);
 assert.match(viewSource, /this\.run\('originate', \[ 'browser', number \]\)/);
 assert.match(viewSource, /this\.run\('answer', \[ 'browser' \]\)/);
 assert.match(viewSource, /this\.run\('sendDtmf', \[ 'browser', digit \]\)/);
-assert.match(viewSource, /this\.run\('generateSipCredentials', \[ this\.refs\.sipUser\.value\.trim\(\) \]/);
+assert.doesNotMatch(viewSource, /generateSipCredentials|qmodem_sip/);
 assert.match(viewSource, /rpc\.callHistory\(\)/);
 assert.match(viewSource, /await this\.prepareBrowserAudio\(\);[\s\S]+this\.run\('originate'/);
 assert.match(viewSource, /const snapshot = this\.state\.snapshot/);
@@ -132,14 +127,9 @@ assert.match(viewSource, /this\.refs\.mediaAction\.disabled = this\.state\.media
 assert.doesNotMatch(viewSource, /\[ 'idle', 'disabled' \]\.indexOf\(model\.state\)[\s\S]+this\.refs\.dial\.value = ''/);
 assert.doesNotMatch(viewSource, /crypto\.randomUUID\(\)/);
 assert.match(viewSource, /new form\.Map\('qmodem_voip'\)/);
-assert.match(viewSource, /map\.section\(form\.NamedSection, 'main', 'main'/);
+assert.match(viewSource, /voiceMap\.section\(form\.NamedSection, 'main', 'main'/);
 assert.match(viewSource, /section\.option\(form\.Flag, 'enabled'/);
-assert.match(viewSource, /map\.section\(form\.NamedSection, 'sip', 'sip'/);
-assert.match(viewSource, /sip\.option\(form\.ListValue, 'interface'/);
-assert.match(viewSource, /uci\.sections\('network', 'interface'\)/);
-assert.match(viewSource, /const serviceMap = await this\.createServiceMap\(\);/);
-assert.match(viewSource, /const serviceForm = await serviceMap\.render\(\);/);
-assert.doesNotMatch(viewSource, /this\.createServiceMap\(\)\.render\(\)/);
+assert.match(viewSource, /await this\.createServiceMap\(\)\.render\(\)/);
 assert.doesNotMatch(viewSource, /Date\.now\(\)\s*-\s*this\.(call|active)/);
 assert.match(viewSource, /this\.updateTimer\(model\.callDurationSeconds\)/);
 const cssSource = fs.readFileSync(path.resolve(__dirname, '../htdocs/luci-static/resources/qmodem-voip/qmodem-voip.css'), 'utf8');
@@ -147,8 +137,21 @@ assert.doesNotMatch(cssSource, /--qvoip-(surface|text|accent|status)/);
 assert.match(cssSource, /\.qvoip-page \.cbi-section/);
 assert.match(cssSource, /\.qvoip-keypad \.cbi-button/);
 
+const rpcSource = fs.readFileSync(path.resolve(__dirname, '../htdocs/luci-static/resources/qmodem-voip/rpc.js'), 'utf8');
+assert.match(rpcSource, /object: 'qmodem\.sip'[\s\S]+method: 'status'/);
+assert.match(rpcSource, /object: 'qmodem\.sip'[\s\S]+method: 'generate_credentials'/);
+
+const sipViewSource = fs.readFileSync(path.resolve(__dirname, '../htdocs/luci-static/resources/view/qmodem-voip/sip.js'), 'utf8');
+assert.match(sipViewSource, /new form\.Map\('qmodem_sip'/);
+assert.match(sipViewSource, /map\.section\(form\.NamedSection, 'inbound', 'direction'/);
+assert.match(sipViewSource, /map\.section\(form\.NamedSection, 'outbound', 'direction'/);
+assert.match(sipViewSource, /uci\.sections\('network', 'interface'\)/);
+assert.match(sipViewSource, /Generate credentials/);
+assert.match(sipViewSource, /rpc\.generateSipCredentials\(username\)/);
+
 const menu = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../root/usr/share/luci/menu.d/luci-app-qmodem-voip.json'), 'utf8'));
 assert.ok(menu['admin/modem/qmodem/qmodem-voip']);
+assert.ok(menu['admin/modem/qmodem/qmodem-sipd']);
 assert.equal(menu['admin/modem/advanced/qmodem-voip'].title, undefined);
 assert.deepEqual(menu['admin/modem/advanced/qmodem-voip'].action, {
 	type: 'alias',

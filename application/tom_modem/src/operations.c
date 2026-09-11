@@ -98,8 +98,9 @@ int sms_read(PROFILE_T *profile, void *transport_ptr)
 
     if (response_text)
     {
-        char *line = strtok(response_text, "\n");
+        char *line = strtok(response_text, "\r\n");
         int sms_count = 0;
+        int decode_errors = 0;
         char *pdu;
 
         while (line != NULL)
@@ -109,10 +110,12 @@ int sms_read(PROFILE_T *profile, void *transport_ptr)
                 sms = (SMS_T *)malloc(sizeof(SMS_T));
                 memset(sms, 0, sizeof(SMS_T));
                 
-                pdu = strtok(NULL, "\n");
+                pdu = strtok(NULL, "\r\n");
                 if (pdu == NULL || strlen(pdu) < 3) {
                     dbg_msg("No PDU found for line: %s", line);
-                    pdu = strtok(NULL, "\n");
+                    destroy_sms(sms);
+                    decode_errors++;
+                    break;
                 }
                 sms->sms_pdu = strdup(pdu);
                 sms->sender = (char *)malloc(PHONE_NUMBER_SIZE);
@@ -122,21 +125,29 @@ int sms_read(PROFILE_T *profile, void *transport_ptr)
                 int sms_len = decode_pdu(sms);
                 if (sms_len > 0)
                 {
-                    sms_list[sms_count] = sms;
-                    sms_count++;
+                    if (sms_count < SMS_LIST_SIZE)
+                        sms_list[sms_count++] = sms;
+                    else {
+                        err_msg("SMS result exceeds list capacity");
+                        destroy_sms(sms);
+                        decode_errors++;
+                    }
                 }
                 else
                 {
                     dbg_msg("Error decoding SMS in line: %s", line);
                     destroy_sms(sms);
+                    decode_errors++;
                 }
             }
-            line = strtok(NULL, "\n");
+            line = strtok(NULL, "\r\n");
 
         }
 
         display_sms_in_json(sms_list, sms_count);
         free(response_text);
+        if (decode_errors > 0)
+            return COMM_ERROR;
     }
 
     dbg_msg("Read SMS success");
@@ -153,10 +164,15 @@ int sms_send(PROFILE_T *profile, void *transport_ptr)
     }
 
     int pdu_len = strlen(profile->sms_pdu);
+    if (pdu_len < 2 || pdu_len % 2 != 0) {
+        err_msg("Invalid SMS PDU length");
+        return INVALID_PARAM;
+    }
     int pdu_expected_len = (pdu_len) / 2 - 1;
     char send_sms_cmd[32];
-    char pdu_hex[512];
-    char send_sms_cmd2[514];
+    char *pdu_hex = NULL;
+    char *send_sms_cmd2 = NULL;
+    char *prompt_response = NULL;
     char *send_sms_response = NULL;
     int result;
     int ascii_code;
@@ -170,33 +186,53 @@ int sms_send(PROFILE_T *profile, void *transport_ptr)
     dbg_msg("Set PDU format success");
 
     snprintf(send_sms_cmd, 32, SEND_SMS, pdu_expected_len);
+    pdu_hex = malloc((size_t)pdu_len * 2 + 1);
+    send_sms_cmd2 = malloc((size_t)pdu_len * 2 + 3);
+    if (!pdu_hex || !send_sms_cmd2) {
+        free(pdu_hex);
+        free(send_sms_cmd2);
+        return COMM_ERROR;
+    }
     for (int i = 0; i < pdu_len; i++) {
         //将字符串转换成字符串对应的十六进制的字符串
         ascii_code = profile->sms_pdu[i];
         snprintf(pdu_hex + (i * 2), 3, "%02X", ascii_code);
     }
     pdu_hex[pdu_len * 2] = '\0'; // Add the end of transmission character
-    snprintf(send_sms_cmd2, 514, "%s%s", pdu_hex, "1A"); // Append Ctrl+Z to indicate end of SMS
+    snprintf(send_sms_cmd2, (size_t)pdu_len * 2 + 3, "%s%s", pdu_hex, "1A");
+    free(pdu_hex);
 
-    // Send first AT command and wait for > prompt
-    transport_send_at_only(transport, profile, send_sms_cmd, 0);
+    // Send the CMGS command and wait until the modem is ready for the PDU.
+    result = transport_send_at_with_response(
+        transport, profile, send_sms_cmd,
+        ">,ERROR,+CMS ERROR:,+CME ERROR:", 0, &prompt_response);
     dbg_msg("Send SMS command: %s", send_sms_cmd);
+    if (result != SUCCESS || !prompt_response || strstr(prompt_response, "ERROR")) {
+        dbg_msg("SMS prompt was not received, error code: %d", result);
+        free(prompt_response);
+        free(send_sms_cmd2);
+        return result != SUCCESS ? result : SEND_SMS_FAILED;
+    }
+    free(prompt_response);
     dbg_msg("Write PDU command: %s", send_sms_cmd2);
-    usleep(10000); // 10ms delay
 
     // Send PDU data and wait for +CMGS response
-    result = transport_send_at_with_response(transport, profile, send_sms_cmd2, "+CMGS:", 1, &send_sms_response);
+    result = transport_send_at_with_response(
+        transport, profile, send_sms_cmd2,
+        "+CMGS:,ERROR,+CMS ERROR:,+CME ERROR:", 1, &send_sms_response);
+    free(send_sms_cmd2);
     if (result != SUCCESS) {
         dbg_msg("Error sending SMS PDU, error code: %d", result);
         return result;
     }
     // Check send SMS response (contain +CME ERROR or +CMS ERROR indicates failure and contain OK indicates success)
-    dbg_msg("Send SMS response: %s", send_sms_response);
-    if (strstr(send_sms_response, "ERROR") != NULL) {
-        dbg_msg("Error sending SMS, response: %s", send_sms_response);
+    if (!send_sms_response || strstr(send_sms_response, "ERROR") != NULL) {
+        dbg_msg("Error sending SMS, response: %s",
+                send_sms_response ? send_sms_response : "(empty)");
         free(send_sms_response);
         return SEND_SMS_FAILED;
     }
+    dbg_msg("Send SMS response: %s", send_sms_response);
     free(send_sms_response);
     return SUCCESS;
 }
@@ -228,8 +264,9 @@ int sms_read_unread(PROFILE_T *profile, void *transport_ptr)
 
     if (response_text)
     {
-        char *line = strtok(response_text, "\n");
+        char *line = strtok(response_text, "\r\n");
         int sms_count = 0;
+        int decode_errors = 0;
         char *pdu;
         while (line != NULL)
         {
@@ -237,10 +274,12 @@ int sms_read_unread(PROFILE_T *profile, void *transport_ptr)
             {
                 sms = (SMS_T *)malloc(sizeof(SMS_T));
                 memset(sms, 0, sizeof(SMS_T));
-                pdu = strtok(NULL, "\n");
+                pdu = strtok(NULL, "\r\n");
                 if (pdu == NULL || strlen(pdu) < 3) {
                     dbg_msg("No PDU found for line: %s", line);
-                    pdu = strtok(NULL, "\n");
+                    destroy_sms(sms);
+                    decode_errors++;
+                    break;
                 }
                 sms->sms_pdu = strdup(pdu);
                 sms->sender = (char *)malloc(PHONE_NUMBER_SIZE);
@@ -250,20 +289,28 @@ int sms_read_unread(PROFILE_T *profile, void *transport_ptr)
                 int sms_len = decode_pdu(sms);
                 if (sms_len > 0)
                 {
-                    sms_list[sms_count] = sms;
-                    sms_count++;
+                    if (sms_count < SMS_LIST_SIZE)
+                        sms_list[sms_count++] = sms;
+                    else {
+                        err_msg("SMS result exceeds list capacity");
+                        destroy_sms(sms);
+                        decode_errors++;
+                    }
                 }
                 else
                 {
                     dbg_msg("Error decoding SMS in line: %s", line);
                     destroy_sms(sms);
+                    decode_errors++;
                 }
             }
-            line = strtok(NULL, "\n");
+            line = strtok(NULL, "\r\n");
         }
 
         display_sms_in_json(sms_list, sms_count);
         free(response_text);
+        if (decode_errors > 0)
+            return COMM_ERROR;
     }
 
     dbg_msg("Read unread SMS success");

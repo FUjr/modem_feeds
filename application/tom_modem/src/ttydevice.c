@@ -209,15 +209,15 @@ int tty_read_keyword(FILE *fdi, AT_MESSAGE_T *message, char *key_word, PROFILE_T
     return exitcode;
 }
 
-int tty_write_raw(FILE *fdo, const char *input)
+int tty_write_raw(FILE *fdo, const void *input, size_t length)
 {
-    int ret;
-    ret = fputs(input, fdo);
+    size_t written;
+    written = fwrite(input, 1, length, fdo);
     fflush(fdo);
     usleep(100);
-    if (ret < 0)
+    if (written != length)
     {
-        err_msg("Error writing to tty %d" , ret);
+        err_msg("Error writing raw data to tty");
         return COMM_ERROR;
     }
     return SUCCESS;
@@ -235,7 +235,7 @@ int tty_write(FILE *fdo, const char *input)
         return COMM_ERROR;
     }
     snprintf(cmd_line, cmd_len, "%s\r\n", input);
-    ret =  tty_write_raw(fdo, cmd_line);
+    ret = tty_write_raw(fdo, cmd_line, strlen(cmd_line));
     free(cmd_line);
     return ret;
 }

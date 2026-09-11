@@ -27,7 +27,7 @@ static int tty_send_at_with_response(PROFILE_T *profile, const char *at_cmd, con
             return INVALID_HEX;
         }
         
-        w_ret = tty_write_raw(fds->fdo, binary_cmd);
+        w_ret = tty_write_raw(fds->fdo, binary_cmd, strlen(at_cmd) / 2);
         free(binary_cmd);
     } else {
         w_ret = tty_write(fds->fdo, at_cmd);
@@ -83,7 +83,7 @@ static int tty_send_at_only(PROFILE_T *profile, const char *at_cmd, int is_raw) 
             return INVALID_HEX;
         }
         
-        w_ret = tty_write_raw(fds->fdo, binary_cmd);
+        w_ret = tty_write_raw(fds->fdo, binary_cmd, strlen(at_cmd) / 2);
         free(binary_cmd);
     } else {
         w_ret = tty_write(fds->fdo, at_cmd);

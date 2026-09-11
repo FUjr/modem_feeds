@@ -175,15 +175,17 @@ struct udh_info {
 /* Parse every IE in the UDH.  Concatenation is not required to be the last
  * IE; language shift IEs and application IEs may follow it. */
 static int
-parse_udh(const unsigned char *buffer, int buffer_length, int sms_start,
+parse_udh(const unsigned char *buffer, int buffer_length, int user_data_start,
+		  int has_udh,
 		  struct udh_info *info)
 {
 	memset(info, 0, sizeof(*info));
-	if (sms_start < 0 || sms_start + 1 >= buffer_length ||
-	    !(buffer[sms_start] & 0x40))
+	if (!has_udh)
 		return 0;
-	const int udhl = buffer[sms_start + 1];
-	const int first = sms_start + 2;
+	if (user_data_start < 0 || user_data_start >= buffer_length)
+		return -1;
+	const int udhl = buffer[user_data_start];
+	const int first = user_data_start + 1;
 	const int end = first + udhl;
 	if (end > buffer_length)
 		return -1;
@@ -576,7 +578,8 @@ int pdu_decode(const unsigned char* buffer, int buffer_length,
 	if (sms_start + 1 >= buffer_length) return -1;  // Invalid input buffer.
 
 	struct udh_info udh;
-	if (parse_udh(buffer, buffer_length, sms_start, &udh) < 0)
+	if (parse_udh(buffer, buffer_length, sms_start + 1,
+		      buffer[sms_deliver_start] & 0x40, &udh) < 0)
 		return -1;
 	*skip_bytes = udh.present ? udh.bytes : 0;
 	*ref_number = udh.concat_ref;

@@ -40,7 +40,8 @@ int main(void)
     assert(fd >= 0);
     close(fd);
     assert(sms_db_open(&db, path) == 0);
-    assert(scalar(db.sql, "SELECT MAX(version) FROM schema_migrations") == 2);
+    assert(scalar(db.sql, "SELECT MAX(version) FROM schema_migrations") == 3);
+    assert(scalar(db.sql, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='managed_sends'") == 1);
     assert(sms_db_record_event(&db, "usb-1-1", 10, 1, &gap) == 0 && !gap);
     assert(sms_db_record_event(&db, "usb-1-1", 10, 2, &gap) == 0 && !gap);
     assert(sms_db_record_event(&db, "usb-1-1", 10, 4, &gap) == 0 && gap);
@@ -49,6 +50,9 @@ int main(void)
     assert(sms_db_import_segment(&db, &first, 2000, 1, &result) == 0);
     assert(result.safe_to_delete && !result.published);
     assert(scalar(db.sql, "SELECT count(*) FROM messages") == 0);
+    assert(sms_db_prune(&db, "usb-1-1", 100, 100) == 0);
+    assert(scalar(db.sql, "SELECT count(*) FROM multipart_groups") == 1);
+    assert(scalar(db.sql, "SELECT count(*) FROM segments") == 1);
     sms_db_close(&db);
 
     assert(sms_db_open(&db, path) == 0);
@@ -75,6 +79,31 @@ int main(void)
         assert(!strcmp((const char *)sqlite3_column_text(stmt, 0), "hello world"));
         sqlite3_finalize(stmt);
     }
+	{
+		int deleted = 0;
+		int64_t original_message_id = result.message_id;
+		sms_segment_t reused_first = first;
+		sms_segment_t reused_second = second;
+
+		reused_first.source_index = 11;
+		reused_first.pdu = "PDU-REUSED-A";
+		reused_first.timestamp = 2450;
+		reused_first.content = "fresh ";
+		reused_second.source_index = 12;
+		reused_second.pdu = "PDU-REUSED-B";
+		reused_second.timestamp = 2451;
+		reused_second.content = "message";
+		assert(sms_db_import_segment(&db, &reused_first, 2450, 1, &result) == 0);
+		assert(!result.published);
+		assert(sms_db_import_segment(&db, &reused_second, 2451, 1, &result) == 0);
+		assert(result.published && result.message_id != original_message_id);
+		assert(scalar(db.sql, "SELECT count(*) FROM messages") == 2);
+		assert(scalar(db.sql, "SELECT count(*) FROM multipart_groups") == 2);
+		assert(scalar(db.sql, "SELECT count(*) FROM deliveries") == 3);
+		assert(sms_db_delete_message(&db, "usb-1-1", result.message_id, &deleted) == 0);
+		assert(deleted == 1);
+		result.message_id = original_message_id;
+	}
 	{
 		int deleted = 0;
 		assert(sms_db_delete_message(&db, "usb-1-1", result.message_id, &deleted) == 0);

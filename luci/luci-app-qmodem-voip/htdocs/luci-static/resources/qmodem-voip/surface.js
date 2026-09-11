@@ -78,29 +78,6 @@ function build(context, serviceForm) {
 	context.refs.mediaSummary = node('div', { class: 'qvoip-status-detail' });
 	context.refs.serviceSwitch = serviceForm?.querySelector('input[type="checkbox"]') || null;
 
-	context.refs.sipStatus = node('div', { class: 'cbi-section-descr' });
-	context.refs.sipForm = node('form', { class: 'cbi-section-node' });
-	const sipUser = textfield(context, 'sipUser', {
-		id: 'qvoip-sip-user', name: 'username', optional: false
-	});
-	context.refs.sipUser.setAttribute('autocomplete', 'username');
-	context.refs.sipUser.required = true;
-	context.refs.sipForm.addEventListener('submit', (event) => context.generateCredentials(event));
-	context.refs.generatedCredentials = node('div', { class: 'qvoip-generated-credentials', hidden: true });
-	context.refs.generatedUsername = node('code');
-	context.refs.generatedPassword = node('code');
-	context.refs.generatedCredentials.append(
-		field(_('Username'), context.refs.generatedUsername),
-		field(_('Generated password'), context.refs.generatedPassword)
-	);
-	context.refs.sipForm.append(
-		field(_('Username'), sipUser),
-		node('div', { class: 'cbi-page-actions' }, [
-			button(_('Generate credentials'), 'apply', null, 'submit')
-		]),
-		context.refs.generatedCredentials
-	);
-
 	context.refs.callStatus = node('span', { class: 'label' });
 	context.refs.callDetail = node('div', {
 		class: 'cbi-section-descr', id: 'qvoip-call-detail'
@@ -165,10 +142,6 @@ function build(context, serviceForm) {
 	]);
 
 	serviceForm.classList.add('qvoip-service-map');
-	const sipPanel = node('div', { class: 'cbi-section' }, [
-		node('h3', {}, [ _('SIP account') ]), context.refs.sipStatus, context.refs.sipForm
-	]);
-
 	const callPanel = node('div', { class: 'cbi-section qvoip-call-panel' }, [
 		node('div', { class: 'qvoip-section-heading' }, [
 			node('h3', {}, [ _('Call') ]), context.refs.callStatus
@@ -231,7 +204,7 @@ function build(context, serviceForm) {
 			_('Place and receive one modem call. Unsupported hardware remains disabled.')
 		]),
 		overview,
-		node('div', { class: 'qvoip-settings-grid' }, [ serviceForm, sipPanel ]),
+		serviceForm,
 		node('div', { class: 'qvoip-workspace-grid' }, [ callPanel, mediaPanel ]),
 		historyPanel,
 		context.refs.error,

@@ -1,13 +1,13 @@
 #!/bin/sh
 
-if ! uci -q get firewall.qmodem_voip >/dev/null; then
+if ! uci -q get firewall.qmodem_voip_sipd >/dev/null; then
 	uci -q batch <<'EOF'
 add firewall include
 set firewall.@include[-1].path='/etc/qmodem_voip/firewall.include'
 set firewall.@include[-1].type='script'
 set firewall.@include[-1].reload='1'
-set firewall.@include[-1].enabled='0'
-rename firewall.@include[-1]='qmodem_voip'
+set firewall.@include[-1].enabled='1'
+rename firewall.@include[-1]='qmodem_voip_sipd'
 commit firewall
 EOF
 fi

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+changed=0
+
+default_use_ubus()
+{
+	local section="$1"
+	local value
+
+	config_get value "$section" use_ubus
+	[ -n "$value" ] && return 0
+	uci -q set "qmodem.$section.use_ubus=1" || return 1
+	changed=1
+}
+
+config_load qmodem
+config_foreach default_use_ubus modem-device
+[ "$changed" = 0 ] || uci -q commit qmodem
+
+exit 0

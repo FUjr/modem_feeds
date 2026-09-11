@@ -58,3 +58,11 @@ config sms_forward_instance
 
 # 注意：相同 modem_cfg 和 api_type 的实例会被自动合并，使用最小的 poll_interval
 # Note: Instances with same modem_cfg and api_type will be automatically merged, using minimum poll_interval
+
+# SIP MESSAGE example. The selected sipd direction must be enabled and registered.
+config sms_forward_instance
+	option enable '0'
+	option modem_cfg 'modem_1'
+	option poll_interval '30'
+	option api_type 'sip'
+	option api_config '{"direction":"outbound","recipient_uri":"sip:sms@example.invalid"}'

@@ -13,8 +13,6 @@ function initialState() {
 		capabilities: null,
 		snapshot: null,
 		error: null,
-		credentialStatus: 'unknown',
-		credentialUsername: '',
 		mediaStatus: 'not_ready',
 		mediaUrl: '',
 		mediaPermission: 'unknown',
@@ -58,9 +56,7 @@ function copySnapshot(input) {
 		media: String(input.media || ''),
 		media_engine: String(input.media_engine || ''),
 		browser_media: String(input.browser_media || ''),
-		media_url: String(input.media_url || ''),
-		sip_configured: asBoolean(input.sip_configured),
-		sip_username: String(input.sip_username || '')
+		media_url: String(input.media_url || '')
 	};
 }
 
@@ -88,8 +84,6 @@ function applySnapshot(state, input, source, eventName) {
 
 	return Object.assign({}, state, {
 		snapshot,
-		credentialStatus: snapshot.sip_configured ? 'configured' : state.credentialStatus,
-		credentialUsername: snapshot.sip_username || state.credentialUsername,
 		error: null,
 		mediaStatus: snapshot.media || snapshot.media_engine || state.mediaStatus,
 		mediaUrl: snapshot.media_url,
@@ -117,14 +111,6 @@ function reduce(state, action) {
 		return applySnapshot(current, action.value, 'event', action.value?.event || '');
 	case 'ERROR':
 		return Object.assign({}, current, { error: action.value || null });
-	case 'CREDENTIAL_RESULT':
-		if (action.value?.status === 'error' && action.value.error === 'unsupported' && action.value.message === 'not_ready')
-			return Object.assign({}, current, { credentialStatus: 'not_ready', error: action.value });
-		return Object.assign({}, current, {
-			credentialStatus: action.value?.status === 'error' ? 'error' : (action.value?.configured ? 'configured' : 'unconfigured'),
-			credentialUsername: action.value?.username || current.credentialUsername,
-			error: action.value?.status === 'error' ? action.value : null
-		});
 	case 'MEDIA_RESULT':
 		return Object.assign({}, current, {
 			mediaStatus: action.value?.status === 'error' && action.value.message === 'not_ready' ? 'not_ready' : current.mediaStatus,
@@ -149,8 +135,6 @@ function errorMessage(error) {
 		invalid_dtmf: _('The selected DTMF key is not supported.'),
 		unsupported: _('This operation is not ready for the current capability state.'),
 		restore_failed: _('The modem could not restore its baseline state.'),
-		invalid_credentials: _('The SIP credentials were rejected.'),
-		activation_failed: _('The SIP service could not be activated.'),
 		history_unavailable: _('Call history is temporarily unavailable.')
 	};
 	if (!error)
@@ -196,7 +180,6 @@ function viewModel(state) {
 		callTimerVisible: [ 'outgoing_setup', 'early_media', 'active', 'terminating' ].indexOf(snapshot.state) !== -1,
 		remoteNumber: snapshot.caller_id_withheld ? '' : snapshot.remote_number,
 		callDurationSeconds: snapshot.call_duration_seconds,
-		registration: state.credentialStatus === 'configured' ? 'configured' : state.credentialStatus,
 		media: state.mediaStatus,
 		permission: state.mediaPermission,
 		errorText: errorMessage(state.error)

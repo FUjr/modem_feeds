@@ -19,9 +19,9 @@ static int read_uci_credentials(char username[QMODEM_VOIP_SIP_USERNAME_SIZE],
 	const char *value;
 	int result = -1;
 
-	if (!context || uci_load(context, "qmodem_voip", &package) != UCI_OK)
+	if (!context || uci_load(context, "qmodem_sip", &package) != UCI_OK)
 		goto out;
-	section = uci_lookup_section(context, package, "sip");
+	section = uci_lookup_section(context, package, "inbound");
 	if (!section)
 		goto out;
 	value = uci_lookup_option_string(context, section, "username");
@@ -49,8 +49,8 @@ static int set_option(struct uci_context *context, const char *option,
 	struct uci_ptr pointer = { 0 };
 	pointer.p = package;
 	pointer.s = section;
-	pointer.package = "qmodem_voip";
-	pointer.section = "sip";
+	pointer.package = "qmodem_sip";
+	pointer.section = "inbound";
 	pointer.option = option;
 	pointer.value = value;
 	return uci_set(context, &pointer) == UCI_OK ? 0 : -1;
@@ -63,15 +63,15 @@ static int persist_credentials(const char *username, const char *password)
 	struct uci_section *section;
 	int result = -1;
 
-	if (!context || uci_load(context, "qmodem_voip", &package) != UCI_OK)
+	if (!context || uci_load(context, "qmodem_sip", &package) != UCI_OK)
 		goto out;
-	section = uci_lookup_section(context, package, "sip");
+	section = uci_lookup_section(context, package, "inbound");
 	if (!section || set_option(context, "username", package, section, username) != 0 ||
 	    set_option(context, "password", package, section, password) != 0 ||
 	    uci_save(context, package) != UCI_OK ||
 	    uci_commit(context, &package, false) != UCI_OK)
 		goto out;
-	(void)chmod("/etc/config/qmodem_voip", S_IRUSR | S_IWUSR);
+	(void)chmod("/etc/config/qmodem_sip", S_IRUSR | S_IWUSR);
 	result = 0;
 out:
 	if (package)

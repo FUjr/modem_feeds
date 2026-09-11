@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define MULTIPART_WAIT_SECONDS 300
 #define LATE_FRAGMENT_SECONDS 3600
@@ -51,6 +52,10 @@ static const char schema_sql[] =
       "available_at INTEGER NOT NULL, claimed_at INTEGER, completed_at INTEGER, last_error TEXT,"
       "UNIQUE(message_id,revision));"
     "CREATE INDEX IF NOT EXISTS deliveries_claim ON deliveries(state,available_at,id);"
+    "CREATE TABLE IF NOT EXISTS managed_sends("
+      "request_id TEXT PRIMARY KEY, modem_id TEXT NOT NULL, recipient TEXT NOT NULL,"
+      "content TEXT NOT NULL, state TEXT NOT NULL, parts INTEGER NOT NULL DEFAULT 0,"
+      "error TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);"
     "CREATE TABLE IF NOT EXISTS legacy_imports("
       "path TEXT NOT NULL, record_key TEXT NOT NULL, imported_at INTEGER NOT NULL,"
       "PRIMARY KEY(path,record_key));";
@@ -86,6 +91,21 @@ static int apply_migrations(sqlite3 *sql)
                 "ALTER TABLE modems ADD COLUMN last_event_epoch INTEGER") != 0) ||
             exec_sql(sql, "INSERT OR REPLACE INTO schema_migrations "
                           "VALUES(2,strftime('%s','now'))") != 0 ||
+            exec_sql(sql, "COMMIT") != 0) {
+            exec_sql(sql, "ROLLBACK");
+            return -1;
+        }
+    }
+    if (version < 3) {
+        if (exec_sql(sql, "BEGIN IMMEDIATE") != 0)
+            return -1;
+        if (exec_sql(sql,
+                "CREATE TABLE IF NOT EXISTS managed_sends("
+                "request_id TEXT PRIMARY KEY,modem_id TEXT NOT NULL,recipient TEXT NOT NULL,"
+                "content TEXT NOT NULL,state TEXT NOT NULL,parts INTEGER NOT NULL DEFAULT 0,"
+                "error TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)") != 0 ||
+            exec_sql(sql, "INSERT OR REPLACE INTO schema_migrations "
+                          "VALUES(3,strftime('%s','now'))") != 0 ||
             exec_sql(sql, "COMMIT") != 0) {
             exec_sql(sql, "ROLLBACK");
             return -1;
@@ -206,8 +226,10 @@ static int find_group(sms_db_t *db, const sms_segment_t *segment, int64_t now,
 {
     sqlite3_stmt *stmt = NULL;
     const char *query =
-        "SELECT id FROM multipart_groups WHERE modem_id=? AND sender=? AND reference=? "
-        "AND total_parts=? AND last_seen>=? ORDER BY last_seen DESC,id DESC LIMIT 1";
+        "SELECT g.id FROM multipart_groups g LEFT JOIN messages m ON m.group_id=g.id "
+        "WHERE g.modem_id=? AND g.sender=? AND g.reference=? "
+        "AND g.total_parts=? AND g.last_seen>=? AND (m.id IS NULL OR m.complete=0) "
+        "ORDER BY g.last_seen DESC,g.id DESC LIMIT 1";
     if (sqlite3_prepare_v2(db->sql, query, -1, &stmt, NULL) != SQLITE_OK)
         return -1;
     bind_text(stmt, 1, segment->modem_id);
@@ -700,27 +722,54 @@ static int prune_direction(sqlite3 *sql, const char *modem_id,
 int sms_db_prune(sms_db_t *db, const char *modem_id,
                  int received_limit, int sent_limit)
 {
+    sqlite3_stmt *stmt = NULL;
+    int64_t orphan_before;
+
     if (received_limit < 1 || sent_limit < 1 ||
         exec_sql(db->sql, "BEGIN IMMEDIATE") != 0)
         return -1;
     if (prune_direction(db->sql, modem_id, "received", received_limit) != 0 ||
-        prune_direction(db->sql, modem_id, "sent", sent_limit) != 0 ||
-        exec_sql(db->sql,
-            "DELETE FROM segments WHERE group_id IN (SELECT g.id FROM multipart_groups g "
-            "LEFT JOIN messages m ON m.group_id=g.id WHERE m.id IS NULL);"
+        prune_direction(db->sql, modem_id, "sent", sent_limit) != 0)
+        goto fail;
+
+    orphan_before = (int64_t)time(NULL) -
+        (db->late_fragment_window > db->multipart_wait ?
+         db->late_fragment_window : db->multipart_wait);
+    if (sqlite3_prepare_v2(db->sql,
+            "DELETE FROM segments WHERE group_id IN ("
+            "SELECT g.id FROM multipart_groups g LEFT JOIN messages m ON m.group_id=g.id "
+            "WHERE m.id IS NULL AND g.last_seen<?)", -1, &stmt, NULL) != SQLITE_OK)
+        goto fail;
+    sqlite3_bind_int64(stmt, 1, orphan_before);
+    if (sqlite3_step(stmt) != SQLITE_DONE)
+        goto fail;
+    sqlite3_finalize(stmt);
+    stmt = NULL;
+    if (sqlite3_prepare_v2(db->sql,
             "DELETE FROM multipart_groups WHERE id NOT IN "
-            "(SELECT group_id FROM messages WHERE group_id IS NOT NULL);"
+            "(SELECT group_id FROM messages WHERE group_id IS NOT NULL) AND last_seen<?",
+            -1, &stmt, NULL) != SQLITE_OK)
+        goto fail;
+    sqlite3_bind_int64(stmt, 1, orphan_before);
+    if (sqlite3_step(stmt) != SQLITE_DONE)
+        goto fail;
+    sqlite3_finalize(stmt);
+    stmt = NULL;
+    if (exec_sql(db->sql,
             "DELETE FROM source_messages WHERE committed=1 AND deleted_at IS NOT NULL "
             "AND deleted_at < strftime('%s','now')-604800 "
             "AND NOT EXISTS (SELECT 1 FROM segments WHERE source_id=source_messages.id);"
             "DELETE FROM sync_runs WHERE finished_at IS NOT NULL "
-            "AND finished_at < strftime('%s','now')-2592000;") != 0) {
-        exec_sql(db->sql, "ROLLBACK");
-        return -1;
-    }
+            "AND finished_at < strftime('%s','now')-2592000;") != 0)
+        goto fail;
     if (exec_sql(db->sql, "COMMIT") != 0)
         return -1;
     return 0;
+
+fail:
+    sqlite3_finalize(stmt);
+    exec_sql(db->sql, "ROLLBACK");
+    return -1;
 }
 
 int sms_db_mark_source_deleted(sms_db_t *db, int64_t source_id, int64_t deleted_at)

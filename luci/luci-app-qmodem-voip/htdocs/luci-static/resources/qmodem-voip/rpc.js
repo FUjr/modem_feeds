@@ -14,6 +14,20 @@ Object.keys(contract.METHODS).forEach((name) => {
 	});
 });
 
+calls.sipStatus = rpc.declare({
+	object: 'qmodem.sip',
+	method: 'status',
+	params: [],
+	expect: {}
+});
+
+calls.generateSipCredentials = rpc.declare({
+	object: 'qmodem.sip',
+	method: 'generate_credentials',
+	params: [ 'username' ],
+	expect: {}
+});
+
 const api = Object.freeze(Object.assign({}, calls, { eventTopic: contract.EVENT_TOPIC }));
 
 if (typeof module !== 'undefined' && module.exports && typeof baseclass === 'undefined')

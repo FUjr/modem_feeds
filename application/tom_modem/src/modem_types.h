@@ -61,7 +61,7 @@
 #define READ_ALL_SMS "AT+CMGL=4"
 #define READ_UNREAD_SMS "AT+CMGL=0"
 #define MARK_SMS_READ "AT+CMGR=%d"
-#define SEND_SMS "AT+CMGS=%d\r\n"
+#define SEND_SMS "AT+CMGS=%d"
 #define DELETE_SMS "AT+CMGD=%d"
 
 #define SMS_BUF_SIZE 262144

@@ -7,9 +7,7 @@ grep -q -- 'procd_set_param command /usr/sbin/qmodem_voip_daemon_wait' \
 	"$ROOT/files/etc/init.d/qmodem_voip"
 grep -q -- '--media-interface "$interface"' "$ROOT/files/etc/init.d/qmodem_voip"
 grep -q -- '--start-enabled "$enabled"' "$ROOT/files/etc/init.d/qmodem_voip"
-grep -q "qmodem_voip.main.enabled)\" = 1" "$ROOT/files/etc/init.d/qmodem_voip"
-grep -q "qmodem_voip.main.enabled)\" = 1" \
-	"$ROOT/files/etc/qmodem_voip/firewall.include"
+grep -q 'enabled=$(uci -q get qmodem_voip.main.enabled)' "$ROOT/files/etc/init.d/qmodem_voip"
 grep -A1 "config main 'main'" "$ROOT/files/etc/config/qmodem_voip" |
 	grep -q "option enabled '0'"
 grep -q "option web_enabled '0'" "$ROOT/files/etc/config/qmodem_voip"
@@ -18,8 +16,6 @@ grep -q 'qmodem_voip_https' "$ROOT/files/usr/sbin/qmodem_voip_web"
 grep -q 'case " $listeners " in' "$ROOT/files/usr/sbin/qmodem_voip_web"
 grep -q "web_enabled" "$ROOT/../../luci/luci-app-qmodem-voip/htdocs/luci-static/resources/view/qmodem-voip/call.js"
 grep -q 'revision = app->call.revision' "$ROOT/src/media_manager.c"
-grep -q 'strcmp(blobmsg_get_string(values\[0\]), "ring")' "$ROOT/src/sip_consumer.c"
-grep -q 'send_incoming_invite();' "$ROOT/src/sip_consumer.c"
 if grep -q '\[ -n "$lan_address" \] || return 0' "$ROOT/files/etc/init.d/qmodem_voip"; then
 	echo 'FAIL: daemon startup still exits when the interface address is late' >&2
 	exit 1

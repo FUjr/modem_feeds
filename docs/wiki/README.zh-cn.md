@@ -6,7 +6,9 @@
 - [分支与发布策略](../release/branch-policy.zh-cn.md)：说明 `main`、`stable`、feature、
   hotfix 和冲突决策规则；
 - [版本迁移与反馈](../release/version-migration.zh-cn.md)：按 release tag 记录测试中
-  的功能、迁移风险、已知问题和版本 Issue 入口。
+  的功能、迁移风险、已知问题和版本 Issue 入口；
+- [SIP、SMSD 与 VoIP 配置](SIP-SMS-VoIP-Configuration.zh-cn.md)：说明独立
+  `sipd` 的入站/出站配置、与 `voipd`/`smsd` 的连接方式，以及 SMS 转 SIP。
 
 每个 release tag 都应创建一个对应的置顶 Issue，正文包含完整 tag、提交 SHA、变更摘要、
 已知问题、升级/回滚步骤和反馈格式；新版本发布后取消上一个版本的置顶状态。Issue

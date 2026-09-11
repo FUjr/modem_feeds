@@ -4,7 +4,7 @@
 #include "utils.h"
 
 int tty_open_device(PROFILE_T *profile,FDS_T *fds);
-int tty_write_raw(FILE *fdo, const char *input);
+int tty_write_raw(FILE *fdo, const void *input, size_t length);
 int tty_write(FILE *fdo, const char *input);
 
 #endif

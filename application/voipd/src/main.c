@@ -3,7 +3,6 @@
 #include "daemon_core.h"
 #include "media_manager.h"
 #include "modem_profile.h"
-#include "sip_credentials.h"
 
 #include <libubox/uloop.h>
 #include <libubus.h>
@@ -37,7 +36,6 @@ int main(int argc, char **argv)
 		return 1;
 	openlog("qmodem_voip", LOG_PID, LOG_DAEMON);
 	qmodem_voip_call_init(&app->call);
-	app->sip_configured = qmodem_voip_sip_credentials_sync(app->sip_username) == 0;
 	app->start_enabled = strcmp(argv[10], "1") == 0;
 	(void)snprintf(app->media_socket_path, sizeof(app->media_socket_path),
 		"%s", socket_path);

@@ -19,12 +19,6 @@ const LOG_LEVEL = {
 let current_log_level = LOG_LEVEL.DEBUG;
 let should_exit = false;
 
-// Signal handler for graceful shutdown
-function handleSignal(signo) {
-	log(LOG_LEVEL.INFO, `Received signal ${signo}, shutting down...`);
-	should_exit = true;
-}
-
 function log(level, message) {
 	if (level <= current_log_level) {
 		let level_str = 'INFO';
@@ -34,6 +28,12 @@ function log(level, message) {
 		
 		warn(`${LOG_PREFIX} [${level_str}] ${message}\n`);
 	}
+}
+
+// Signal handler for graceful shutdown
+function handleSignal(signo) {
+	log(LOG_LEVEL.INFO, `Received signal ${signo}, shutting down...`);
+	should_exit = true;
 }
 
 // Read SMS forwarder configuration
@@ -191,6 +191,43 @@ function formatTimestamp(timestamp) {
 	return output || sprintf('%d', timestamp);
 }
 
+function forwardSip(msg, api_config) {
+	let config;
+	try {
+		config = json(api_config);
+	} catch (e) {
+		log(LOG_LEVEL.ERROR, `Invalid SIP forwarder configuration: ${e}`);
+		return false;
+	}
+	if (!config || (config.direction != 'inbound' && config.direction != 'outbound') ||
+	    !config.recipient_uri) {
+		log(LOG_LEVEL.ERROR, 'SIP forwarder requires direction and recipient_uri');
+		return false;
+	}
+	let conn = ubus.connect();
+	if (!conn)
+		return false;
+	let result;
+	try {
+		result = conn.call('qmodem.sip', 'send_message', {
+			direction: config.direction,
+			recipient_uri: config.recipient_uri,
+			sender: msg.sender || '',
+			timestamp: msg.timestamp || 0,
+			content: msg.content || '',
+			message_id: sprintf('%s-%s', msg.id, msg.revision || 1),
+			revision: msg.revision || 1,
+			modem_id: msg.modem_id || ''
+		});
+	} catch (e) {
+		conn.disconnect();
+		log(LOG_LEVEL.ERROR, `SIP forwarding failed: ${e}`);
+		return false;
+	}
+	conn.disconnect();
+	return result && result.status == 'success';
+}
+
 // Execute forward script
 function executeForward(msg, api_configs) {
 	let total_success = 0, total_count = 0;
@@ -200,6 +237,11 @@ function executeForward(msg, api_configs) {
 		log(LOG_LEVEL.INFO, `Forwarding message ID ${msg.id} using API type: ${api.api_type} （${total_count}/${length(api_configs)}）`);
 		let api_type = api.api_type;
 		let api_config = api.api_config;
+		if (api_type == 'sip') {
+			if (forwardSip(msg, api_config))
+				total_success++;
+			continue;
+		}
 		let script_path = `${SCRIPT_DIR}/sms_forward_${api_type}.sh`;
 		
 		// Format timestamp
